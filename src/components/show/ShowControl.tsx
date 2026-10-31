@@ -57,7 +57,7 @@ export function ShowControl() {
     if (loaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(show));
   }, [show, loaded]);
   useEffect(() => {
-    if (!standby && flat.length) setStandbyId(flat[0].id);
+    if (!standby && flat.length) setStandbyId(flat[0]!.id);
   }, [flat, standby]);
 
   // ticker
@@ -75,7 +75,7 @@ export function ShowControl() {
     engine().go(flat, standbyIdx);
     setLastGo(performance.now());
     const n = nextStandbyIndex(flat, standbyIdx);
-    setStandbyId(n >= 0 ? flat[n].id : null);
+    setStandbyId(n >= 0 ? flat[n]!.id : null);
   }, [flat, standbyIdx]);
 
   const panic = useCallback(() => engine().panic(show.panicFade), [show.panicFade]);
@@ -85,7 +85,7 @@ export function ShowControl() {
     (d: number) => {
       if (!flat.length) return;
       const i = Math.max(0, Math.min(flat.length - 1, (standbyIdx < 0 ? flat.length : standbyIdx) + d));
-      setStandbyId(flat[i].id);
+      setStandbyId(flat[i]!.id);
     },
     [flat, standbyIdx],
   );
@@ -125,10 +125,10 @@ export function ShowControl() {
       let si = songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedId));
       if (si < 0) si = songs.length - 1;
       if (si < 0) return { ...s, songs: [{ id: uid(), name: "Sang 1", cues: [c] }] };
-      const cues = [...songs[si].cues];
+      const cues = [...songs[si]!.cues];
       const ci = cues.findIndex((x) => x.id === selectedId);
       cues.splice(ci < 0 ? cues.length : ci + 1, 0, c);
-      songs[si] = { ...songs[si], cues };
+      songs[si] = { ...songs[si]!, cues };
       return { ...s, songs };
     });
     setSelectedId(c.id);
@@ -236,7 +236,7 @@ export function ShowControl() {
             )}
             {standbyIdx >= 0 && flat[nextStandbyIndex(flat, standbyIdx)] && (
               <div className="mt-2 truncate border-t border-border pt-2 text-sm text-muted-foreground">
-                Derefter: {flat[nextStandbyIndex(flat, standbyIdx)].name}
+                Derefter: {flat[nextStandbyIndex(flat, standbyIdx)]!.name}
               </div>
             )}
           </div>

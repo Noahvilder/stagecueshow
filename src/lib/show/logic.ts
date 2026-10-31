@@ -31,7 +31,7 @@ export const flatten = (show: Show): Cue[] => show.songs.flatMap((s) => s.cues);
 /** Index of the next cue waiting for GO after firing `fired` (and its auto-follow chain). -1 if none. */
 export function nextStandbyIndex(flat: Cue[], fired: number): number {
   let j = fired;
-  while (j < flat.length && flat[j].follow !== "manual") j++;
+  while (j < flat.length && flat[j]!.follow !== "manual") j++;
   return j + 1 < flat.length ? j + 1 : -1;
 }
 
