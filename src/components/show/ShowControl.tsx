@@ -439,7 +439,7 @@ function summary(c: Cue, ports: string[]): string {
     case "wait":
       return `${c.duration}s`;
     case "memo":
-      return c.text.split("\n")[0];
+      return c.text.split("\n")[0] ?? "";
   }
 }
 
