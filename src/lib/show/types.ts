@@ -1,4 +1,5 @@
-export type Trigger = "manual" | "withPrev" | "afterPrev";
+/** What happens to the NEXT cue after this one fires. */
+export type Follow = "manual" | "withStart" | "afterEnd";
 export type MidiKind = "noteon" | "noteoff" | "cc" | "pc";
 
 export interface MidiMsg {
@@ -13,8 +14,10 @@ export interface MidiMsg {
 interface Base {
   id: string;
   name: string;
-  trigger: Trigger;
+  follow: Follow;
   preWait: number;
+  postWait: number;
+  color?: string;
   notes?: string;
 }
 
@@ -27,6 +30,7 @@ export type AudioCue = Base & {
   fadeIn: number;
   fadeOut: number;
   loop: boolean;
+  outputId: string;
 };
 export type MidiCue = Base & { type: "midi"; messages: MidiMsg[] };
 export type FadeCue = Base & {
@@ -54,5 +58,6 @@ export interface Show {
   version: 1;
   name: string;
   panicFade: number;
+  typeColors: Partial<Record<CueType, string>>;
   songs: Song[];
 }
