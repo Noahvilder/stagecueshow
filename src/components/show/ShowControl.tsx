@@ -6,10 +6,12 @@ import {
   newCue, newMidiMsg, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
+import { RemoteHost } from "./RemoteHost";
+import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
-type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal";
+type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote";
 const WIN_KEY = "stagecue.windows.v1";
 const PEDAL_KEY = "stagecue.pedals.v1";
 const defaultWins = (): Record<WinKey, WinState> => ({
@@ -18,8 +20,9 @@ const defaultWins = (): Record<WinKey, WinState> => ({
   list: { x: 644, y: 12, w: 620, h: 700, z: 3, open: true, min: false },
   inspector: { x: 1276, y: 12, w: 400, h: 700, z: 2, open: true, min: false },
   pedal: { x: 384, y: 454, w: 360, h: 330, z: 1, open: false, min: false },
+  remote: { x: 756, y: 454, w: 320, h: 470, z: 1, open: false, min: false },
 });
-const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal" };
+const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon" };
 
 const STORAGE_KEY = "stagecue.show.v1";
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
@@ -237,6 +240,21 @@ export function ShowControl() {
   };
 
   const lastGoEl = lastGo ? (now - lastGo) / 1000 : null;
+  const remoteState = useMemo<RemoteState>(() => ({
+    showName: show.name,
+    standbyId,
+    running: [...new Set(active.map((a) => a.cueId))],
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "" })) })),
+  }), [show, standbyId, active]);
+  const onRemote = (c: RemoteCmd) => {
+    if (c.t === "go") go();
+    else if (c.t === "panic") panic();
+    else if (c.t === "stopAll") hardStop();
+    else if (c.t === "step") step(c.d);
+    else if (c.t === "standby") flat.some((x) => x.id === c.id) && setStandbyId(c.id);
+    else if (c.t === "fire") { const cue = flat.find((x) => x.id === c.id); if (cue) engine().go([cue], 0); }
+    else if (c.t === "stopCue") engine().stopCue(c.id);
+  };
   const mainRun = active.filter((a) => a.state !== "pre" && a.duration && isFinite(a.duration)).sort((a, b) => b.duration! - b.elapsed - (a.duration! - a.elapsed))[0];
 
   return (
@@ -326,6 +344,9 @@ export function ShowControl() {
             </div>
           </div>
         </div>
+</FloatingWindow>
+<FloatingWindow title={"Telefon-fjernbetjening"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>
+<RemoteHost state={remoteState} onCmd={onRemote} />
 </FloatingWindow>
 <FloatingWindow title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
 <div className="flex h-full min-h-0 flex-col">
