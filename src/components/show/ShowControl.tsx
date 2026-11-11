@@ -6,6 +6,20 @@ import {
   newCue, newMidiMsg, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
+import { FloatingWindow, type WinState } from "./FloatingWindow";
+import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
+
+type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal";
+const WIN_KEY = "stagecue.windows.v1";
+const PEDAL_KEY = "stagecue.pedals.v1";
+const defaultWins = (): Record<WinKey, WinState> => ({
+  stage: { x: 12, y: 12, w: 620, h: 430, z: 5, open: true, min: false },
+  transport: { x: 12, y: 454, w: 360, h: 470, z: 4, open: true, min: false },
+  list: { x: 644, y: 12, w: 620, h: 700, z: 3, open: true, min: false },
+  inspector: { x: 1276, y: 12, w: 400, h: 700, z: 2, open: true, min: false },
+  pedal: { x: 384, y: 454, w: 360, h: 330, z: 1, open: false, min: false },
+});
+const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal" };
 
 const STORAGE_KEY = "stagecue.show.v1";
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
@@ -26,6 +40,30 @@ export function ShowControl() {
   const [clock, setClock] = useState("");
   const [lastGo, setLastGo] = useState<number | null>(null);
   const [now, setNow] = useState(0);
+  const [wins, setWins] = useState(defaultWins);
+  const [noteSize, setNoteSize] = useState<0 | 1 | 2>(1);
+  const [pedals, setPedals] = useState<PedalMap>({});
+  const [learning, setLearning] = useState<PedalAction | null>(null);
+  const [lastMidi, setLastMidi] = useState<MidiIn | null>(null);
+  const setWin = (k: WinKey, p: Partial<WinState>) => setWins((w) => ({ ...w, [k]: { ...w[k], ...p } }));
+  const focusWin = (k: WinKey) =>
+    setWins((w) => {
+      const top = Math.max(...Object.values(w).map((x) => x.z));
+      return w[k].z === top ? w : { ...w, [k]: { ...w[k], z: top + 1 } };
+    });
+  useEffect(() => {
+    try {
+      const w = localStorage.getItem(WIN_KEY);
+      if (w) setWins({ ...defaultWins(), ...JSON.parse(w) });
+      const p = localStorage.getItem(PEDAL_KEY);
+      if (p) setPedals(JSON.parse(p));
+      const n = localStorage.getItem("stagecue.notesize");
+      if (n) setNoteSize(Number(n) as 0 | 1 | 2);
+    } catch {}
+  }, []);
+  useEffect(() => { if (loaded) localStorage.setItem(WIN_KEY, JSON.stringify(wins)); }, [wins, loaded]);
+  useEffect(() => { if (loaded) localStorage.setItem(PEDAL_KEY, JSON.stringify(pedals)); }, [pedals, loaded]);
+  useEffect(() => { if (loaded) localStorage.setItem("stagecue.notesize", String(noteSize)); }, [noteSize, loaded]);
 
   const engine = () => {
     if (!engineRef.current) {
@@ -111,6 +149,26 @@ export function ShowControl() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [go, panic, step]);
+
+  const midiRef = useRef<(b: number[]) => void>(() => {});
+  midiRef.current = (b) => {
+    const ev = parseMidiIn(b);
+    if (!ev) return;
+    setLastMidi(ev);
+    if (learning) {
+      setPedals((m) => ({ ...m, [learning]: ev }));
+      setLearning(null);
+      return;
+    }
+    const a = matchPedal(pedals, ev);
+    if (a === "go") go();
+    else if (a === "panic") panic();
+    else if (a === "next") step(1);
+    else if (a === "prev") step(-1);
+  };
+  useEffect(() => {
+    engine().onMidiIn = (b) => midiRef.current(b);
+  }, []);
 
   // mutations
   const updateCue = (id: string, patch: Partial<Cue>) =>
@@ -205,6 +263,18 @@ export function ShowControl() {
         >
           Ny
         </Btn>
+        <div className="flex gap-1 border-l border-border pl-3">
+          {(Object.keys(WIN_TITLES) as WinKey[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => (wins[k].open ? setWin(k, { open: false }) : (setWin(k, { open: true, min: false }), focusWin(k)))}
+              className={`rounded px-2 py-1 text-xs font-semibold ${wins[k].open ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary"}`}
+            >
+              {WIN_TITLES[k]}
+            </button>
+          ))}
+          <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
+        </div>
         <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>
         <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
@@ -216,35 +286,16 @@ export function ShowControl() {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[360px_1fr_380px]">
-        {/* live panel */}
-        <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-r border-border p-4">
-          <div className="rounded-lg border-2 border-standby bg-card p-3">
-            <div className="text-xs font-bold uppercase tracking-widest text-standby">Standby</div>
-            {standby ? (
-              <>
-                <div className="mt-1 truncate text-2xl font-bold">{standby.name}</div>
-                <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                  <TypeTag show={show} cue={standby} />
-                  {standby.preWait > 0 && <span>pre-wait {standby.preWait}s</span>}
-                </div>
-                {standby.type === "memo" && standby.text && <p className="mt-2 whitespace-pre-wrap text-lg text-memo">{standby.text}</p>}
-                {standby.notes && <p className="mt-2 whitespace-pre-wrap text-base text-memo">{standby.notes}</p>}
-              </>
-            ) : (
-              <div className="mt-1 text-xl text-muted-foreground">Slut på show</div>
-            )}
-            {standbyIdx >= 0 && flat[nextStandbyIndex(flat, standbyIdx)] && (
-              <div className="mt-2 truncate border-t border-border pt-2 text-sm text-muted-foreground">
-                Derefter: {flat[nextStandbyIndex(flat, standbyIdx)]!.name}
-              </div>
-            )}
-          </div>
-
+<div className="relative min-h-0 flex-1 overflow-hidden">
+<FloatingWindow title={"Scene · Nu & Næste"} state={wins.stage} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
+<StageView show={show} flat={flat} standby={standby} standbyIdx={standbyIdx} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
+</FloatingWindow>
+<FloatingWindow title={"Transport"} state={wins.transport} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
+<div className="flex flex-col gap-3 p-3">
           <button
             onClick={go}
             disabled={!standby}
-            className="h-44 rounded-xl bg-go text-6xl font-black tracking-widest text-go-foreground shadow-[0_0_40px_-8px_var(--go)] transition active:scale-[0.98] disabled:opacity-30"
+            className="h-32 rounded-xl bg-go text-6xl font-black tracking-widest text-go-foreground shadow-[0_0_40px_-8px_var(--go)] transition active:scale-[0.98] disabled:opacity-30"
           >
             GO
           </button>
@@ -274,10 +325,10 @@ export function ShowControl() {
               {!active.length && <div className="text-sm text-muted-foreground">Intet kører</div>}
             </div>
           </div>
-        </aside>
-
-        {/* cue list */}
-        <main className="flex min-h-0 flex-col">
+        </div>
+</FloatingWindow>
+<FloatingWindow title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
+<div className="flex h-full min-h-0 flex-col">
           <div className="flex flex-wrap gap-1 border-b border-border p-2">
             {TYPES.map((t) => (
               <button
@@ -363,10 +414,10 @@ export function ShowControl() {
             ))}
             {!show.songs.length && <div className="p-8 text-center text-muted-foreground">Tilføj en sang for at komme i gang</div>}
           </div>
-        </main>
-
-        {/* inspector */}
-        <aside className="min-h-0 overflow-y-auto border-l border-border bg-card p-4">
+        </div>
+</FloatingWindow>
+<FloatingWindow title={"Cue Inspector"} state={wins.inspector} onChange={(p) => setWin("inspector", p)} onFocus={() => focusWin("inspector")}>
+<div className="p-4">
           {selected ? (
             <Inspector
               key={selected.id}
@@ -389,8 +440,12 @@ export function ShowControl() {
           ) : (
             <div className="text-muted-foreground">Vælg et cue for at redigere. Dobbeltklik for at sætte det som standby.</div>
           )}
-        </aside>
-      </div>
+        </div>
+</FloatingWindow>
+<FloatingWindow title={"Fodpedal (MIDI)"} state={wins.pedal} onChange={(p) => setWin("pedal", p)} onFocus={() => focusWin("pedal")}>
+<PedalPanel map={pedals} learning={learning} last={lastMidi} onLearn={setLearning} onClear={(k) => setPedals((m) => { const n = { ...m }; delete n[k]; return n; })} />
+</FloatingWindow>
+</div>
 
       {settings && (
         <Settings
@@ -706,6 +761,80 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
         {action}
       </div>
       {children}
+    </div>
+  );
+}
+
+const NOTE_SIZES = ["text-xl", "text-3xl", "text-5xl"];
+
+function StageView(props: {
+  show: Show; flat: Cue[]; standby: Cue | null; standbyIdx: number;
+  size: 0 | 1 | 2; setSize: (n: 0 | 1 | 2) => void; onNotes: (v: string) => void;
+}) {
+  const { show, flat, standby, standbyIdx } = props;
+  const songIdx = standby ? show.songs.findIndex((s) => s.cues.some((c) => c.id === standby.id)) : -1;
+  const song = songIdx >= 0 ? show.songs[songIdx]! : null;
+  const cueInSong = song && standby ? song.cues.findIndex((c) => c.id === standby.id) + 1 : 0;
+  const nIdx = standbyIdx >= 0 ? nextStandbyIndex(flat, standbyIdx) : -1;
+  const after = nIdx >= 0 ? flat[nIdx] : null;
+  const afterSong = after ? show.songs.find((s) => s.cues.some((c) => c.id === after.id)) : null;
+  return (
+    <div className="flex h-full flex-col gap-2 p-3">
+      <div className="flex items-baseline gap-3">
+        <span className="font-mono text-lg font-bold text-muted-foreground">SANG {songIdx >= 0 ? songIdx + 1 : "–"}/{show.songs.length}</span>
+        <span className="min-w-0 flex-1 truncate text-4xl font-black uppercase">{song?.name ?? "Slut på show"}</span>
+      </div>
+      {standby ? (
+        <div className="rounded-lg border-l-[12px] bg-muted px-4 py-3" style={{ borderLeftColor: cueColor(show, standby) }}>
+          <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-standby">
+            <span>Næste GO · cue {cueInSong}/{song?.cues.length}</span>
+            <TypeTag show={show} cue={standby} />
+            {standby.preWait > 0 && <span className="text-muted-foreground">pre-wait {standby.preWait}s</span>}
+          </div>
+          <div className="truncate text-5xl font-black leading-tight">{standby.name}</div>
+          {standby.type === "memo" && standby.text && <div className="mt-1 whitespace-pre-wrap text-2xl text-memo">{standby.text}</div>}
+        </div>
+      ) : (
+        <div className="rounded-lg bg-muted px-4 py-6 text-3xl font-bold text-muted-foreground">Ingen flere cues</div>
+      )}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Noter til næste cue</span>
+        <div className="ml-auto flex gap-1">
+          {(["A", "A+", "A++"] as const).map((l, i) => (
+            <button key={l} onClick={() => props.setSize(i as 0 | 1 | 2)} className={`rounded px-2 text-xs font-bold ${props.size === i ? "bg-standby text-background" : "bg-secondary"}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <textarea
+        value={standby?.notes ?? ""}
+        disabled={!standby}
+        onChange={(e) => props.onNotes(e.target.value)}
+        placeholder="Skriv noter til dette cue…"
+        className={`min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 font-semibold leading-snug text-memo outline-none focus:border-standby ${NOTE_SIZES[props.size]}`}
+      />
+      <div className="truncate border-t border-border pt-2 text-lg text-muted-foreground">
+        Derefter: {after ? <><span className="font-bold text-foreground">{after.name}</span>{afterSong && afterSong !== song && <span className="ml-2 text-standby">→ ny sang: {afterSong.name}</span>}</> : "—"}
+      </div>
+    </div>
+  );
+}
+
+function PedalPanel(props: {
+  map: PedalMap; learning: PedalAction | null; last: MidiIn | null;
+  onLearn: (a: PedalAction | null) => void; onClear: (a: PedalAction) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 p-3 text-sm">
+      <p className="text-muted-foreground">Tryk "Lær" og træd på kontakten på din Nektar Pacer.</p>
+      {(Object.keys(PEDAL_LABEL) as PedalAction[]).map((a) => (
+        <div key={a} className="flex items-center gap-2 rounded bg-muted px-2 py-1.5">
+          <span className="w-24 font-bold">{PEDAL_LABEL[a]}</span>
+          <span className="flex-1 font-mono text-xs text-muted-foreground">{props.learning === a ? "Venter på pedal…" : midiInLabel(props.map[a])}</span>
+          <button onClick={() => props.onLearn(props.learning === a ? null : a)} className={`rounded px-2 py-1 text-xs font-bold ${props.learning === a ? "bg-standby text-background" : "bg-secondary"}`}>{props.learning === a ? "Annullér" : "Lær"}</button>
+          {props.map[a] && <button onClick={() => props.onClear(a)} className="px-1 text-muted-foreground hover:text-destructive" aria-label="Fjern">✕</button>}
+        </div>
+      ))}
+      <div className="font-mono text-xs text-muted-foreground">Sidst modtaget: {props.last ? midiInLabel(props.last) : "intet"}</div>
     </div>
   );
 }
