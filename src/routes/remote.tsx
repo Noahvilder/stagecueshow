@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RemoteControl } from "@/components/show/RemoteControl";
 
 export const Route = createFileRoute("/remote")({
-  validateSearch: (s: Record<string, unknown>): { code?: string } => ({ code: typeof s.code === "string" ? s.code : undefined }),
+  validateSearch: (s: Record<string, unknown>): { code?: string } => ({ code: typeof s["code"] === "string" ? s["code"] : undefined }),
   head: () => ({
     meta: [
       { title: "StageCue Fjernbetjening" },

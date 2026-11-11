@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DataConnection, Peer as PeerT } from "peerjs";
 import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
-export function RemoteControl({ initialCode }: { initialCode?: string }) {
+export function RemoteControl({ initialCode }: { initialCode?: string | undefined }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState<string | null>(initialCode && isValidCode(initialCode) ? initialCode : null);
   const [status, setStatus] = useState<"idle" | "connecting" | "on" | "lost">("idle");
