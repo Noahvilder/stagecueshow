@@ -49,7 +49,10 @@ export type PauseCue = Base & { type: "pause"; target: string };
 export type WaitCue = Base & { type: "wait"; duration: number };
 export type MemoCue = Base & { type: "memo"; text: string };
 
-export type Cue = AudioCue | MidiCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue;
+/** Fires all children at the same time (each honours its own pre-wait). */
+export type GroupCue = Base & { type: "group"; children: Cue[] };
+
+export type Cue = AudioCue | MidiCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue | GroupCue;
 export type CueType = Cue["type"];
 
 export interface Song {

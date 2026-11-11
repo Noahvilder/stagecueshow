@@ -10,6 +10,7 @@ export const TYPE_LABEL: Record<CueType, string> = {
   pause: "Pause",
   wait: "Vent",
   memo: "Memo",
+  group: "Gruppe",
 };
 
 export const DEFAULT_TYPE_COLORS: Record<CueType, string> = {
@@ -20,6 +21,7 @@ export const DEFAULT_TYPE_COLORS: Record<CueType, string> = {
   pause: "#a855f7",
   wait: "#94a3b8",
   memo: "#facc15",
+  group: "#ec4899",
 };
 
 export function cueColor(show: Show, cue: Cue): string {
@@ -27,6 +29,14 @@ export function cueColor(show: Show, cue: Cue): string {
 }
 
 export const flatten = (show: Show): Cue[] => show.songs.flatMap((s) => s.cues);
+
+/** Cues including the children of group cues (for target lists / preloading). */
+export const deepCues = (cues: Cue[]): Cue[] => cues.flatMap((c) => (c.type === "group" ? [c, ...deepCues(c.children)] : [c]));
+
+/** Longest pre-wait + duration among a group's children. */
+export function groupDuration(children: Cue[], dur: (c: Cue) => number): number {
+  return children.reduce((m, c) => Math.max(m, c.preWait + dur(c)), 0);
+}
 
 /** Index of the next cue waiting for GO after firing `fired` (and its auto-follow chain). -1 if none. */
 export function nextStandbyIndex(flat: Cue[], fired: number): number {
@@ -116,6 +126,8 @@ export function newCue(type: CueType): Cue {
       return { ...base, type, duration: 5 };
     case "memo":
       return { ...base, type, text: "" };
+    case "group":
+      return { ...base, type, children: [] };
   }
 }
 
