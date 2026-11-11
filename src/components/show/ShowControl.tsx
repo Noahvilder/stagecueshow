@@ -1,3 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio } from "@/lib/show/audioStore";
@@ -29,10 +31,12 @@ const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "mem
 
 type Output = { id: string; label: string };
 
-export function ShowControl() {
+export function ShowControl({ showId }: { showId: string }) {
+  const navigate = useNavigate();
   const engineRef = useRef<Engine | null>(null);
   const [show, setShow] = useState<Show>(emptyShow);
   const [loaded, setLoaded] = useState(false);
+  const [saved, setSaved] = useState<"ok" | "saving" | "error">("ok");
   const [standbyId, setStandbyId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [active, setActive] = useState<ActiveRow[]>([]);
@@ -83,11 +87,11 @@ export function ShowControl() {
 
   // load + autosave
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setShow(parseShow(raw));
-    } catch {}
-    setLoaded(true);
+    supabase.from("shows").select("name,data").eq("id", showId).single().then(({ data, error: e }) => {
+      if (e || !data) { setError("Kunne ikke hente show: " + (e?.message ?? "ikke fundet")); return; }
+      try { setShow(parseShow(JSON.stringify({ ...emptyShow(), ...(data.data as object), name: data.name }))); } catch { setShow({ ...emptyShow(), name: data.name }); }
+      setLoaded(true);
+    });
     engine()
       .initMidi()
       .then(setMidiPorts)
@@ -95,7 +99,13 @@ export function ShowControl() {
     listAudioOutputs(false).then((o) => setOutputs(dedupe(o))).catch(() => {});
   }, []);
   useEffect(() => {
-    if (loaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(show));
+    if (!loaded) return;
+    setSaved("saving");
+    const t = setTimeout(async () => {
+      const { error: e } = await supabase.from("shows").update({ name: show.name, data: show as never, updated_at: new Date().toISOString() }).eq("id", showId);
+      setSaved(e ? "error" : "ok");
+    }, 700);
+    return () => clearTimeout(t);
   }, [show, loaded]);
   useEffect(() => {
     if (!standby && flat.length) setStandbyId(flat[0]!.id);
@@ -244,7 +254,7 @@ export function ShowControl() {
     showName: show.name,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "" })) })),
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
   }), [show, standbyId, active]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
@@ -271,16 +281,8 @@ export function ShowControl() {
         <span className="font-mono text-2xl tabular-nums">{clock}</span>
         <Btn onClick={() => fileRef.current?.click()}>Åbn</Btn>
         <Btn onClick={exportShow}>Gem</Btn>
-        <Btn
-          onClick={() => {
-            if (confirm("Start et nyt tomt show?")) {
-              engine().panic(0);
-              setShow(emptyShow());
-            }
-          }}
-        >
-          Ny
-        </Btn>
+        <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}</span>
+        <Btn onClick={() => { engine().panic(0); navigate({ to: "/hub" }); }}>← Shows</Btn>
         <div className="flex gap-1 border-l border-border pl-3">
           {(Object.keys(WIN_TITLES) as WinKey[]).map((k) => (
             <button
@@ -346,7 +348,7 @@ export function ShowControl() {
         </div>
 </FloatingWindow>
 <FloatingWindow title={"Telefon-fjernbetjening"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>
-<RemoteHost state={remoteState} onCmd={onRemote} />
+<RemoteHost showId={showId} state={remoteState} onCmd={onRemote} getAudio={async (id) => { const c = flat.find((x) => x.id === id); return c?.type === "audio" && c.fileId ? getAudio(c.fileId) : undefined; }} />
 </FloatingWindow>
 <FloatingWindow title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
 <div className="flex h-full min-h-0 flex-col">
