@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ShowControl } from "@/components/show/ShowControl";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
+  ssr: false,
+  beforeLoad: () => { throw redirect({ to: "/hub" }); },
   head: () => ({
     meta: [
       { title: "StageCue Control – Live show control" },
@@ -12,5 +13,4 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: ShowControl,
 });

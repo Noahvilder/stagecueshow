@@ -1,14 +1,28 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import type { DataConnection, Peer as PeerT } from "peerjs";
 import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
-export function RemoteControl({ initialCode }: { initialCode?: string | undefined }) {
+export function RemoteControl({ initialCode, backToHub }: { initialCode?: string | undefined; backToHub?: boolean }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState<string | null>(initialCode && isValidCode(initialCode) ? initialCode : null);
   const [status, setStatus] = useState<"idle" | "connecting" | "on" | "lost">("idle");
   const [state, setState] = useState<RemoteState | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"live" | "cues">("live");
+  const [preview, setPreview] = useState<{ id: string; loading: boolean } | null>(null);
   const conn = useRef<DataConnection | null>(null);
+  const audioEl = useRef<HTMLAudioElement | null>(null);
+  const cache = useRef(new Map<string, string>());
+
+  const playLocal = (id: string, url: string) => {
+    audioEl.current?.pause();
+    const a = new Audio(url);
+    audioEl.current = a;
+    a.onended = () => setPreview(null);
+    a.play().catch(() => setPreview(null));
+    setPreview({ id, loading: false });
+  };
 
   useEffect(() => {
     if (!target) return;
@@ -21,7 +35,16 @@ export function RemoteControl({ initialCode }: { initialCode?: string | undefine
       const c = peer.connect(PEER_PREFIX + target, { reliable: true });
       conn.current = c;
       c.on("open", () => setStatus("on"));
-      c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") setState(m.s); });
+      c.on("data", (d) => {
+        const m = d as HostMsg;
+        if (m.t === "state") setState(m.s);
+        else if (m.t === "audio") {
+          if (!m.buf) { setPreview(null); alert("Lydfilen findes ikke på pulten."); return; }
+          const url = URL.createObjectURL(new Blob([m.buf], { type: m.mime }));
+          cache.current.set(m.id, url);
+          playLocal(m.id, url);
+        }
+      });
       c.on("close", () => { setStatus("lost"); retry = setTimeout(connect, 2000); });
       c.on("error", () => { setStatus("lost"); });
     };
@@ -39,15 +62,29 @@ export function RemoteControl({ initialCode }: { initialCode?: string | undefine
     return () => { dead = true; clearTimeout(retry); peer?.destroy(); conn.current = null; };
   }, [target]);
 
+  useEffect(() => () => { audioEl.current?.pause(); cache.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
+
   const send = (c: RemoteCmd) => {
     if (conn.current?.open) { conn.current.send(c); navigator.vibrate?.(30); }
   };
+  const listen = (id: string) => {
+    if (preview?.id === id) { audioEl.current?.pause(); setPreview(null); return; }
+    const u = cache.current.get(id);
+    if (u) return playLocal(id, u);
+    setPreview({ id, loading: true });
+    send({ t: "getAudio", id });
+  };
+
+  const back = backToHub ? <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link> : null;
 
   if (!target) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
-        <div className="font-mono text-lg font-bold tracking-widest text-go">STAGECUE REMOTE</div>
-        <p className="text-center text-sm text-muted-foreground">Skriv koden fra Telefon-vinduet på hovedcomputeren.</p>
+        {back && <div className="absolute left-3 top-3">{back}</div>}
+        <div className="font-mono text-lg font-bold tracking-widest text-go">STAGECUE MOBIL</div>
+        <p className="max-w-xs text-center text-sm text-muted-foreground">
+          {backToHub ? "Åbn showet i PC-mode og slå Telefon-vinduet til – så forbinder mobilen automatisk. Eller skriv koden:" : "Skriv koden fra Telefon-vinduet på hovedcomputeren."}
+        </p>
         <input
           inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
           className="w-56 rounded-lg bg-input p-3 text-center font-mono text-4xl tracking-[0.3em] outline-none" aria-label="Kode"
@@ -60,56 +97,90 @@ export function RemoteControl({ initialCode }: { initialCode?: string | undefine
   const all = state?.songs.flatMap((s) => s.cues.map((c) => ({ ...c, song: s }))) ?? [];
   const sbIdx = all.findIndex((c) => c.id === state?.standbyId);
   const sb = sbIdx >= 0 ? all[sbIdx] : null;
+  const after = sbIdx >= 0 ? all[sbIdx + 1] : null;
   const viewSong = state?.songs.find((s) => s.id === (songId ?? sb?.song.id)) ?? state?.songs[0];
   const on = status === "on";
+  const songIdx = state?.songs.findIndex((s) => s.id === viewSong?.id) ?? -1;
 
   return (
-    <div className="flex min-h-screen flex-col gap-3 bg-background p-3 text-foreground">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-sm font-bold tracking-widest text-go">REMOTE</span>
-        <span className={`rounded px-2 py-0.5 text-xs font-bold ${on ? "bg-go text-go-foreground" : "bg-destructive text-destructive-foreground"}`}>
-          {on ? "● Forbundet til pult" : status === "connecting" ? "Forbinder…" : "Mistet – prøver igen"}
+    <div className="flex h-[100dvh] flex-col bg-background text-foreground">
+      <header className="flex items-center gap-2 border-b border-border px-3 py-2">
+        {back}
+        <span className="min-w-0 flex-1 truncate text-sm font-bold">{state?.showName ?? "…"}</span>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${on ? "bg-go text-go-foreground" : "bg-destructive text-destructive-foreground"}`}>
+          {on ? "● Live" : status === "connecting" ? "Forbinder…" : "Afbrudt"}
         </span>
-      </div>
+      </header>
 
-      <div className="rounded-lg border-2 border-standby bg-card p-3">
-        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{sb ? sb.song.name : state?.showName ?? "—"}</div>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="h-6 w-2 rounded" style={{ background: sb?.color }} />
-          <span className="text-2xl font-black leading-tight">{sb ? `#${sbIdx + 1} ${sb.name}` : "Slut på show"}</span>
-        </div>
-        {sb?.notes && <div className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap text-sm text-muted-foreground">{sb.notes}</div>}
-      </div>
-
-      <button disabled={!on || !sb} onClick={() => send({ t: "go" })} className="h-28 rounded-xl bg-go text-6xl font-black tracking-widest text-go-foreground active:scale-[0.98] disabled:opacity-30">GO</button>
-      <div className="grid grid-cols-2 gap-2">
-        <button disabled={!on} onClick={() => send({ t: "step", d: -1 })} className="h-12 rounded-lg bg-secondary font-bold disabled:opacity-30">▲ Forrige</button>
-        <button disabled={!on} onClick={() => send({ t: "step", d: 1 })} className="h-12 rounded-lg bg-secondary font-bold disabled:opacity-30">▼ Næste</button>
-        <button disabled={!on} onClick={() => send({ t: "panic" })} className="h-14 rounded-lg bg-destructive text-lg font-black text-destructive-foreground disabled:opacity-30">PANIC</button>
-        <button disabled={!on} onClick={() => send({ t: "stopAll" })} className="h-14 rounded-lg border-2 border-destructive text-lg font-black text-destructive disabled:opacity-30">STOP ALT</button>
-      </div>
-
-      {state && (
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-bold uppercase tracking-widest text-standby">Test cues</div>
-          <select value={viewSong?.id ?? ""} onChange={(e) => setSongId(e.target.value)} className="h-11 rounded-lg bg-input px-2 text-base">
-            {state.songs.map((s, i) => <option key={s.id} value={s.id}>{i + 1}. {s.name}</option>)}
-          </select>
-          {viewSong?.cues.map((c) => {
-            const running = state.running.includes(c.id);
-            return (
-              <div key={c.id} className={`flex items-center gap-2 rounded-lg bg-card p-2 ${c.id === state.standbyId ? "outline outline-2 outline-standby" : ""}`}>
-                <span className="h-8 w-1.5 rounded" style={{ background: c.color }} />
-                <button onClick={() => send({ t: "standby", id: c.id })} className="min-w-0 flex-1 truncate text-left font-semibold">{running && <span className="text-go">● </span>}{c.name}</button>
-                {running
-                  ? <button disabled={!on} onClick={() => send({ t: "stopCue", id: c.id })} className="h-10 rounded bg-destructive px-3 text-sm font-bold text-destructive-foreground">Stop</button>
-                  : <button disabled={!on} onClick={() => send({ t: "fire", id: c.id })} className="h-10 rounded bg-go px-3 text-sm font-bold text-go-foreground">▶ Test</button>}
+      <main className="flex-1 overflow-y-auto p-3">
+        {tab === "live" ? (
+          <div className="flex flex-col gap-3">
+            <div className="rounded-xl border-2 border-standby bg-card p-4">
+              <div className="text-xs font-bold uppercase tracking-widest text-standby">Standby · {sb?.song.name ?? "—"}</div>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="h-8 w-2 shrink-0 rounded" style={{ background: sb?.color }} />
+                <span className="text-3xl font-black leading-tight">{sb ? `#${sbIdx + 1} ${sb.name}` : "Slut på show"}</span>
               </div>
-            );
-          })}
-          <p className="text-xs text-muted-foreground">"Test" spiller kun det ene cue. Tryk på navnet for at sætte det som standby.</p>
+              {sb?.notes && <div className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap text-base text-muted-foreground">{sb.notes}</div>}
+              {after && <div className="mt-3 border-t border-border pt-2 text-sm text-muted-foreground">Derefter: <span className="font-semibold text-foreground">{after.name}</span></div>}
+            </div>
+            <button disabled={!on || !sb} onClick={() => send({ t: "go" })} className="h-36 rounded-2xl bg-go text-7xl font-black tracking-widest text-go-foreground active:scale-[0.98] disabled:opacity-30">GO</button>
+            <div className="grid grid-cols-2 gap-2">
+              <button disabled={!on} onClick={() => send({ t: "step", d: -1 })} className="h-14 rounded-xl bg-secondary text-lg font-bold disabled:opacity-30">▲ Forrige</button>
+              <button disabled={!on} onClick={() => send({ t: "step", d: 1 })} className="h-14 rounded-xl bg-secondary text-lg font-bold disabled:opacity-30">▼ Næste</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="sticky top-0 z-10 flex items-center gap-2 bg-background pb-2">
+              <button disabled={songIdx <= 0} onClick={() => setSongId(state!.songs[songIdx - 1]!.id)} className="h-12 w-12 rounded-lg bg-secondary text-xl font-bold disabled:opacity-30">‹</button>
+              <select value={viewSong?.id ?? ""} onChange={(e) => setSongId(e.target.value)} className="h-12 min-w-0 flex-1 rounded-lg bg-input px-2 text-base font-bold">
+                {state?.songs.map((s, i) => <option key={s.id} value={s.id}>{i + 1}. {s.name}</option>)}
+              </select>
+              <button disabled={!state || songIdx >= state.songs.length - 1} onClick={() => setSongId(state!.songs[songIdx + 1]!.id)} className="h-12 w-12 rounded-lg bg-secondary text-xl font-bold disabled:opacity-30">›</button>
+            </div>
+            {viewSong?.cues.length === 0 && <div className="p-6 text-center text-muted-foreground">Ingen cues i denne sang.</div>}
+            {viewSong?.cues.map((c) => {
+              const running = state!.running.includes(c.id);
+              const isSb = c.id === state!.standbyId;
+              const pv = preview?.id === c.id;
+              return (
+                <div key={c.id} className={`rounded-xl bg-card p-3 ${isSb ? "outline outline-2 outline-standby" : ""}`}>
+                  <button onClick={() => send({ t: "standby", id: c.id })} className="flex w-full items-center gap-2 text-left">
+                    <span className="h-7 w-1.5 shrink-0 rounded" style={{ background: c.color }} />
+                    <span className="min-w-0 flex-1 truncate text-lg font-bold">{running && <span className="text-go">● </span>}{c.name}</span>
+                    {isSb && <span className="text-xs font-bold text-standby">STANDBY</span>}
+                  </button>
+                  <div className="mt-2 flex gap-2">
+                    {running
+                      ? <button disabled={!on} onClick={() => send({ t: "stopCue", id: c.id })} className="h-12 flex-1 rounded-lg bg-destructive font-bold text-destructive-foreground">■ Stop på PA</button>
+                      : <button disabled={!on} onClick={() => send({ t: "fire", id: c.id })} className="h-12 flex-1 rounded-lg bg-go font-bold text-go-foreground disabled:opacity-30">📡 Test på PA</button>}
+                    {c.hasAudio && (
+                      <button disabled={!on && !cache.current.has(c.id)} onClick={() => listen(c.id)} className={`h-12 flex-1 rounded-lg font-bold disabled:opacity-30 ${pv ? "bg-standby text-background" : "bg-secondary"}`}>
+                        {pv ? (preview!.loading ? "Henter…" : "■ Stop lyt") : "🎧 Lyt her"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      <footer className="border-t border-border p-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button disabled={!on} onClick={() => send({ t: "panic" })} className="h-12 rounded-lg bg-destructive font-black text-destructive-foreground disabled:opacity-30">PANIC</button>
+          <button disabled={!on} onClick={() => send({ t: "stopAll" })} className="h-12 rounded-lg border-2 border-destructive font-black text-destructive disabled:opacity-30">STOP ALT</button>
         </div>
-      )}
+        <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+          {(["live", "cues"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)} className={`h-10 rounded-md text-sm font-bold ${tab === t ? "bg-background text-foreground" : "text-muted-foreground"}`}>
+              {t === "live" ? "Live / GO" : "Cues & test"}
+            </button>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }
