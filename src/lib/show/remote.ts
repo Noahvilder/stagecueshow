@@ -1,4 +1,4 @@
-import type { CueType } from "./types";
+import type { CueType, Show } from "./types";
 
 /** Snapshot the main computer sends to phones. */
 export interface RemoteState {
@@ -15,7 +15,8 @@ export type RemoteCmd =
   | { t: "standby"; id: string }
   | { t: "fire"; id: string }
   | { t: "stopCue"; id: string }
-  | { t: "getAudio"; id: string };
+  | { t: "getAudio"; id: string }
+  | { t: "setShow"; show: Show };
 export type HostMsg =
   | { t: "state"; s: RemoteState }
   | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null };

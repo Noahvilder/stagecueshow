@@ -27,5 +27,5 @@ function MobilePage() {
     return () => clearInterval(t);
   }, [showId]);
   if (code === undefined) return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Henter show…</div>;
-  return <RemoteControl key={code ?? "none"} initialCode={code ?? undefined} backToHub />;
+  return <RemoteControl key={code ?? "none"} initialCode={code ?? undefined} backToHub showId={showId} />;
 }
