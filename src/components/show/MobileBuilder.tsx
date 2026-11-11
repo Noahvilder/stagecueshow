@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, newCue, parseShow, uid } from "@/lib/show/logic";
-import type { Cue, CueType, Follow, Show } from "@/lib/show/types";
+import { DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, newCue, newMidiMsg, parseShow, uid, MIDI_KINDS, midiKindInfo, noteName } from "@/lib/show/logic";
+import type { Cue, CueType, Follow, MidiMsg, Show } from "@/lib/show/types";
 
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
 const FOLLOW: Record<Follow, string> = { manual: "Manuel GO", withStart: "Auto ved start", afterEnd: "Auto ved slut" };
 
 /** Phone-friendly show editor. Saves to the cloud and, when connected, pushes live to the PC. */
-export function MobileBuilder({ showId, connected, push }: { showId: string; connected: boolean; push: (s: Show) => void }) {
+export function MobileBuilder({ showId, connected, push, ports, testMidi }: { showId: string; connected: boolean; push: (s: Show) => void; ports: string[]; testMidi: (m: MidiMsg) => void }) {
   const [show, setShow] = useState<Show | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -114,6 +114,50 @@ export function MobileBuilder({ showId, connected, push }: { showId: string; con
                   <label className="text-xs font-bold text-muted-foreground">Varighed (s)</label>
                   <input type="number" inputMode="decimal" step="0.1" value={c.duration} onChange={(e) => updCue(c.id, { duration: Math.max(0, Number(e.target.value) || 0) } as Partial<Cue>)} className={inp} />
                 </>)}
+                {c.type === "midi" && (
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-muted-foreground">MIDI-beskeder</label>
+                    {c.messages.map((m, mi) => {
+                      const k = midiKindInfo(m.kind);
+                      const setMsgs = (msgs: MidiMsg[]) => updCue(c.id, { messages: msgs } as Partial<Cue>);
+                      const upd = (p: Partial<MidiMsg>) => setMsgs(c.messages.map((x) => (x.id === m.id ? { ...x, ...p } : x)));
+                      const num = (v: string, max: number) => Math.min(max, Math.max(0, Math.round(Number(v) || 0)));
+                      return (
+                        <div key={m.id} className="flex flex-col gap-2 rounded-lg border border-border p-2">
+                          <div className="flex items-center justify-between text-xs font-bold text-muted-foreground">
+                            Besked {mi + 1}
+                            <span className="flex gap-3">
+                              <button disabled={!connected} onClick={() => testMidi(m)} className="text-go disabled:opacity-30">▶ Send test</button>
+                              <button onClick={() => setMsgs(c.messages.filter((x) => x.id !== m.id))} className="text-destructive">Fjern</button>
+                            </span>
+                          </div>
+                          {ports.length > 0 ? (
+                            <select value={m.port} onChange={(e) => upd({ port: e.target.value })} className={inp}>
+                              <option value="">Vælg port…</option>
+                              {ports.map((p) => <option key={p} value={p}>{p}</option>)}
+                              {m.port && !ports.includes(m.port) && <option value={m.port}>{m.port} (ikke tilsluttet)</option>}
+                            </select>
+                          ) : (
+                            <input value={m.port} onChange={(e) => upd({ port: e.target.value })} placeholder="Port-navn (forbind til pult for liste)" className={inp} />
+                          )}
+                          <select value={m.kind} onChange={(e) => { const nk = midiKindInfo(e.target.value as MidiMsg["kind"]); upd({ kind: nk.kind, ...(nk.def1 != null ? { data1: nk.def1 } : {}) }); }} className={inp + " font-bold"}>
+                            {MIDI_KINDS.map((x) => <option key={x.kind} value={x.kind}>{x.label}</option>)}
+                          </select>
+                          <div className="grid grid-cols-3 gap-2">
+                            {k.channel && <div><label className="text-xs text-muted-foreground">Kanal</label>
+                              <input type="number" inputMode="numeric" min={1} max={16} value={m.channel} onChange={(e) => upd({ channel: Math.min(16, Math.max(1, Math.round(Number(e.target.value) || 1))) })} className={inp} /></div>}
+                            {k.d1 && <div className={k.d1.max > 127 ? "col-span-2" : ""}><label className="text-xs text-muted-foreground">{k.d1.label}{k.d1.note ? ` · ${noteName(m.data1)}` : ""}</label>
+                              <input type="number" inputMode="numeric" min={0} max={k.d1.max} value={m.data1} onChange={(e) => upd({ data1: num(e.target.value, k.d1!.max) })} className={inp} /></div>}
+                            {k.d2 && <div><label className="text-xs text-muted-foreground">{k.d2.label}</label>
+                              <input type="number" inputMode="numeric" min={0} max={k.d2.max} value={m.data2} onChange={(e) => upd({ data2: num(e.target.value, k.d2!.max) })} className={inp} /></div>}
+                          </div>
+                          {!k.channel && <div className="text-xs text-muted-foreground">Systembesked – ingen kanal eller værdier.</div>}
+                        </div>
+                      );
+                    })}
+                    <button onClick={() => updCue(c.id, { messages: [...c.messages, newMidiMsg()] } as Partial<Cue>)} className="h-11 rounded-lg bg-secondary font-bold">+ Tilføj MIDI-besked</button>
+                  </div>
+                )}
                 {c.type === "audio" && <div className="rounded-lg bg-secondary p-2 text-sm text-muted-foreground">🎵 {c.fileName || "Ingen fil"} – lydfiler vælges på PC'en.</div>}
                 <label className="text-xs font-bold text-muted-foreground">Næste cue</label>
                 <div className="grid grid-cols-3 gap-1">

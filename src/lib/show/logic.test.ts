@@ -22,3 +22,16 @@ describe("midi bytes", () => {
     expect(midiBytes({ id: "", port: "", kind: "pc", channel: 1, data1: 5, data2: 0 })).toEqual([0xc0, 5]);
   });
 });
+
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+d2("midiBytes extra kinds", () => {
+  i2("pitch bend center = 8192 splits into LSB/MSB", () => {
+    e2(midiBytes({ id: "", port: "", kind: "pitchbend", channel: 1, data1: 8192, data2: 0 })).toEqual([0xe0, 0x00, 0x40]);
+  });
+  i2("channel aftertouch is 2 bytes", () => {
+    e2(midiBytes({ id: "", port: "", kind: "chanat", channel: 3, data1: 90, data2: 0 })).toEqual([0xd2, 90]);
+  });
+  i2("transport start is a single byte", () => {
+    e2(midiBytes({ id: "", port: "", kind: "start", channel: 1, data1: 0, data2: 0 })).toEqual([0xfa]);
+  });
+});

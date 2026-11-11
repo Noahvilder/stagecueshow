@@ -78,7 +78,7 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
 
   const back = backToHub ? <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link> : null;
 
-  const builder = showId ? <MobileBuilder showId={showId} connected={status === "on"} push={(show) => send({ t: "setShow", show })} /> : null;
+  const builder = showId ? <MobileBuilder showId={showId} connected={status === "on"} push={(show) => send({ t: "setShow", show })} ports={state?.midiPorts ?? []} testMidi={(msg) => send({ t: "testMidi", msg })} /> : null;
 
   if (!target && tab === "build" && builder) {
     return (

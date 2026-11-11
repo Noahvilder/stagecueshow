@@ -1,4 +1,4 @@
-import type { Cue, CueType, MidiMsg, Show } from "./types";
+import type { MidiKind, Cue, CueType, MidiMsg, Show } from "./types";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -50,8 +50,44 @@ export function midiBytes(m: MidiMsg): number[] {
       return [0xb0 | ch, d1, d2];
     case "pc":
       return [0xc0 | ch, d1];
+    case "polyat":
+      return [0xa0 | ch, d1, d2];
+    case "chanat":
+      return [0xd0 | ch, d1];
+    case "pitchbend": {
+      const v = clamp(m.data1, 0, 16383);
+      return [0xe0 | ch, v & 0x7f, v >> 7];
+    }
+    case "start":
+      return [0xfa];
+    case "continue":
+      return [0xfb];
+    case "stop":
+      return [0xfc];
+    case "clock":
+      return [0xf8];
   }
 }
+
+type Field = { label: string; max: number; note?: boolean };
+/** UI metadata for every MIDI message kind (shared by PC and phone editors). */
+export const MIDI_KINDS: { kind: MidiKind; label: string; channel: boolean; d1?: Field; d2?: Field; def1?: number; def2?: number }[] = [
+  { kind: "noteon", label: "Note On", channel: true, d1: { label: "Note", max: 127, note: true }, d2: { label: "Velocity", max: 127 } },
+  { kind: "noteoff", label: "Note Off", channel: true, d1: { label: "Note", max: 127, note: true }, d2: { label: "Velocity", max: 127 } },
+  { kind: "cc", label: "Control Change (CC)", channel: true, d1: { label: "CC#", max: 127 }, d2: { label: "Værdi", max: 127 } },
+  { kind: "pc", label: "Program Change", channel: true, d1: { label: "Program", max: 127 } },
+  { kind: "polyat", label: "Poly Aftertouch", channel: true, d1: { label: "Note", max: 127, note: true }, d2: { label: "Tryk", max: 127 } },
+  { kind: "chanat", label: "Channel Aftertouch", channel: true, d1: { label: "Tryk", max: 127 } },
+  { kind: "pitchbend", label: "Pitch Bend", channel: true, d1: { label: "Værdi (8192 = midt)", max: 16383 }, def1: 8192 },
+  { kind: "start", label: "Start (transport)", channel: false },
+  { kind: "stop", label: "Stop (transport)", channel: false },
+  { kind: "continue", label: "Continue (transport)", channel: false },
+  { kind: "clock", label: "Clock tick", channel: false },
+];
+export const midiKindInfo = (k: MidiKind) => MIDI_KINDS.find((x) => x.kind === k) ?? MIDI_KINDS[0]!;
+const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+/** 60 → "C4" */
+export const noteName = (n: number) => `${NOTES[((n % 12) + 12) % 12]}${Math.floor(n / 12) - 1}`;
 
 export const dbToGain = (db: number) => (db <= -60 ? 0 : Math.pow(10, db / 20));
 
