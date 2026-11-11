@@ -35,3 +35,11 @@ d2("midiBytes extra kinds", () => {
     e2(midiBytes({ id: "", port: "", kind: "start", channel: 1, data1: 0, data2: 0 })).toEqual([0xfa]);
   });
 });
+
+import { trimSpan } from "./logic";
+describe("trimSpan", () => {
+  it("uses whole file when untrimmed", () => expect(trimSpan(10)).toEqual({ start: 0, end: 10, len: 10 }));
+  it("applies start and end trim", () => expect(trimSpan(10, 1.5, 8)).toEqual({ start: 1.5, end: 8, len: 6.5 }));
+  it("end 0 means file end", () => expect(trimSpan(10, 2, 0).end).toBe(10));
+  it("invalid end before start falls back to file end", () => expect(trimSpan(10, 5, 3).end).toBe(10));
+});

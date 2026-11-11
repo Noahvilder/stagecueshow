@@ -15,6 +15,12 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
   const conn = useRef<DataConnection | null>(null);
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const cache = useRef(new Map<string, string>());
+  const lastSb = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const id = state?.standbyId;
+    if (lastSb.current !== undefined && id !== lastSb.current) navigator.vibrate?.(15);
+    lastSb.current = id;
+  }, [state?.standbyId]);
 
   const playLocal = (id: string, url: string) => {
     audioEl.current?.pause();
@@ -66,7 +72,10 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
   useEffect(() => () => { audioEl.current?.pause(); cache.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
 
   const send = (c: RemoteCmd) => {
-    if (conn.current?.open) { conn.current.send(c); navigator.vibrate?.(30); }
+    if (!conn.current?.open) { navigator.vibrate?.([300]); return; }
+    conn.current.send(c);
+    const pattern = c.t === "go" ? [40, 40, 40] : c.t === "panic" || c.t === "stopAll" ? [200, 80, 200, 80, 200] : c.t === "fire" ? [60] : 25;
+    navigator.vibrate?.(pattern);
   };
   const listen = (id: string) => {
     if (preview?.id === id) { audioEl.current?.pause(); setPreview(null); return; }
@@ -126,6 +135,8 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${on ? "bg-go text-go-foreground" : "bg-destructive text-destructive-foreground"}`}>
           {on ? "● Live" : status === "connecting" ? "Forbinder…" : "Afbrudt"}
         </span>
+        {state?.locked && <span className="shrink-0 text-xs font-bold text-standby" title="Pulten er låst til live">🔒</span>}
+        <button disabled={!on} onClick={() => send({ t: "mute", on: !state?.muted })} className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold disabled:opacity-30 ${state?.muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`}>{state?.muted ? "🔇 PA muted" : "🔊 PA"}</button>
       </header>
 
       <main className="flex-1 overflow-y-auto p-3">
