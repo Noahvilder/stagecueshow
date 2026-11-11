@@ -122,7 +122,7 @@ export class Engine {
   }
 
   async preload(cues: Cue[]) {
-    for (const c of cues) if (c.type === "audio" && c.fileId) await this.buffer(c.fileId, await this.ctx(c.outputId)).catch(() => {});
+    for (const c of deepCues(cues)) if (c.type === "audio" && c.fileId) await this.buffer(c.fileId, await this.ctx(c.outputId)).catch(() => {});
   }
 
   private startSource(p: Player) {
@@ -221,6 +221,8 @@ export class Engine {
       case "fade":
       case "stop":
         return cue.duration;
+      case "group":
+        return groupDuration(cue.children, (c) => this.durationOf(c));
       default:
         return 0;
     }
@@ -253,6 +255,9 @@ export class Engine {
           break;
         }
         case "memo":
+          break;
+        case "group":
+          cue.children.forEach((ch) => (ch.preWait > 0 ? this.later(ch.preWait, () => void this.execute(ch)) : void this.execute(ch)));
           break;
       }
     } catch (e) {
