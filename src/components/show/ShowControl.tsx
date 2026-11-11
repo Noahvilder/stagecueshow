@@ -263,6 +263,7 @@ export function ShowControl({ showId }: { showId: string }) {
     else if (c.t === "standby") flat.some((x) => x.id === c.id) && setStandbyId(c.id);
     else if (c.t === "fire") { const cue = flat.find((x) => x.id === c.id); if (cue) engine().go([cue], 0); }
     else if (c.t === "stopCue") engine().stopCue(c.id);
+    else if (c.t === "setShow") setShow(c.show);
   };
   const mainRun = active.filter((a) => a.state !== "pre" && a.duration && isFinite(a.duration)).sort((a, b) => b.duration! - b.elapsed - (a.duration! - a.elapsed))[0];
 

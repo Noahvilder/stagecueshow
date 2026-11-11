@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { DataConnection, Peer as PeerT } from "peerjs";
+import { MobileBuilder } from "./MobileBuilder";
 import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
-export function RemoteControl({ initialCode, backToHub }: { initialCode?: string | undefined; backToHub?: boolean }) {
+export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?: string | undefined; backToHub?: boolean; showId?: string }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState<string | null>(initialCode && isValidCode(initialCode) ? initialCode : null);
   const [status, setStatus] = useState<"idle" | "connecting" | "on" | "lost">("idle");
   const [state, setState] = useState<RemoteState | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"live" | "cues">("live");
+  const [tab, setTab] = useState<"live" | "cues" | "build">("live");
   const [preview, setPreview] = useState<{ id: string; loading: boolean } | null>(null);
   const conn = useRef<DataConnection | null>(null);
   const audioEl = useRef<HTMLAudioElement | null>(null);
@@ -77,6 +78,20 @@ export function RemoteControl({ initialCode, backToHub }: { initialCode?: string
 
   const back = backToHub ? <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link> : null;
 
+  const builder = showId ? <MobileBuilder showId={showId} connected={status === "on"} push={(show) => send({ t: "setShow", show })} /> : null;
+
+  if (!target && tab === "build" && builder) {
+    return (
+      <div className="flex h-[100dvh] flex-col bg-background text-foreground">
+        <header className="flex items-center gap-2 border-b border-border px-3 py-2">
+          {back}<span className="flex-1 text-sm font-bold">Byg show</span>
+          <button onClick={() => setTab("live")} className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">Forbind</button>
+        </header>
+        <main className="flex-1 overflow-y-auto p-3">{builder}</main>
+      </div>
+    );
+  }
+
   if (!target) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
@@ -90,6 +105,7 @@ export function RemoteControl({ initialCode, backToHub }: { initialCode?: string
           className="w-56 rounded-lg bg-input p-3 text-center font-mono text-4xl tracking-[0.3em] outline-none" aria-label="Kode"
         />
         <button disabled={!isValidCode(code)} onClick={() => setTarget(code)} className="h-14 w-56 rounded-lg bg-go text-xl font-black text-go-foreground disabled:opacity-30">Forbind</button>
+        {builder && <button onClick={() => setTab("build")} className="h-12 w-56 rounded-lg bg-secondary font-bold">🛠 Byg show uden pult</button>}
       </div>
     );
   }
@@ -113,7 +129,7 @@ export function RemoteControl({ initialCode, backToHub }: { initialCode?: string
       </header>
 
       <main className="flex-1 overflow-y-auto p-3">
-        {tab === "live" ? (
+        {tab === "build" ? builder : tab === "live" ? (
           <div className="flex flex-col gap-3">
             <div className="rounded-xl border-2 border-standby bg-card p-4">
               <div className="text-xs font-bold uppercase tracking-widest text-standby">Standby · {sb?.song.name ?? "—"}</div>
@@ -173,10 +189,10 @@ export function RemoteControl({ initialCode, backToHub }: { initialCode?: string
           <button disabled={!on} onClick={() => send({ t: "panic" })} className="h-12 rounded-lg bg-destructive font-black text-destructive-foreground disabled:opacity-30">PANIC</button>
           <button disabled={!on} onClick={() => send({ t: "stopAll" })} className="h-12 rounded-lg border-2 border-destructive font-black text-destructive disabled:opacity-30">STOP ALT</button>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
-          {(["live", "cues"] as const).map((t) => (
+        <div className={`mt-2 grid gap-1 rounded-lg bg-secondary p-1 ${builder ? "grid-cols-3" : "grid-cols-2"}`}>
+          {(builder ? (["live", "cues", "build"] as const) : (["live", "cues"] as const)).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`h-10 rounded-md text-sm font-bold ${tab === t ? "bg-background text-foreground" : "text-muted-foreground"}`}>
-              {t === "live" ? "Live / GO" : "Cues & test"}
+              {t === "live" ? "Live / GO" : t === "cues" ? "Cues & test" : "🛠 Byg"}
             </button>
           ))}
         </div>
