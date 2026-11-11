@@ -1,5 +1,5 @@
 import { getAudio } from "./audioStore";
-import { dbToGain, midiBytes, trimSpan } from "./logic";
+import { dbToGain, deepCues, groupDuration, midiBytes, trimSpan } from "./logic";
 import type { AudioCue, Cue, MidiMsg } from "./types";
 
 interface Player {

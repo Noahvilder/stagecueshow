@@ -573,6 +573,8 @@ function followLabel(c: Cue) {
 
 function summary(c: Cue, ports: string[]): string {
   switch (c.type) {
+    case "group":
+      return `${c.children.length} cues samtidig: ${c.children.map((x) => x.name).join(", ")}`;
     case "audio":
       return `${c.fileName || "ingen fil"} · ${c.volume}dB${c.loop ? " · loop" : ""}`;
     case "midi":
