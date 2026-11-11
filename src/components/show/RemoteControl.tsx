@@ -47,7 +47,7 @@ export function RemoteControl({ initialCode }: { initialCode?: string | undefine
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
         <div className="font-mono text-lg font-bold tracking-widest text-go">STAGECUE REMOTE</div>
-        <p className="text-center text-sm text-muted-foreground">Skriv koden fra Fjernbetjening-vinduet på hovedcomputeren.</p>
+        <p className="text-center text-sm text-muted-foreground">Skriv koden fra Telefon-vinduet på hovedcomputeren.</p>
         <input
           inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
           className="w-56 rounded-lg bg-input p-3 text-center font-mono text-4xl tracking-[0.3em] outline-none" aria-label="Kode"
