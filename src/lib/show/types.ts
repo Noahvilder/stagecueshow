@@ -1,6 +1,6 @@
 /** What happens to the NEXT cue after this one fires. */
 export type Follow = "manual" | "withStart" | "afterEnd";
-export type MidiKind = "noteon" | "noteoff" | "cc" | "pc";
+export type MidiKind = "noteon" | "noteoff" | "cc" | "pc" | "polyat" | "chanat" | "pitchbend" | "start" | "stop" | "continue" | "clock";
 
 export interface MidiMsg {
   id: string;
