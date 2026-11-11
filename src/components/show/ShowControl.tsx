@@ -288,7 +288,7 @@ export function ShowControl() {
 
 <div className="relative min-h-0 flex-1 overflow-hidden">
 <FloatingWindow title={"Scene · Nu & Næste"} state={wins.stage} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
-<StageView show={show} flat={flat} standby={standby} standbyIdx={standbyIdx} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
+<StageView show={show} flat={flat} standby={standby ?? null} standbyIdx={standbyIdx} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
 </FloatingWindow>
 <FloatingWindow title={"Transport"} state={wins.transport} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
 <div className="flex flex-col gap-3 p-3">
