@@ -11,9 +11,11 @@ import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
 import { RemoteHost } from "./RemoteHost";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
+import { Waveform } from "./Waveform";
+import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
-type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote";
+type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon";
 const WIN_KEY = "stagecue.windows.v1";
 const PEDAL_KEY = "stagecue.pedals.v1";
 const defaultWins = (): Record<WinKey, WinState> => ({
@@ -23,8 +25,9 @@ const defaultWins = (): Record<WinKey, WinState> => ({
   inspector: { x: 1276, y: 12, w: 400, h: 700, z: 2, open: true, min: false },
   pedal: { x: 384, y: 454, w: 360, h: 330, z: 1, open: false, min: false },
   remote: { x: 756, y: 454, w: 320, h: 470, z: 1, open: false, min: false },
+  midimon: { x: 1088, y: 454, w: 560, h: 360, z: 1, open: false, min: false },
 });
-const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon" };
+const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon", midimon: "MIDI Monitor" };
 
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
 
@@ -51,6 +54,15 @@ export function ShowControl({ showId }: { showId: string }) {
   const [pedals, setPedals] = useState<PedalMap>({});
   const [learning, setLearning] = useState<PedalAction | null>(null);
   const [lastMidi, setLastMidi] = useState<MidiIn | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [midiIns, setMidiIns] = useState<string[]>([]);
+  const [midiLog, setMidiLog] = useState<MidiLogRow[]>([]);
+  const [monPaused, setMonPaused] = useState(false);
+  const monPausedRef = useRef(false);
+  monPausedRef.current = monPaused;
+  const logId = useRef(0);
+  const [recovered, setRecovered] = useState<string | null>(null);
   const setWin = (k: WinKey, p: Partial<WinState>) => setWins((w) => ({ ...w, [k]: { ...w[k], ...p } }));
   const focusWin = (k: WinKey) =>
     setWins((w) => {
@@ -75,6 +87,12 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!engineRef.current) {
       engineRef.current = new Engine();
       engineRef.current.onError = (m) => setError(m);
+      engineRef.current.onMidiLog = (dir, port, bytes) => {
+        if (monPausedRef.current) return;
+        const row = { id: ++logId.current, t: Date.now(), dir, port, bytes };
+        setMidiLog((l) => [row, ...l].slice(0, 300));
+      };
+      engineRef.current.onMidiPorts = (outs, ins) => { setMidiPorts(outs); setMidiIns(ins); };
     }
     return engineRef.current;
   };
@@ -93,10 +111,41 @@ export function ShowControl({ showId }: { showId: string }) {
     });
     engine()
       .initMidi()
-      .then(setMidiPorts)
+      .then((o) => { setMidiPorts(o); setMidiIns(engine().midiInputs()); })
       .catch((e) => setError(e.message));
     listAudioOutputs(false).then((o) => setOutputs(dedupe(o))).catch(() => {});
+    const onDev = () => listAudioOutputs(false).then((o) => setOutputs(dedupe(o))).catch(() => {});
+    navigator.mediaDevices?.addEventListener?.("devicechange", onDev);
+    return () => navigator.mediaDevices?.removeEventListener?.("devicechange", onDev);
   }, []);
+
+  // hardware watchdog
+  const seenIns = useRef(new Set<string>());
+  midiIns.forEach((i) => seenIns.current.add(i));
+  const warnings = useMemo(() => {
+    const w: string[] = [];
+    for (const i of seenIns.current) if (!midiIns.includes(i)) w.push(`MIDI-indgang frakoblet: ${i}`);
+    const outsUsed = new Set<string>(), audioUsed = new Set<string>();
+    flat.forEach((c) => {
+      if (c.type === "midi") c.messages.forEach((m) => m.port && outsUsed.add(m.port));
+      if (c.type === "audio" && c.outputId) audioUsed.add(c.outputId);
+    });
+    if (midiPorts.length || midiIns.length || seenIns.current.size) for (const p of outsUsed) if (!midiPorts.includes(p)) w.push(`MIDI-udgang mangler: ${p}`);
+    if (outputs.length > 1) for (const a of audioUsed) if (!outputs.some((o) => o.id === a)) w.push("Lydudgang mangler (brugt af lyd-cue)");
+    return [...new Set(w)];
+  }, [midiIns, midiPorts, outputs, flat]);
+  const prevWarn = useRef<string[]>([]);
+  useEffect(() => {
+    const fixed = prevWarn.current.filter((x) => !warnings.includes(x));
+    prevWarn.current = warnings;
+    if (fixed.length) {
+      setRecovered("✓ Genforbundet: " + fixed.map((f) => f.split(": ")[1] ?? f).join(", "));
+      const t = setTimeout(() => setRecovered(null), 4000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [warnings]);
+  const toggleMute = (on?: boolean) => setMuted((m) => { const v = on ?? !m; engine().setMute(v); return v; });
   useEffect(() => {
     if (!loaded) return;
     setSaved("saving");
@@ -143,6 +192,7 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyL") { e.preventDefault(); setLocked((l) => !l); return; }
       if (t.closest("input, textarea, select, [contenteditable]")) return;
       if (e.code === "Space") {
         e.preventDefault();
@@ -254,8 +304,10 @@ export function ShowControl({ showId }: { showId: string }) {
     midiPorts,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
+    muted,
+    locked,
     songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
-  }), [show, standbyId, active, midiPorts]);
+  }), [show, standbyId, active, midiPorts, muted, locked]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
     else if (c.t === "panic") panic();
@@ -264,7 +316,8 @@ export function ShowControl({ showId }: { showId: string }) {
     else if (c.t === "standby") flat.some((x) => x.id === c.id) && setStandbyId(c.id);
     else if (c.t === "fire") { const cue = flat.find((x) => x.id === c.id); if (cue) engine().go([cue], 0); }
     else if (c.t === "stopCue") engine().stopCue(c.id);
-    else if (c.t === "setShow") setShow(c.show);
+    else if (c.t === "setShow") { if (!locked) setShow(c.show); }
+    else if (c.t === "mute") toggleMute(c.on);
     else if (c.t === "testMidi") engine().sendMidi(c.msg);
   };
   const mainRun = active.filter((a) => a.state !== "pre" && a.duration && isFinite(a.duration)).sort((a, b) => b.duration! - b.elapsed - (a.duration! - a.elapsed))[0];
@@ -277,15 +330,18 @@ export function ShowControl({ showId }: { showId: string }) {
         <input
           className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none focus:bg-input"
           value={show.name}
+          readOnly={locked}
           onChange={(e) => setShow({ ...show, name: e.target.value })}
           aria-label="Show navn"
         />
         <span className="font-mono text-2xl tabular-nums">{clock}</span>
-        <Btn onClick={() => fileRef.current?.click()}>Åbn</Btn>
+        {!locked && <Btn onClick={() => fileRef.current?.click()}>Åbn</Btn>}
         <Btn onClick={exportShow}>Gem</Btn>
         <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}</span>
         <Btn onClick={() => { engine().panic(0); navigate({ to: "/hub" }); }}>← Shows</Btn>
-        <div className="flex gap-1 border-l border-border pl-3">
+        <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
+        <button onClick={() => setLocked((l) => !l)} title="Ctrl+L" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? "🔒 LÅST TIL LIVE" : "🔓 Lås show"}</button>
+        {!locked && <div className="flex gap-1 border-l border-border pl-3">
           {(Object.keys(WIN_TITLES) as WinKey[]).map((k) => (
             <button
               key={k}
@@ -296,11 +352,15 @@ export function ShowControl({ showId }: { showId: string }) {
             </button>
           ))}
           <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
-        </div>
-        <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>
+        </div>}
+        {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
         <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
 
+      {warnings.length > 0 && (
+        <div role="alert" className="animate-pulse bg-destructive px-4 py-2 text-lg font-black text-destructive-foreground">⚠️ {warnings.join(" · ")}</div>
+      )}
+      {recovered && <div className="bg-go px-4 py-1 text-sm font-bold text-go-foreground">{recovered}</div>}
       {error && (
         <div className="flex items-center justify-between bg-destructive px-4 py-1 text-sm font-semibold text-destructive-foreground">
           <span>{error}</span>
@@ -309,10 +369,10 @@ export function ShowControl({ showId }: { showId: string }) {
       )}
 
 <div className="relative min-h-0 flex-1 overflow-hidden">
-<FloatingWindow title={"Scene · Nu & Næste"} state={wins.stage} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
+<FloatingWindow locked={locked} title={"Scene · Nu & Næste"} state={wins.stage} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
 <StageView show={show} flat={flat} standby={standby ?? null} standbyIdx={standbyIdx} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
 </FloatingWindow>
-<FloatingWindow title={"Transport"} state={wins.transport} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
+<FloatingWindow locked={locked} title={"Transport"} state={wins.transport} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
 <div className="flex flex-col gap-3 p-3">
           <button
             onClick={go}
@@ -349,12 +409,12 @@ export function ShowControl({ showId }: { showId: string }) {
           </div>
         </div>
 </FloatingWindow>
-<FloatingWindow title={"Telefon-fjernbetjening"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>
+<FloatingWindow locked={locked} title={"Telefon-fjernbetjening"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>
 <RemoteHost showId={showId} state={remoteState} onCmd={onRemote} getAudio={async (id) => { const c = flat.find((x) => x.id === id); return c?.type === "audio" && c.fileId ? getAudio(c.fileId) : undefined; }} />
 </FloatingWindow>
-<FloatingWindow title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
+<FloatingWindow locked={locked} title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
 <div className="flex h-full min-h-0 flex-col">
-          <div className="flex flex-wrap gap-1 border-b border-border p-2">
+          {!locked && <div className="flex flex-wrap gap-1 border-b border-border p-2">
             {TYPES.map((t) => (
               <button
                 key={t}
@@ -368,12 +428,12 @@ export function ShowControl({ showId }: { showId: string }) {
             <button onClick={addSong} className="ml-auto rounded bg-secondary px-3 py-1.5 text-sm font-semibold hover:bg-accent">
               + Sang
             </button>
-          </div>
+          </div>}
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {show.songs.map((song, si) => (
               <section key={song.id} className="mb-3">
                 <div
-                  draggable
+                  draggable={!locked}
                   onDragStart={() => (drag.current = { kind: "song", id: song.id })}
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -385,11 +445,12 @@ export function ShowControl({ showId }: { showId: string }) {
                   <span className="font-mono text-sm text-muted-foreground">{si + 1}</span>
                   <input
                     value={song.name}
+                    readOnly={locked}
                     onChange={(e) => renameSong(song.id, e.target.value)}
                     className="min-w-0 flex-1 bg-transparent text-lg font-bold outline-none focus:bg-input"
                   />
                   <span className="text-xs text-muted-foreground">{song.cues.length} cues</span>
-                  <button onClick={() => deleteSong(song.id)} className="px-2 text-muted-foreground hover:text-destructive" aria-label="Slet sang">✕</button>
+                  {!locked && <button onClick={() => deleteSong(song.id)} className="px-2 text-muted-foreground hover:text-destructive" aria-label="Slet sang">✕</button>}
                 </div>
                 {song.cues.map((c) => {
                   const idx = flat.indexOf(c);
@@ -398,7 +459,7 @@ export function ShowControl({ showId }: { showId: string }) {
                   return (
                     <div
                       key={c.id}
-                      draggable
+                      draggable={!locked}
                       onDragStart={() => (drag.current = { kind: "cue", id: c.id })}
                       onDragOver={(e) => {
                         e.preventDefault();
@@ -441,10 +502,13 @@ export function ShowControl({ showId }: { showId: string }) {
           </div>
         </div>
 </FloatingWindow>
-<FloatingWindow title={"Cue Inspector"} state={wins.inspector} onChange={(p) => setWin("inspector", p)} onFocus={() => focusWin("inspector")}>
+<FloatingWindow locked={locked} title={"Cue Inspector"} state={wins.inspector} onChange={(p) => setWin("inspector", p)} onFocus={() => focusWin("inspector")}>
 <div className="p-4">
-          {selected ? (
+          {locked ? (
+            <div className="text-muted-foreground">🔒 Showet er låst til live. Tryk Ctrl+L eller "Lås show" for at redigere.</div>
+          ) : selected ? (
             <Inspector
+              loadAudio={(fid, out) => engine().decoded(fid, out)}
               key={selected.id}
               cue={selected}
               show={show}
@@ -467,8 +531,11 @@ export function ShowControl({ showId }: { showId: string }) {
           )}
         </div>
 </FloatingWindow>
-<FloatingWindow title={"Fodpedal (MIDI)"} state={wins.pedal} onChange={(p) => setWin("pedal", p)} onFocus={() => focusWin("pedal")}>
+<FloatingWindow locked={locked} title={"Fodpedal (MIDI)"} state={wins.pedal} onChange={(p) => setWin("pedal", p)} onFocus={() => focusWin("pedal")}>
 <PedalPanel map={pedals} learning={learning} last={lastMidi} onLearn={setLearning} onClear={(k) => setPedals((m) => { const n = { ...m }; delete n[k]; return n; })} />
+</FloatingWindow>
+<FloatingWindow locked={locked} title={"MIDI Monitor"} state={wins.midimon} onChange={(p) => setWin("midimon", p)} onFocus={() => focusWin("midimon")}>
+<MidiMonitor rows={midiLog} paused={monPaused} setPaused={setMonPaused} onClear={() => setMidiLog([])} ins={midiIns} outs={midiPorts} />
 </FloatingWindow>
 </div>
 
@@ -596,6 +663,7 @@ function Inspector(props: {
   cue: Cue; show: Show; flat: Cue[]; midiPorts: string[]; outputs: Output[];
   onChange: (p: Partial<Cue>) => void; onDelete: () => void; onStandby: () => void; onFire: () => void;
   onFile: (f: File) => void; onTestMidi: (m: MidiMsg) => void;
+  loadAudio: (fileId: string, outputId: string) => Promise<AudioBuffer>;
 }) {
   const { cue, show, flat, midiPorts, outputs, onChange } = props;
   const set = (p: Record<string, unknown>) => onChange(p as Partial<Cue>);
@@ -641,6 +709,19 @@ function Inspector(props: {
             <input type="file" accept="audio/*" className="text-sm" onChange={(e) => e.target.files?.[0] && props.onFile(e.target.files[0])} />
             <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || "Ingen fil valgt"}</div>
           </Field>
+          {cue.fileId && (
+            <Field label="Waveform & trim (træk i markørerne)">
+              <Waveform fileKey={cue.fileId} load={() => props.loadAudio(cue.fileId!, cue.outputId)} startTime={cue.startTime ?? 0} endTime={cue.endTime ?? 0} onChange={(p) => set(p)} />
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <Field label="Start (s)"><Num value={cue.startTime ?? 0} step={0.05} min={0} onChange={(n) => set({ startTime: Math.max(0, n) })} /></Field>
+                <Field label="Slut (s, 0 = filens slut)"><Num value={cue.endTime ?? 0} step={0.05} min={0} onChange={(n) => set({ endTime: Math.max(0, n) })} /></Field>
+              </div>
+              <div className="mt-1 flex gap-2">
+                <Btn onClick={props.onFire}>▶ Afspil trim-udsnit</Btn>
+                {(cue.startTime || cue.endTime) ? <button className="text-sm text-muted-foreground underline" onClick={() => set({ startTime: 0, endTime: 0 })}>Nulstil trim</button> : null}
+              </div>
+            </Field>
+          )}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
               {outputs.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}

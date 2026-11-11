@@ -161,3 +161,11 @@ export function parseShow(text: string): Show {
   if (!d || !Array.isArray(d.songs)) throw new Error("Ugyldig show-fil");
   return { ...emptyShow(), ...d, typeColors: d.typeColors ?? {} };
 }
+
+/** Playable [start, end] window of an audio file after trim. */
+export function trimSpan(dur: number, startTime = 0, endTime = 0): { start: number; end: number; len: number } {
+  const start = Math.max(0, Math.min(startTime || 0, Math.max(0, dur - 0.01)));
+  let end = endTime && endTime > 0 ? Math.min(endTime, dur) : dur;
+  if (end <= start) end = dur;
+  return { start, end, len: end - start };
+}

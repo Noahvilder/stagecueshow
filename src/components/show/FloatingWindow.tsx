@@ -8,6 +8,7 @@ export function FloatingWindow(props: {
   onChange: (p: Partial<WinState>) => void;
   onFocus: () => void;
   accent?: boolean;
+  locked?: boolean;
   children: ReactNode;
 }) {
   const { state: s, onChange, onFocus } = props;
@@ -15,7 +16,7 @@ export function FloatingWindow(props: {
   if (!s.open) return null;
 
   const begin = (e: React.PointerEvent, mode: "move" | "resize") => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    if (props.locked || (e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
     onFocus();
     start.current = { mx: e.clientX, my: e.clientY, x: s.x, y: s.y, w: s.w, h: s.h };
@@ -45,17 +46,18 @@ export function FloatingWindow(props: {
     >
       <div
         onPointerDown={(e) => begin(e, "move")}
-        onDoubleClick={() => onChange({ min: !s.min })}
-        className="flex cursor-move select-none items-center gap-2 border-b border-border bg-muted px-3 py-1.5"
+        onDoubleClick={() => !props.locked && onChange({ min: !s.min })}
+        className={`flex ${props.locked ? "" : "cursor-move"} select-none items-center gap-2 border-b border-border bg-muted px-3 py-1.5`}
       >
         <span className={`flex-1 truncate text-xs font-bold uppercase tracking-widest ${props.accent ? "text-standby" : "text-muted-foreground"}`}>{props.title}</span>
+        {props.locked ? <span className="text-xs" aria-label="Låst">🔒</span> : <>
         <button onClick={() => onChange({ min: !s.min })} className="px-1.5 text-muted-foreground hover:text-foreground" aria-label="Minimer">{s.min ? "▢" : "–"}</button>
-        <button onClick={() => onChange({ open: false })} className="px-1.5 text-muted-foreground hover:text-destructive" aria-label="Luk">✕</button>
+        <button onClick={() => onChange({ open: false })} className="px-1.5 text-muted-foreground hover:text-destructive" aria-label="Luk">✕</button></>}
       </div>
       {!s.min && (
         <>
           <div className="min-h-0 flex-1 overflow-auto">{props.children}</div>
-          <div onPointerDown={(e) => begin(e, "resize")} className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize" style={{ background: "linear-gradient(135deg, transparent 50%, var(--muted-foreground) 50%)" }} aria-label="Ændr størrelse" />
+          {!props.locked && <div onPointerDown={(e) => begin(e, "resize")} className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize" style={{ background: "linear-gradient(135deg, transparent 50%, var(--muted-foreground) 50%)" }} aria-label="Ændr størrelse" />}
         </>
       )}
     </div>

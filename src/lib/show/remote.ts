@@ -6,6 +6,8 @@ export interface RemoteState {
   midiPorts?: string[];
   standbyId: string | null;
   running: string[];
+  muted?: boolean;
+  locked?: boolean;
   songs: { id: string; name: string; cues: { id: string; name: string; type: CueType; color: string; notes: string; hasAudio?: boolean }[] }[];
 }
 export type RemoteCmd =
@@ -18,7 +20,8 @@ export type RemoteCmd =
   | { t: "stopCue"; id: string }
   | { t: "getAudio"; id: string }
   | { t: "setShow"; show: Show }
-  | { t: "testMidi"; msg: MidiMsg };
+  | { t: "testMidi"; msg: MidiMsg }
+  | { t: "mute"; on: boolean };
 export type HostMsg =
   | { t: "state"; s: RemoteState }
   | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null };
