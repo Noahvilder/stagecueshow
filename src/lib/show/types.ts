@@ -31,6 +31,10 @@ export type AudioCue = Base & {
   fadeOut: number;
   loop: boolean;
   outputId: string;
+  /** Trim start in seconds (0 = file start). */
+  startTime?: number;
+  /** Trim end in seconds (0 = file end). */
+  endTime?: number;
 };
 export type MidiCue = Base & { type: "midi"; messages: MidiMsg[] };
 export type FadeCue = Base & {

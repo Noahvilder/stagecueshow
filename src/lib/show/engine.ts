@@ -1,5 +1,5 @@
 import { getAudio } from "./audioStore";
-import { dbToGain, midiBytes } from "./logic";
+import { dbToGain, midiBytes, trimSpan } from "./logic";
 import type { AudioCue, Cue, MidiMsg } from "./types";
 
 interface Player {
@@ -12,6 +12,8 @@ interface Player {
   offset: number;
   startedCtx: number;
   paused: boolean;
+  start: number;
+  end: number;
 }
 
 export interface ActiveRow {
@@ -36,27 +38,56 @@ export class Engine {
   midi: MIDIAccess | null = null;
   onError: (msg: string) => void = () => {};
   onMidiIn: (bytes: number[]) => void = () => {};
+  onMidiLog: (dir: "in" | "out", port: string, bytes: number[]) => void = () => {};
+  onMidiPorts: (outs: string[], ins: string[]) => void = () => {};
+  private masters = new Map<AudioContext, GainNode>();
+  private muted = false;
   private attachInputs() {
     if (!this.midi) return;
     this.midi.inputs.forEach((inp) => {
-      inp.onmidimessage = (e) => e.data && this.onMidiIn(Array.from(e.data));
+      inp.onmidimessage = (e) => {
+        if (!e.data) return;
+        const b = Array.from(e.data);
+        if (b[0] === 0xf8 || b[0] === 0xfe) return; // skip clock/active sensing noise
+        this.onMidiLog("in", inp.name ?? inp.id, b);
+        this.onMidiIn(b);
+      };
     });
+  }
+  midiInputs(): string[] {
+    return this.midi ? Array.from(this.midi.inputs.values()).filter((i) => i.state !== "disconnected").map((i) => i.name ?? i.id) : [];
+  }
+  setMute(m: boolean) {
+    this.muted = m;
+    this.masters.forEach((g, c) => g.gain.setTargetAtTime(m ? 0 : 1, c.currentTime, 0.02));
+  }
+  isMuted() { return this.muted; }
+  private master(c: AudioContext) {
+    let g = this.masters.get(c);
+    if (!g) { g = c.createGain(); g.gain.value = this.muted ? 0 : 1; g.connect(c.destination); this.masters.set(c, g); }
+    return g;
+  }
+  /** Decoded audio for waveform display. */
+  async decoded(fileId: string, outputId = ""): Promise<AudioBuffer> {
+    return this.buffer(fileId, await this.ctx(outputId));
   }
 
   async initMidi(): Promise<string[]> {
     if (!navigator.requestMIDIAccess) throw new Error("Web MIDI understøttes ikke i denne browser (brug Chrome/Edge)");
     this.midi = await navigator.requestMIDIAccess({ sysex: false });
     this.attachInputs();
-    this.midi.onstatechange = () => this.attachInputs();
+    this.midi.onstatechange = () => { this.attachInputs(); this.onMidiPorts(this.midiOutputs(), this.midiInputs()); };
     return this.midiOutputs();
   }
   midiOutputs(): string[] {
-    return this.midi ? Array.from(this.midi.outputs.values()).map((o) => o.name ?? o.id) : [];
+    return this.midi ? Array.from(this.midi.outputs.values()).filter((o) => o.state !== "disconnected").map((o) => o.name ?? o.id) : [];
   }
   sendMidi(m: MidiMsg) {
     const out = this.midi && Array.from(this.midi.outputs.values()).find((o) => (o.name ?? o.id) === m.port);
     if (!out) return this.onError(`MIDI-port ikke fundet: ${m.port || "(ingen valgt)"}`);
-    out.send(midiBytes(m));
+    const b = midiBytes(m);
+    out.send(b);
+    this.onMidiLog("out", m.port, b);
   }
 
   private async ctx(outputId: string): Promise<AudioContext> {
@@ -99,12 +130,17 @@ export class Engine {
     src.buffer = p.buffer;
     src.loop = p.cue.loop;
     src.connect(p.gain);
+    const len = p.end - p.start;
     src.onended = () => {
       if (p.source === src && !p.paused) this.removePlayer(p.cue.id);
     };
     p.source = src;
     p.startedCtx = p.ctx.currentTime;
-    src.start(0, p.offset % p.buffer.duration);
+    if (p.cue.loop) {
+      src.loopStart = p.start;
+      src.loopEnd = p.end;
+      src.start(0, p.start + (p.offset % len));
+    } else src.start(0, p.start + p.offset, Math.max(0, len - p.offset));
   }
 
   private async playAudio(cue: AudioCue) {
@@ -115,19 +151,20 @@ export class Engine {
     const gain = ctx.createGain();
     const pan = ctx.createStereoPanner();
     pan.pan.value = Math.max(-1, Math.min(1, cue.pan));
-    gain.connect(pan).connect(ctx.destination);
+    gain.connect(pan).connect(this.master(ctx));
+    const span = trimSpan(buffer.duration, cue.startTime, cue.endTime);
     const target = dbToGain(cue.volume);
     const now = ctx.currentTime;
     if (cue.fadeIn > 0) {
       gain.gain.setValueAtTime(0, now);
       gain.gain.linearRampToValueAtTime(target, now + cue.fadeIn);
     } else gain.gain.setValueAtTime(target, now);
-    if (!cue.loop && cue.fadeOut > 0 && buffer.duration > cue.fadeOut) {
-      const t = now + buffer.duration - cue.fadeOut;
+    if (!cue.loop && cue.fadeOut > 0 && span.len > cue.fadeOut) {
+      const t = now + span.len - cue.fadeOut;
       gain.gain.setValueAtTime(target, t);
-      gain.gain.linearRampToValueAtTime(0, now + buffer.duration);
+      gain.gain.linearRampToValueAtTime(0, now + span.len);
     }
-    const p: Player = { cue, ctx, buffer, gain, pan, source: null, offset: 0, startedCtx: now, paused: false };
+    const p: Player = { cue, ctx, buffer, gain, pan, source: null, offset: 0, startedCtx: now, paused: false, start: span.start, end: span.end };
     this.players.set(cue.id, p);
     this.startSource(p);
   }
@@ -178,7 +215,7 @@ export class Engine {
     switch (cue.type) {
       case "audio": {
         const b = cue.fileId ? this.buffers.get(cue.fileId) : undefined;
-        return cue.loop ? Infinity : b?.duration ?? 0;
+        return cue.loop ? Infinity : b ? trimSpan(b.duration, cue.startTime, cue.endTime).len : 0;
       }
       case "wait":
       case "fade":
@@ -275,8 +312,9 @@ export class Engine {
     );
     this.players.forEach((p) => {
       let el = p.paused ? p.offset : p.offset + p.ctx.currentTime - p.startedCtx;
-      if (p.cue.loop) el %= p.buffer.duration;
-      rows.push({ key: p.cue.id, cueId: p.cue.id, name: p.cue.name, type: "audio", state: p.paused ? "paused" : "run", elapsed: el, duration: p.buffer.duration });
+      const len = p.end - p.start;
+      if (p.cue.loop) el %= len;
+      rows.push({ key: p.cue.id, cueId: p.cue.id, name: p.cue.name, type: "audio", state: p.paused ? "paused" : "run", elapsed: el, duration: len });
     });
     this.waits.forEach((w, k) =>
       rows.push({ key: "w" + k, cueId: k, name: w.name, type: "wait", state: "run", elapsed: (now - w.start) / 1000, duration: w.dur }),
