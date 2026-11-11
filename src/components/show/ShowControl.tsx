@@ -5,7 +5,7 @@ import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
 import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, moveCue, moveSong,
-  newCue, newMidiMsg, nextStandbyIndex, parseShow, uid,
+  newCue, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
 import { RemoteHost } from "./RemoteHost";
@@ -251,10 +251,11 @@ export function ShowControl({ showId }: { showId: string }) {
   const lastGoEl = lastGo ? (now - lastGo) / 1000 : null;
   const remoteState = useMemo<RemoteState>(() => ({
     showName: show.name,
+    midiPorts,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
     songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
-  }), [show, standbyId, active]);
+  }), [show, standbyId, active, midiPorts]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
     else if (c.t === "panic") panic();
@@ -264,6 +265,7 @@ export function ShowControl({ showId }: { showId: string }) {
     else if (c.t === "fire") { const cue = flat.find((x) => x.id === c.id); if (cue) engine().go([cue], 0); }
     else if (c.t === "stopCue") engine().stopCue(c.id);
     else if (c.t === "setShow") setShow(c.show);
+    else if (c.t === "testMidi") engine().sendMidi(c.msg);
   };
   const mainRun = active.filter((a) => a.state !== "pre" && a.duration && isFinite(a.duration)).sort((a, b) => b.duration! - b.elapsed - (a.duration! - a.elapsed))[0];
 
@@ -507,7 +509,7 @@ function summary(c: Cue, ports: string[]): string {
     case "audio":
       return `${c.fileName || "ingen fil"} · ${c.volume}dB${c.loop ? " · loop" : ""}`;
     case "midi":
-      return c.messages.map((m) => `${m.port || "?"}${ports.includes(m.port) ? "" : "⚠"} ${m.kind.toUpperCase()} ch${m.channel} ${m.data1}${m.kind === "pc" ? "" : "/" + m.data2}`).join(" · ");
+      return c.messages.map((m) => `${m.port || "?"}${ports.includes(m.port) ? "" : "⚠"} ${midiKindInfo(m.kind).label} ch${m.channel} ${m.data1}${midiKindInfo(m.kind).d2 ? "/" + m.data2 : ""}`).join(" · ");
     case "fade":
       return `${c.target === "all" ? "alle" : "mål"} → ${c.volume}dB over ${c.duration}s`;
     case "stop":
@@ -675,21 +677,20 @@ function Inspector(props: {
                   {midiPorts.map((p) => <option key={p} value={p}>{p}</option>)}
                   {m.port && !midiPorts.includes(m.port) && <option value={m.port}>{m.port} (ikke tilsluttet)</option>}
                 </select>
+                {(() => { const k = midiKindInfo(m.kind); return (<>
                 <div className="mt-2 grid grid-cols-4 gap-1">
-                  <select className={inputCls} value={m.kind} onChange={(e) => upd({ kind: e.target.value as MidiMsg["kind"] })}>
-                    <option value="noteon">Note On</option>
-                    <option value="noteoff">Note Off</option>
-                    <option value="cc">CC</option>
-                    <option value="pc">PC</option>
+                  <select className={inputCls + " col-span-4"} value={m.kind} onChange={(e) => { const nk = midiKindInfo(e.target.value as MidiMsg["kind"]); upd({ kind: nk.kind, ...(nk.def1 != null ? { data1: nk.def1 } : {}) }); }}>
+                    {MIDI_KINDS.map((x) => <option key={x.kind} value={x.kind}>{x.label}</option>)}
                   </select>
-                  <input title="Kanal" type="number" min={1} max={16} className={inputCls} value={m.channel} onChange={(e) => upd({ channel: +e.target.value })} />
-                  <input title={m.kind === "cc" ? "Controller" : m.kind === "pc" ? "Program" : "Note"} type="number" min={0} max={127} className={inputCls} value={m.data1} onChange={(e) => upd({ data1: +e.target.value })} />
-                  {m.kind !== "pc" && <input title={m.kind === "cc" ? "Værdi" : "Velocity"} type="number" min={0} max={127} className={inputCls} value={m.data2} onChange={(e) => upd({ data2: +e.target.value })} />}
+                  {k.channel && <input title="Kanal" type="number" min={1} max={16} className={inputCls} value={m.channel} onChange={(e) => upd({ channel: +e.target.value })} />}
+                  {k.d1 && <input title={k.d1.label} type="number" min={0} max={k.d1.max} className={inputCls + (k.d1.max > 127 ? " col-span-2" : "")} value={m.data1} onChange={(e) => upd({ data1: +e.target.value })} />}
+                  {k.d2 && <input title={k.d2.label} type="number" min={0} max={k.d2.max} className={inputCls} value={m.data2} onChange={(e) => upd({ data2: +e.target.value })} />}
                 </div>
                 <div className="mt-1 grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
-                  <span>Type</span><span>Kanal</span><span>{m.kind === "cc" ? "CC#" : m.kind === "pc" ? "Program" : "Note"}</span><span>{m.kind === "pc" ? "" : m.kind === "cc" ? "Værdi" : "Velocity"}</span>
+                  {k.channel && <span>Kanal</span>}{k.d1 && <span className={k.d1.max > 127 ? "col-span-2" : ""}>{k.d1.label}{k.d1.note ? ` (${noteName(m.data1)})` : ""}</span>}{k.d2 && <span>{k.d2.label}</span>}
                 </div>
-              </div>
+                </>); })()}
+                            </div>
             );
           })}
           <Btn onClick={() => set({ messages: [...cue.messages, newMidiMsg()] })}>+ Tilføj MIDI-besked</Btn>

@@ -1,8 +1,9 @@
-import type { CueType, Show } from "./types";
+import type { CueType, MidiMsg, Show } from "./types";
 
 /** Snapshot the main computer sends to phones. */
 export interface RemoteState {
   showName: string;
+  midiPorts?: string[];
   standbyId: string | null;
   running: string[];
   songs: { id: string; name: string; cues: { id: string; name: string; type: CueType; color: string; notes: string; hasAudio?: boolean }[] }[];
@@ -16,7 +17,8 @@ export type RemoteCmd =
   | { t: "fire"; id: string }
   | { t: "stopCue"; id: string }
   | { t: "getAudio"; id: string }
-  | { t: "setShow"; show: Show };
+  | { t: "setShow"; show: Show }
+  | { t: "testMidi"; msg: MidiMsg };
 export type HostMsg =
   | { t: "state"; s: RemoteState }
   | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null };
