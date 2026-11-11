@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { supabase } from "@/integrations/supabase/client";
 import type { DataConnection, Peer as PeerT } from "peerjs";
 import { PEER_PREFIX, makeCode, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
 const CODE_KEY = "stagecue.remotecode";
 
-export function RemoteHost({ state, onCmd }: { state: RemoteState; onCmd: (c: RemoteCmd) => void }) {
+export function RemoteHost({ showId, state, onCmd, getAudio }: { showId: string; state: RemoteState; onCmd: (c: RemoteCmd) => void; getAudio: (cueId: string) => Promise<Blob | undefined> }) {
+  const audioRef = useRef(getAudio);
+  audioRef.current = getAudio;
   const [code, setCode] = useState<string | null>(null);
   const [status, setStatus] = useState("Starter…");
   const [count, setCount] = useState(0);
@@ -41,7 +44,13 @@ export function RemoteHost({ state, onCmd }: { state: RemoteState; onCmd: (c: Re
           setCount(conns.current.size);
           conn.send({ t: "state", s: stateRef.current });
         });
-        conn.on("data", (d) => cmdRef.current(d as RemoteCmd));
+        conn.on("data", async (d) => {
+          const c = d as RemoteCmd;
+          if (c.t === "getAudio") {
+            const b = await audioRef.current(c.id).catch(() => undefined);
+            conn.send({ t: "audio", id: c.id, mime: b?.type || "audio/mpeg", buf: b ? await b.arrayBuffer() : null });
+          } else cmdRef.current(c);
+        });
         conn.on("close", () => { conns.current.delete(conn); setCount(conns.current.size); });
       });
       peer.on("disconnected", () => { setStatus("Genforbinder…"); peer?.reconnect(); });
@@ -56,6 +65,10 @@ export function RemoteHost({ state, onCmd }: { state: RemoteState; onCmd: (c: Re
     start();
     return () => { dead = true; clearTimeout(retry); peer?.destroy(); conns.current.clear(); setCount(0); };
   }, [code, enabled]);
+
+  useEffect(() => {
+    if (code) supabase.from("shows").update({ remote_code: enabled ? code : null }).eq("id", showId).then(() => {});
+  }, [code, enabled, showId]);
 
   useEffect(() => {
     conns.current.forEach((c) => c.open && c.send({ t: "state", s: state }));

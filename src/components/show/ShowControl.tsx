@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
-import { putAudio } from "@/lib/show/audioStore";
+import { putAudio, getAudio } from "@/lib/show/audioStore";
 import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, moveCue, moveSong,
   newCue, newMidiMsg, nextStandbyIndex, parseShow, uid,
@@ -26,7 +26,6 @@ const defaultWins = (): Record<WinKey, WinState> => ({
 });
 const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon" };
 
-const STORAGE_KEY = "stagecue.show.v1";
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
 
 type Output = { id: string; label: string };
