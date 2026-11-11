@@ -143,6 +143,7 @@ export function ShowControl({ showId }: { showId: string }) {
       const t = setTimeout(() => setRecovered(null), 4000);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [warnings]);
   const toggleMute = (on?: boolean) => setMuted((m) => { const v = on ?? !m; engine().setMute(v); return v; });
   useEffect(() => {
