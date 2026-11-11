@@ -1,0 +1,1 @@
+ALTER TABLE public.shows ADD COLUMN remote_code text;
