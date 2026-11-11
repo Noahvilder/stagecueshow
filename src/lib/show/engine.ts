@@ -35,10 +35,19 @@ export class Engine {
   private waits = new Map<string, { name: string; start: number; dur: number }>();
   midi: MIDIAccess | null = null;
   onError: (msg: string) => void = () => {};
+  onMidiIn: (bytes: number[]) => void = () => {};
+  private attachInputs() {
+    if (!this.midi) return;
+    this.midi.inputs.forEach((inp) => {
+      inp.onmidimessage = (e) => e.data && this.onMidiIn(Array.from(e.data));
+    });
+  }
 
   async initMidi(): Promise<string[]> {
     if (!navigator.requestMIDIAccess) throw new Error("Web MIDI understøttes ikke i denne browser (brug Chrome/Edge)");
     this.midi = await navigator.requestMIDIAccess({ sysex: false });
+    this.attachInputs();
+    this.midi.onstatechange = () => this.attachInputs();
     return this.midiOutputs();
   }
   midiOutputs(): string[] {
