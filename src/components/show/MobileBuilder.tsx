@@ -130,7 +130,7 @@ export function MobileBuilder({ showId, connected, push }: { showId: string; con
                 <label className="text-xs font-bold text-muted-foreground">Farve</label>
                 <div className="flex items-center gap-2">
                   <input type="color" value={cueColor(show, c)} onChange={(e) => updCue(c.id, { color: e.target.value })} className="h-11 w-16 rounded bg-transparent" />
-                  {c.color && <button onClick={() => updCue(c.id, { color: undefined })} className="text-sm text-muted-foreground underline">Brug type-farve</button>}
+                  {c.color && <button onClick={() => song && updSong(song.id, (cs) => cs.map((x) => { if (x.id !== c.id) return x; const { color: _c, ...rest } = x; return rest as Cue; }))} className="text-sm text-muted-foreground underline">Brug type-farve</button>}
                 </div>
                 <div className="mt-1 grid grid-cols-3 gap-2">
                   <button onClick={() => moveCueBy(c.id, -1)} className="h-11 rounded-lg bg-secondary font-bold">▲ Op</button>
