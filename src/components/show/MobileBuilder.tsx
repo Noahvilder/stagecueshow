@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, newCue, newMidiMsg, parseShow, uid, MIDI_KINDS, midiKindInfo, noteName } from "@/lib/show/logic";
 import type { Cue, CueType, Follow, MidiMsg, Show } from "@/lib/show/types";
 
-const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
+const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo", "group"];
+const CHILD_TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
 const FOLLOW: Record<Follow, string> = { manual: "Manuel GO", withStart: "Auto ved start", afterEnd: "Auto ved slut" };
 
 /** Phone-friendly show editor. Saves to the cloud and, when connected, pushes live to the PC. */
@@ -156,6 +157,43 @@ export function MobileBuilder({ showId, connected, push, ports, testMidi }: { sh
                       );
                     })}
                     <button onClick={() => updCue(c.id, { messages: [...c.messages, newMidiMsg()] } as Partial<Cue>)} className="h-11 rounded-lg bg-secondary font-bold">+ Tilføj MIDI-besked</button>
+                  </div>
+                )}
+                {c.type === "group" && (
+                  <div className="flex flex-col gap-2 rounded-lg border-2 p-2" style={{ borderColor: cueColor(show, c) }}>
+                    <label className="text-xs font-bold text-muted-foreground">Cues i gruppen (starter samtidig)</label>
+                    {c.children.map((k, ki) => {
+                      const setKids = (children: Cue[]) => updCue(c.id, { children } as Partial<Cue>);
+                      const updK = (p: Partial<Cue>) => setKids(c.children.map((x) => (x.id === k.id ? ({ ...x, ...p } as Cue) : x)));
+                      const mv = (d: number) => { const j = ki + d; if (j < 0 || j >= c.children.length) return; const a = [...c.children]; [a[ki], a[j]] = [a[j]!, a[ki]!]; setKids(a); };
+                      return (
+                        <div key={k.id} className="flex flex-col gap-1 rounded-lg border-l-4 bg-secondary p-2" style={{ borderLeftColor: cueColor(show, k) }}>
+                          <div className="flex items-center gap-2">
+                            <input value={k.name} onChange={(e) => updK({ name: e.target.value })} className={inp + " flex-1"} />
+                            <button onClick={() => mv(-1)} className="h-11 w-9 rounded bg-background">▲</button>
+                            <button onClick={() => mv(1)} className="h-11 w-9 rounded bg-background">▼</button>
+                            <button onClick={() => setKids(c.children.filter((x) => x.id !== k.id))} className="h-11 w-9 rounded bg-destructive text-destructive-foreground">✕</button>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {TYPE_LABEL[k.type]} · Pre-wait (s)
+                            <input type="number" inputMode="decimal" step="0.1" value={k.preWait} onChange={(e) => updK({ preWait: Math.max(0, Number(e.target.value) || 0) })} className={inp + " w-24"} />
+                          </div>
+                          {k.type === "midi" && k.messages.map((m) => (
+                            <div key={m.id} className="flex items-center gap-1 text-xs">
+                              <span className="flex-1 truncate">{m.port || "?"} · {midiKindInfo(m.kind).label} ch{m.channel} {m.data1}</span>
+                              <button disabled={!connected} onClick={() => testMidi(m)} className="text-go disabled:opacity-30">▶ Test</button>
+                            </div>
+                          ))}
+                          {k.type === "memo" && <textarea value={k.text} onChange={(e) => updK({ text: e.target.value } as Partial<Cue>)} rows={2} className="w-full rounded-lg bg-input p-2 text-base outline-none" />}
+                        </div>
+                      );
+                    })}
+                    <div className="grid grid-cols-4 gap-1">
+                      {CHILD_TYPES.map((t) => (
+                        <button key={t} onClick={() => updCue(c.id, { children: [...c.children, newCue(t)] } as Partial<Cue>)} className="h-11 rounded-lg bg-secondary text-xs font-bold">+ {TYPE_LABEL[t]}</button>
+                      ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Detaljer som MIDI-porte og lydfiler redigeres fuldt på PC'en.</div>
                   </div>
                 )}
                 {c.type === "audio" && <div className="rounded-lg bg-secondary p-2 text-sm text-muted-foreground">🎵 {c.fileName || "Ingen fil"} – lydfiler vælges på PC'en.</div>}

@@ -29,7 +29,8 @@ const defaultWins = (): Record<WinKey, WinState> => ({
 });
 const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon", midimon: "MIDI Monitor" };
 
-const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
+const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo", "group"];
+const CHILD_TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
 
 type Output = { id: string; label: string };
 
@@ -805,9 +806,58 @@ function Inspector(props: {
           <textarea rows={6} className={inputCls} value={cue.text} onChange={(e) => set({ text: e.target.value })} />
         </Field>
       )}
+      {cue.type === "group" && <GroupEditor {...props} cue={cue} />}
       <Field label="Noter">
         <textarea rows={3} className={inputCls} value={cue.notes ?? ""} onChange={(e) => set({ notes: e.target.value })} />
       </Field>
+    </div>
+  );
+}
+
+function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue, { type: "group" }> }) {
+  const { cue, show, onChange } = props;
+  const [sel, setSel] = useState<string | null>(cue.children[0]?.id ?? null);
+  const setKids = (children: Cue[]) => onChange({ children } as Partial<Cue>);
+  const upd = (id: string, p: Partial<Cue>) => setKids(cue.children.map((c) => (c.id === id ? ({ ...c, ...p } as Cue) : c)));
+  const move = (i: number, d: number) => { const j = i + d; if (j < 0 || j >= cue.children.length) return; const a = [...cue.children]; [a[i], a[j]] = [a[j]!, a[i]!]; setKids(a); };
+  const child = cue.children.find((c) => c.id === sel);
+  return (
+    <div className="rounded border-2 p-2" style={{ borderColor: cueColor(show, cue) }}>
+      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Cues i gruppen · starter samtidig</div>
+      <div className="flex flex-col gap-1">
+        {cue.children.length === 0 && <div className="text-sm text-muted-foreground">Tom gruppe – tilføj cues nedenfor.</div>}
+        {cue.children.map((c, i) => (
+          <div key={c.id} className={`flex items-center gap-1 rounded border-l-4 px-2 py-1 text-sm ${sel === c.id ? "bg-accent" : "bg-secondary"}`} style={{ borderLeftColor: cueColor(show, c) }}>
+            <button className="min-w-0 flex-1 truncate text-left font-semibold" onClick={() => setSel(c.id)}>{i + 1}. {c.name}{c.preWait ? ` · ⏱${c.preWait}s` : ""}</button>
+            <button title="Op" onClick={() => move(i, -1)}>▲</button>
+            <button title="Ned" onClick={() => move(i, 1)}>▼</button>
+            <button title="Fjern" className="text-destructive" onClick={() => { setKids(cue.children.filter((x) => x.id !== c.id)); if (sel === c.id) setSel(null); }}>✕</button>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {CHILD_TYPES.map((t) => (
+          <button key={t} onClick={() => { const n = newCue(t); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {TYPE_LABEL[t]}</button>
+        ))}
+      </div>
+      {child && (
+        <div className="mt-3 rounded border border-border p-2">
+          <div className="mb-2 text-xs font-bold text-muted-foreground">Redigerer: {child.name} (Auto-follow ignoreres inde i en gruppe)</div>
+          <Inspector
+            {...props}
+            key={child.id}
+            cue={child}
+            onChange={(p) => upd(child.id, p)}
+            onDelete={() => { setKids(cue.children.filter((x) => x.id !== child.id)); setSel(null); }}
+            onStandby={() => {}}
+            onFile={async (f) => {
+              const id = uid();
+              await putAudio(id, f);
+              upd(child.id, { fileId: id, fileName: f.name, name: child.name === "Lyd" ? f.name.replace(/\.[^.]+$/, "") : child.name } as Partial<Cue>);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
