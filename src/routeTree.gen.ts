@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as RemoteRouteImport } from './routes/remote'
+import { Route as ViewRouteImport } from './routes/view'
 import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
 import { Route as AuthenticatedMobileShowIdRouteImport } from './routes/_authenticated/mobile.$showId'
 import { Route as AuthenticatedPcShowIdRouteImport } from './routes/_authenticated/pc.$showId'
@@ -36,6 +37,11 @@ const RemoteRoute = RemoteRouteImport.update({
   path: '/remote',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ViewRoute = ViewRouteImport.update({
+  id: '/view',
+  path: '/view',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedHubRoute = AuthenticatedHubRouteImport.update({
   id: '/hub',
   path: '/hub',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/remote': typeof RemoteRoute
+  '/view': typeof ViewRoute
   '/hub': typeof AuthenticatedHubRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/remote': typeof RemoteRoute
+  '/view': typeof ViewRoute
   '/hub': typeof AuthenticatedHubRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/remote': typeof RemoteRoute
+  '/view': typeof ViewRoute
   '/_authenticated/hub': typeof AuthenticatedHubRoute
   '/_authenticated/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/_authenticated/pc/$showId': typeof AuthenticatedPcShowIdRoute
@@ -82,15 +91,29 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/remote' | '/hub' | '/mobile/$showId' | '/pc/$showId'
+    | '/'
+    | '/auth'
+    | '/remote'
+    | '/view'
+    | '/hub'
+    | '/mobile/$showId'
+    | '/pc/$showId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/remote' | '/hub' | '/mobile/$showId' | '/pc/$showId'
+  to:
+    | '/'
+    | '/auth'
+    | '/remote'
+    | '/view'
+    | '/hub'
+    | '/mobile/$showId'
+    | '/pc/$showId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/remote'
+    | '/view'
     | '/_authenticated/hub'
     | '/_authenticated/mobile/$showId'
     | '/_authenticated/pc/$showId'
@@ -101,6 +124,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   RemoteRoute: typeof RemoteRoute
+  ViewRoute: typeof ViewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -131,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/remote'
       fullPath: '/remote'
       preLoaderRoute: typeof RemoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/view': {
+      id: '/view'
+      path: '/view'
+      fullPath: '/view'
+      preLoaderRoute: typeof ViewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/hub': {
@@ -177,6 +208,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   RemoteRoute: RemoteRoute,
+  ViewRoute: ViewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
