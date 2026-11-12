@@ -24,7 +24,7 @@ export function ChordText({ src, size }: { src: string; size: string }) {
   );
 }
 
-export function StageViewer({ initialCode }: { initialCode?: string }) {
+export function StageViewer({ initialCode }: { initialCode?: string | undefined }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState(initialCode && isValidCode(initialCode) ? initialCode : "");
   const [mode, setMode] = useState<Mode | null>(null);
