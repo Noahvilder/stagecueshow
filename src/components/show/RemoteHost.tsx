@@ -88,6 +88,7 @@ export function RemoteHost({ showId, state, onCmd, getAudio }: { showId: string;
         <button onClick={newCode} className="rounded bg-secondary px-3 py-1 text-xs font-semibold">Ny kode</button>
         <button onClick={() => setEnabled((e) => !e)} className="rounded bg-secondary px-3 py-1 text-xs font-semibold">{enabled ? "Slå fra" : "Slå til"}</button>
       </div>
+      <a href={`/view?code=${code}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-standby underline">🎤 Scenemonitor (lyrics): /view?code={code}</a>
       <div className="text-xs text-muted-foreground">Kræver internet på både computer og telefon.</div>
     </div>
   );

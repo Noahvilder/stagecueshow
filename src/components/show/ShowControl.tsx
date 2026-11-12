@@ -307,7 +307,7 @@ export function ShowControl({ showId }: { showId: string }) {
     running: [...new Set(active.map((a) => a.cueId))],
     muted,
     locked,
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", text: c.type === "memo" ? c.text : "", hasAudio: c.type === "audio" && !!c.fileId })) })),
   }), [show, standbyId, active, midiPorts, muted, locked]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
