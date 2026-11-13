@@ -106,7 +106,7 @@ export function MobileBuilder({ showId, connected, push, ports, testMidi }: { sh
               <div className="flex flex-col gap-2 border-t border-border p-3">
                 <label className="text-xs font-bold text-muted-foreground">Navn</label>
                 <input value={c.name} onChange={(e) => updCue(c.id, { name: e.target.value })} className={inp} />
-                <MonitorNotes cue={c} monitors={show.monitors} onChange={(p) => updCue(c.id, p)} />
+                <MonitorNotes cue={c} monitors={show.monitors ?? []} onChange={(p) => updCue(c.id, p)} />
                 {c.type === "memo" && (<>
                   <label className="text-xs font-bold text-muted-foreground">Memo-tekst</label>
                   <textarea value={c.text} onChange={(e) => updCue(c.id, { text: e.target.value } as Partial<Cue>)} rows={3} className="w-full rounded-lg bg-input p-3 text-base outline-none" />

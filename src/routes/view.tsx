@@ -18,5 +18,5 @@ export const Route = createFileRoute("/view")({
 
 function ViewPage() {
   const { code, monitor } = Route.useSearch();
-  return <StageViewer initialCode={code} initialMonitor={monitor} />;
+  return <StageViewer initialCode={code} initialMonitor={monitor ?? ""} />;
 }

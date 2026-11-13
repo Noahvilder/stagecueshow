@@ -304,13 +304,13 @@ export function ShowControl({ showId }: { showId: string }) {
   const lastGoEl = lastGo ? (now - lastGo) / 1000 : null;
   const remoteState = useMemo<RemoteState>(() => ({
     showName: show.name,
-    monitors: show.monitors,
+    monitors: show.monitors ?? [],
     midiPorts,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
     muted,
     locked,
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", monitorNotes: c.monitorNotes, text: c.type === "memo" ? c.text : "", hasAudio: c.type === "audio" && !!c.fileId })) })),
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", monitorNotes: c.monitorNotes ?? {}, text: c.type === "memo" ? c.text : "", hasAudio: c.type === "audio" && !!c.fileId })) })),
   }), [show, standbyId, active, midiPorts, muted, locked]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
@@ -808,7 +808,7 @@ function Inspector(props: {
         </Field>
       )}
       {cue.type === "group" && <GroupEditor {...props} cue={cue} />}
-      <MonitorNotes key={cue.id} cue={cue} monitors={show.monitors} onChange={onChange} />
+      <MonitorNotes key={cue.id} cue={cue} monitors={show.monitors ?? []} onChange={onChange} />
     </div>
   );
 }
