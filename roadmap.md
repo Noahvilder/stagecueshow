@@ -1,0 +1,3 @@
+- [ ] Monitor-profiler pr. show og personlige cue-noter på PC og mobil.
+- [ ] Personlige QR-links og passiv profilvisning.
+- [ ] Test gemning, synkronisering og fallback.

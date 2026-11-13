@@ -19,6 +19,7 @@ interface Base {
   postWait: number;
   color?: string;
   notes?: string;
+  monitorNotes?: Record<string, string>;
 }
 
 export type AudioCue = Base & {
@@ -67,4 +68,11 @@ export interface Show {
   panicFade: number;
   typeColors: Partial<Record<CueType, string>>;
   songs: Song[];
+  monitors?: MonitorProfile[];
+}
+
+export interface MonitorProfile {
+  id: string;
+  name: string;
+  mode: "lyrics" | "hud";
 }
