@@ -1,3 +1,3 @@
-- [ ] Monitor-profiler pr. show og personlige cue-noter på PC og mobil.
-- [ ] Personlige QR-links og passiv profilvisning.
-- [ ] Test gemning, synkronisering og fallback.
+- [x] Monitor-profiler pr. show og personlige cue-noter på PC og mobil.
+- [x] Personlige QR-links og passiv profilvisning.
+- [x] Test gemning, synkronisering og fallback.

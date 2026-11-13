@@ -108,7 +108,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
           : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(cur) && <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} />}</div>}
       </main>
       {next && <footer className="border-t border-border bg-card px-6 py-3 text-2xl"><span className="text-muted-foreground">Næste: </span><b>{next.song !== cur?.song ? `${next.song} · ` : ""}{next.name}</b></footer>}
-      <div className={`absolute right-3 top-16 flex gap-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+      <div className={`absolute bottom-16 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap justify-end gap-2 rounded bg-background p-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         {SIZES.map((_, i) => <Button variant="secondary" key={i} onClick={() => setSize(i)} className={size === i ? "bg-standby text-standby-foreground" : ""}>{"A" + "+".repeat(i)}</Button>)}
         <Button variant="secondary" title="Fuld skærm" onClick={full}>⛶</Button>
         <Button variant="secondary" onClick={() => { setMonitorId(""); setMode(null); }}>Skift</Button>
