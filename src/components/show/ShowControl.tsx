@@ -9,6 +9,8 @@ import {
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
 import { RemoteHost } from "./RemoteHost";
+import { MonitorNotes } from "./MonitorNotes";
+import { MonitorProfiles } from "./MonitorProfiles";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
@@ -302,12 +304,13 @@ export function ShowControl({ showId }: { showId: string }) {
   const lastGoEl = lastGo ? (now - lastGo) / 1000 : null;
   const remoteState = useMemo<RemoteState>(() => ({
     showName: show.name,
+    monitors: show.monitors,
     midiPorts,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
     muted,
     locked,
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", text: c.type === "memo" ? c.text : "", hasAudio: c.type === "audio" && !!c.fileId })) })),
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", monitorNotes: c.monitorNotes, text: c.type === "memo" ? c.text : "", hasAudio: c.type === "audio" && !!c.fileId })) })),
   }), [show, standbyId, active, midiPorts, muted, locked]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
@@ -410,9 +413,7 @@ export function ShowControl({ showId }: { showId: string }) {
           </div>
         </div>
 </FloatingWindow>
-<FloatingWindow locked={locked} title={"Telefon-fjernbetjening"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>
-<RemoteHost showId={showId} state={remoteState} onCmd={onRemote} getAudio={async (id) => { const c = flat.find((x) => x.id === id); return c?.type === "audio" && c.fileId ? getAudio(c.fileId) : undefined; }} />
-</FloatingWindow>
+{loaded && <RemoteHost showId={showId} state={remoteState} onCmd={onRemote} getAudio={async (id) => { const c = flat.find((x) => x.id === id); return c?.type === "audio" && c.fileId ? getAudio(c.fileId) : undefined; }} renderPanel={(panel) => <FloatingWindow locked={locked} title={"Telefon & scenemonitors"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>{panel}</FloatingWindow>} />}
 <FloatingWindow locked={locked} title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
 <div className="flex h-full min-h-0 flex-col">
           {!locked && <div className="flex flex-wrap gap-1 border-b border-border p-2">
@@ -807,9 +808,7 @@ function Inspector(props: {
         </Field>
       )}
       {cue.type === "group" && <GroupEditor {...props} cue={cue} />}
-      <Field label="Noter">
-        <textarea rows={3} className={inputCls} value={cue.notes ?? ""} onChange={(e) => set({ notes: e.target.value })} />
-      </Field>
+      <MonitorNotes key={cue.id} cue={cue} monitors={show.monitors} onChange={onChange} />
     </div>
   );
 }
@@ -875,6 +874,7 @@ function Settings(props: {
           <Btn onClick={props.onClose}>Luk</Btn>
         </div>
 
+        <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
           {props.midiPorts.length ? props.midiPorts.map((p) => (
             <div key={p} className="flex items-center justify-between border-b border-border py-1.5">

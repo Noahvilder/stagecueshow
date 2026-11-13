@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, newCue, newMidiMsg, parseShow, uid, MIDI_KINDS, midiKindInfo, noteName } from "@/lib/show/logic";
 import type { Cue, CueType, Follow, MidiMsg, Show } from "@/lib/show/types";
+import { MonitorNotes } from "./MonitorNotes";
 
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo", "group"];
 const CHILD_TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
@@ -105,8 +106,7 @@ export function MobileBuilder({ showId, connected, push, ports, testMidi }: { sh
               <div className="flex flex-col gap-2 border-t border-border p-3">
                 <label className="text-xs font-bold text-muted-foreground">Navn</label>
                 <input value={c.name} onChange={(e) => updCue(c.id, { name: e.target.value })} className={inp} />
-                <label className="text-xs font-bold text-muted-foreground">Noter (vises på scenen)</label>
-                <textarea value={c.notes ?? ""} onChange={(e) => updCue(c.id, { notes: e.target.value })} rows={4} className="w-full rounded-lg bg-input p-3 text-base outline-none" />
+                <MonitorNotes cue={c} monitors={show.monitors} onChange={(p) => updCue(c.id, p)} />
                 {c.type === "memo" && (<>
                   <label className="text-xs font-bold text-muted-foreground">Memo-tekst</label>
                   <textarea value={c.text} onChange={(e) => updCue(c.id, { text: e.target.value } as Partial<Cue>)} rows={3} className="w-full rounded-lg bg-input p-3 text-base outline-none" />

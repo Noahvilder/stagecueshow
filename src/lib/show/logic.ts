@@ -1,4 +1,5 @@
 import type { MidiKind, Cue, CueType, MidiMsg, Show } from "./types";
+import { defaultMonitors } from "./monitors";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -139,6 +140,7 @@ export function emptyShow(): Show {
     name: "Nyt show",
     panicFade: 2,
     typeColors: {},
+    monitors: defaultMonitors(),
     songs: [{ id: uid(), name: "Sang 1", cues: [] }],
   };
 }

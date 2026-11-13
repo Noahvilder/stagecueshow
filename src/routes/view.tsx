@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { StageViewer } from "@/components/show/StageViewer";
 
 export const Route = createFileRoute("/view")({
-  validateSearch: (s: Record<string, unknown>): { code?: string } => (s["code"] != null && s["code"] !== "" ? { code: String(s["code"]) } : {}),
+  validateSearch: (s: Record<string, unknown>): { code?: string; monitor?: string } => ({ ...(s["code"] != null && s["code"] !== "" ? { code: String(s["code"]) } : {}), ...(typeof s["monitor"] === "string" ? { monitor: s["monitor"] } : {}) }),
   head: () => ({
     meta: [
       { title: "StageCue Scenemonitor" },
@@ -17,6 +17,6 @@ export const Route = createFileRoute("/view")({
 });
 
 function ViewPage() {
-  const { code } = Route.useSearch();
-  return <StageViewer initialCode={code} />;
+  const { code, monitor } = Route.useSearch();
+  return <StageViewer initialCode={code} initialMonitor={monitor} />;
 }
