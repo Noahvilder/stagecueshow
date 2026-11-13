@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { Peer as PeerT } from "peerjs";
 import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteState } from "@/lib/show/remote";
 import { parseChordPro } from "@/lib/show/chordpro";
+import { monitorBody } from "@/lib/show/monitors";
+import { Button } from "@/components/ui/button";
 
 type Mode = "lyrics" | "hud";
 const SIZES = ["text-2xl", "text-4xl", "text-6xl", "text-8xl"];
@@ -10,7 +12,7 @@ export function ChordText({ src, size }: { src: string; size: string }) {
   const lines = useMemo(() => parseChordPro(src), [src]);
   return (
     <div className={`${size} font-semibold leading-tight`}>
-      {lines.map((l, i) => !l.segs.length || (l.segs.length === 1 && !l.segs[0]!.text && !l.segs[0]!.chord) ? <div key={i} className="h-[1em]" /> : (
+      {lines.map((l, i) => !l.segs.length || (l.segs.length === 1 && !l.segs[0]?.text && !l.segs[0]?.chord) ? <div key={i} className="h-[1em]" /> : (
         <div key={i} className="flex flex-wrap items-end">
           {l.segs.map((s, j) => (
             <span key={j} className={`inline-flex flex-col ${l.chordsOnly ? "mr-[1em]" : ""}`}>
@@ -24,7 +26,7 @@ export function ChordText({ src, size }: { src: string; size: string }) {
   );
 }
 
-export function StageViewer({ initialCode }: { initialCode?: string | undefined }) {
+export function StageViewer({ initialCode, initialMonitor }: { initialCode?: string | undefined; initialMonitor?: string }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState(initialCode && isValidCode(initialCode) ? initialCode : "");
   const [mode, setMode] = useState<Mode | null>(null);
@@ -32,13 +34,16 @@ export function StageViewer({ initialCode }: { initialCode?: string | undefined 
   const [state, setState] = useState<RemoteState | null>(null);
   const [online, setOnline] = useState(false);
   const [ui, setUi] = useState(true);
+  const [monitorId, setMonitorId] = useState(initialMonitor ?? "");
+  const profile = state?.monitors?.find((m) => m.id === monitorId);
+  const viewMode = profile?.mode ?? mode;
 
   useEffect(() => {
     if (!target) return;
     let peer: PeerT | null = null; let dead = false; let retry: ReturnType<typeof setTimeout>;
     const connect = () => {
       if (dead || !peer) return;
-      const c = peer.connect(PEER_PREFIX + target, { reliable: true });
+      const c = peer.connect(PEER_PREFIX + target, { reliable: true, metadata: { role: "viewer" } });
       c.on("open", () => setOnline(true));
       c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") setState(m.s); });
       c.on("close", () => { setOnline(false); retry = setTimeout(connect, 2000); });
@@ -55,19 +60,19 @@ export function StageViewer({ initialCode }: { initialCode?: string | undefined 
   }, [target]);
 
   useEffect(() => {
-    if (!mode) return;
+    if (!viewMode) return;
     let t: ReturnType<typeof setTimeout>;
     const show = () => { setUi(true); clearTimeout(t); t = setTimeout(() => setUi(false), 3000); };
     show();
     window.addEventListener("pointermove", show); window.addEventListener("pointerdown", show);
     return () => { clearTimeout(t); window.removeEventListener("pointermove", show); window.removeEventListener("pointerdown", show); };
-  }, [mode]);
+  }, [viewMode]);
 
   const flat = useMemo(() => (state?.songs ?? []).flatMap((s) => s.cues.map((c) => ({ ...c, song: s.name }))), [state]);
   const idx = flat.findIndex((c) => c.id === state?.standbyId);
   const cur = idx >= 0 ? flat[idx] : undefined;
   const next = idx >= 0 ? flat[idx + 1] : undefined;
-  const body = (c?: typeof cur) => [c?.text, c?.notes].filter(Boolean).join("\n\n");
+  const body = (c?: typeof cur) => monitorBody(c, profile?.id);
 
   if (!target) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
@@ -78,12 +83,13 @@ export function StageViewer({ initialCode }: { initialCode?: string | undefined 
     </div>
   );
 
-  if (!mode) return (
+  if (!viewMode) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
-      <h1 className="text-3xl font-black">Hvad vil du se?</h1>
-      <button onClick={() => setMode("lyrics")} className="w-72 rounded-lg bg-standby p-5 text-xl font-black text-standby-foreground">🎤 Lyrics & akkorder</button>
-      <button onClick={() => setMode("hud")} className="w-72 rounded-lg bg-secondary p-5 text-xl font-black">⏱ Nu & Næste</button>
+      <h1 className="text-3xl font-black">Hvem er du på scenen?</h1>
+      {state?.monitors?.map((m) => <Button key={m.id} variant="secondary" className="h-auto min-h-16 w-full max-w-sm whitespace-normal p-4 text-xl font-bold" onClick={() => { setMonitorId(m.id); setMode(null); }}>{m.name}</Button>)}
+      <Button onClick={() => { setMonitorId(""); setMode("lyrics"); }} className="h-auto w-full max-w-sm whitespace-normal bg-standby p-5 text-xl font-black text-standby-foreground">Fælles lyrics & akkorder</Button>
+      <Button variant="secondary" onClick={() => { setMonitorId(""); setMode("hud"); }} className="h-auto w-full max-w-sm p-5 text-xl font-black">Nu & Næste</Button>
     </div>
   );
 
@@ -97,15 +103,15 @@ export function StageViewer({ initialCode }: { initialCode?: string | undefined 
       </header>
       <main className="min-h-0 flex-1 overflow-auto px-6 py-4">
         {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – prøver igen…</div>}
-        {mode === "lyrics"
-          ? (body(cur) ? <ChordText src={body(cur)} size={SIZES[size]!} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
-          : <div className="flex h-full flex-col justify-center gap-4"><div className="text-[12vw] font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div></div>}
+        {viewMode === "lyrics"
+          ? (body(cur) ? <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
+          : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(cur) && <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} />}</div>}
       </main>
       {next && <footer className="border-t border-border bg-card px-6 py-3 text-2xl"><span className="text-muted-foreground">Næste: </span><b>{next.song !== cur?.song ? `${next.song} · ` : ""}{next.name}</b></footer>}
       <div className={`absolute right-3 top-16 flex gap-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-        {mode === "lyrics" && SIZES.map((_, i) => <button key={i} onClick={() => setSize(i)} className={`rounded px-3 py-2 font-bold ${size === i ? "bg-standby text-standby-foreground" : "bg-secondary"}`}>{"A" + "+".repeat(i)}</button>)}
-        <button onClick={full} className="rounded bg-secondary px-3 py-2 font-bold">⛶</button>
-        <button onClick={() => setMode(null)} className="rounded bg-secondary px-3 py-2 font-bold">Skift</button>
+        {SIZES.map((_, i) => <Button variant="secondary" key={i} onClick={() => setSize(i)} className={size === i ? "bg-standby text-standby-foreground" : ""}>{"A" + "+".repeat(i)}</Button>)}
+        <Button variant="secondary" title="Fuld skærm" onClick={full}>⛶</Button>
+        <Button variant="secondary" onClick={() => { setMonitorId(""); setMode(null); }}>Skift</Button>
       </div>
     </div>
   );
