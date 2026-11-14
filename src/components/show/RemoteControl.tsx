@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { DataConnection, Peer as PeerT } from "peerjs";
 import { MobileBuilder } from "./MobileBuilder";
-import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
+import { PEER_PREFIX, isValidCode, normCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
 const SAVED_KEY = "stagecue.paired";
 
@@ -127,8 +127,8 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
           {backToHub ? "Åbn showet i PC-mode og slå Telefon-vinduet til – så forbinder mobilen automatisk. Eller skriv koden:" : "Skriv koden fra Telefon-vinduet på hovedcomputeren."}
         </p>
         <input
-          inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          className="w-56 rounded-lg bg-input p-3 text-center font-mono text-4xl tracking-[0.3em] outline-none" aria-label="Kode"
+          autoCapitalize="characters" maxLength={12} value={code} onChange={(e) => setCode(normCode(e.target.value))}
+          className="w-72 rounded-lg bg-input p-3 text-center font-mono text-2xl tracking-widest outline-none" aria-label="Kode"
         />
         <button disabled={!isValidCode(code)} onClick={() => setTarget(code)} className="h-14 w-56 rounded-lg bg-go text-xl font-black text-go-foreground disabled:opacity-30">Forbind</button>
         {builder && <button onClick={() => setTab("build")} className="h-12 w-56 rounded-lg bg-secondary font-bold">🛠 Byg show uden pult</button>}

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import type { DataConnection, Peer as PeerT } from "peerjs";
-import { PEER_PREFIX, makeCode, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
+import { PEER_PREFIX, makeCode, isValidCode, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
 const CODE_KEY = "stagecue.remotecode";
 
@@ -29,7 +29,8 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
     supabase.from("shows").select("remote_code").eq("id", showId).single().then(({ data }) => {
       if (dead) return;
       const key = CODE_KEY + "." + showId;
-      setCode(data?.remote_code || localStorage.getItem(key) || makeCode());
+      const c = [data?.remote_code, localStorage.getItem(key)].find((x): x is string => !!x && isValidCode(x));
+      setCode(c ?? makeCode());
     });
     return () => { dead = true; };
   }, [showId]);
