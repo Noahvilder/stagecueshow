@@ -24,10 +24,15 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
   stateRef.current = state;
 
   useEffect(() => {
-    let c = localStorage.getItem(CODE_KEY);
-    if (!c) { c = makeCode(); localStorage.setItem(CODE_KEY, c); }
-    setCode(c);
-  }, []);
+    let dead = false;
+    // Fast kode pr. show: genbrug den gemte kode, så telefoner altid kan finde showet igen.
+    supabase.from("shows").select("remote_code").eq("id", showId).single().then(({ data }) => {
+      if (dead) return;
+      const key = CODE_KEY + "." + showId;
+      setCode(data?.remote_code || localStorage.getItem(key) || makeCode());
+    });
+    return () => { dead = true; };
+  }, [showId]);
 
   useEffect(() => {
     if (!code || !enabled) return;
@@ -58,10 +63,10 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
         });
         conn.on("close", () => { conns.current.delete(conn); setCount(conns.current.size); });
       });
-      peer.on("disconnected", () => { setStatus("Genforbinder…"); peer?.reconnect(); });
+      peer.on("disconnected", () => { setStatus("Genforbinder…"); if (!dead) setTimeout(() => { if (!dead && peer && !peer.destroyed) peer.reconnect(); }, 1000); });
       peer.on("error", (e) => {
         setStatus("Fejl: " + e.type);
-        if (e.type === "unavailable-id" || e.type === "network" || e.type === "server-error") {
+        if (e.type !== "peer-unavailable") {
           peer?.destroy();
           retry = setTimeout(start, 3000);
         }
@@ -72,14 +77,15 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
   }, [code, enabled]);
 
   useEffect(() => {
-    if (code) supabase.from("shows").update({ remote_code: enabled ? code : null }).eq("id", showId).then(() => {});
+    if (code) localStorage.setItem(CODE_KEY + "." + showId, code);
+    if (code && enabled) supabase.from("shows").update({ remote_code: code }).eq("id", showId).then(() => {});
   }, [code, enabled, showId]);
 
   useEffect(() => {
     conns.current.forEach((c) => c.open && c.send({ t: "state", s: state }));
   }, [state]);
 
-  const newCode = () => { const c = makeCode(); localStorage.setItem(CODE_KEY, c); setCode(c); };
+  const newCode = () => { if (confirm("Ny kode afbryder alle parrede telefoner og monitors. Fortsæt?")) setCode(makeCode()); };
 
   useEffect(() => {
     let dead = false;
@@ -94,7 +100,7 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
         {count ? `● ${count} telefon${count > 1 ? "er" : ""} forbundet` : status}
       </div>
       {enabled && qr && <img src={qr} alt="QR-kode til telefon" className="rounded bg-foreground p-1" width={200} height={200} />}
-      <div className="text-xs text-muted-foreground">Scan med telefonen, eller åbn /remote og skriv koden:</div>
+      <div className="text-xs text-muted-foreground">Scan én gang – telefonen husker showet og forbinder selv næste gang. Koden er fast for dette show:</div>
       <div className="font-mono text-4xl font-black tracking-[0.3em] text-standby">{code}</div>
       <div className="flex gap-2">
         <button onClick={newCode} className="rounded bg-secondary px-3 py-1 text-xs font-semibold">Ny kode</button>

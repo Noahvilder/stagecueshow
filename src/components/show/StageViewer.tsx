@@ -6,6 +6,7 @@ import { monitorBody } from "@/lib/show/monitors";
 import { Button } from "@/components/ui/button";
 
 type Mode = "lyrics" | "hud";
+const VIEW_KEY = "stagecue.viewer";
 const SIZES = ["text-2xl", "text-4xl", "text-6xl", "text-8xl"];
 
 export function ChordText({ src, size }: { src: string; size: string }) {
@@ -35,6 +36,13 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [online, setOnline] = useState(false);
   const [ui, setUi] = useState(true);
   const [monitorId, setMonitorId] = useState(initialMonitor ?? "");
+  useEffect(() => {
+    const raw = localStorage.getItem(VIEW_KEY);
+    const saved = raw ? JSON.parse(raw) as { code?: string; monitor?: string } : {};
+    if (!initialCode && saved.code && isValidCode(saved.code)) { setCode(saved.code); setTarget(saved.code); }
+    if (!initialMonitor && !initialCode && saved.monitor) setMonitorId(saved.monitor);
+  }, [initialCode, initialMonitor]);
+  useEffect(() => { if (target) localStorage.setItem(VIEW_KEY, JSON.stringify({ code: target, monitor: monitorId })); }, [target, monitorId]);
   const profile = state?.monitors?.find((m) => m.id === monitorId);
   const viewMode = profile?.mode ?? mode;
 
@@ -42,21 +50,28 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     if (!target) return;
     let peer: PeerT | null = null; let dead = false; let retry: ReturnType<typeof setTimeout>;
     const connect = () => {
+      clearTimeout(retry);
       if (dead || !peer) return;
+      if (peer.disconnected) { peer.reconnect(); return; }
       const c = peer.connect(PEER_PREFIX + target, { reliable: true, metadata: { role: "viewer" } });
       c.on("open", () => setOnline(true));
       c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") setState(m.s); });
-      c.on("close", () => { setOnline(false); retry = setTimeout(connect, 2000); });
+      c.on("close", () => { setOnline(false); clearTimeout(retry); retry = setTimeout(connect, 1500); });
+      cur = c;
     };
+    let cur: { open: boolean } | null = null;
     (async () => {
       const { Peer } = await import("peerjs");
       if (dead) return;
       peer = new Peer();
       peer.on("open", connect);
-      peer.on("error", (e) => { setOnline(false); if (e.type === "peer-unavailable") retry = setTimeout(connect, 2500); });
-      peer.on("disconnected", () => peer?.reconnect());
+      peer.on("error", () => { setOnline(false); clearTimeout(retry); retry = setTimeout(connect, 2000); });
+      peer.on("disconnected", () => { if (!dead) setTimeout(() => { if (!dead && peer && !peer.destroyed && peer.disconnected) peer.reconnect(); }, 1000); });
     })();
-    return () => { dead = true; clearTimeout(retry); peer?.destroy(); };
+    const wake = () => { if (!document.hidden && !cur?.open) connect(); };
+    document.addEventListener("visibilitychange", wake); window.addEventListener("online", wake);
+    const hb = setInterval(wake, 5000);
+    return () => { dead = true; clearTimeout(retry); clearInterval(hb); document.removeEventListener("visibilitychange", wake); window.removeEventListener("online", wake); peer?.destroy(); };
   }, [target]);
 
   useEffect(() => {
@@ -87,6 +102,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
       <h1 className="text-3xl font-black">Hvem er du på scenen?</h1>
+      <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>
       {state?.monitors?.map((m) => <Button key={m.id} variant="secondary" className="h-auto min-h-16 w-full max-w-sm whitespace-normal p-4 text-xl font-bold" onClick={() => { setMonitorId(m.id); setMode(null); }}>{m.name}</Button>)}
       <Button onClick={() => { setMonitorId(""); setMode("lyrics"); }} className="h-auto w-full max-w-sm whitespace-normal bg-standby p-5 text-xl font-black text-standby-foreground">Fælles lyrics & akkorder</Button>
       <Button variant="secondary" onClick={() => { setMonitorId(""); setMode("hud"); }} className="h-auto w-full max-w-sm p-5 text-xl font-black">Nu & Næste</Button>

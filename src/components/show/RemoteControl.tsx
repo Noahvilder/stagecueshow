@@ -4,6 +4,8 @@ import type { DataConnection, Peer as PeerT } from "peerjs";
 import { MobileBuilder } from "./MobileBuilder";
 import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
+const SAVED_KEY = "stagecue.paired";
+
 export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?: string | undefined; backToHub?: boolean; showId?: string }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState<string | null>(initialCode && isValidCode(initialCode) ? initialCode : null);
@@ -13,6 +15,12 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
   const [tab, setTab] = useState<"live" | "cues" | "build">("live");
   const [preview, setPreview] = useState<{ id: string; loading: boolean } | null>(null);
   const conn = useRef<DataConnection | null>(null);
+  useEffect(() => {
+    if (target) { localStorage.setItem(SAVED_KEY, target); return; }
+    const saved = localStorage.getItem(SAVED_KEY);
+    if (!initialCode && saved && isValidCode(saved)) { setCode(saved); setTarget(saved); }
+  }, [target, initialCode]);
+  const forget = () => { localStorage.removeItem(SAVED_KEY); setTarget(null); setState(null); setStatus("idle"); };
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const cache = useRef(new Map<string, string>());
   const lastSb = useRef<string | null | undefined>(undefined);
@@ -37,11 +45,15 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
     let dead = false;
     let retry: ReturnType<typeof setTimeout>;
     const connect = () => {
+      clearTimeout(retry);
       if (dead || !peer) return;
+      if (peer.disconnected) { peer.reconnect(); return; }
       setStatus((s) => (s === "on" ? "lost" : "connecting"));
       const c = peer.connect(PEER_PREFIX + target, { reliable: true });
       conn.current = c;
       c.on("open", () => setStatus("on"));
+      const opened = setTimeout(() => { if (!c.open && !dead) { c.close(); retry = setTimeout(connect, 1500); } }, 8000);
+      c.on("open", () => clearTimeout(opened));
       c.on("data", (d) => {
         const m = d as HostMsg;
         if (m.t === "state") setState(m.s);
@@ -52,7 +64,7 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
           playLocal(m.id, url);
         }
       });
-      c.on("close", () => { setStatus("lost"); retry = setTimeout(connect, 2000); });
+      c.on("close", () => { if (conn.current !== c) return; setStatus("lost"); clearTimeout(retry); retry = setTimeout(connect, 1500); });
       c.on("error", () => { setStatus("lost"); });
     };
     (async () => {
@@ -60,13 +72,18 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
       if (dead) return;
       peer = new Peer();
       peer.on("open", connect);
-      peer.on("error", (e) => {
+      peer.on("error", () => {
         setStatus("lost");
-        if (e.type === "peer-unavailable") retry = setTimeout(connect, 2500);
+        clearTimeout(retry); retry = setTimeout(connect, 2000);
       });
-      peer.on("disconnected", () => peer?.reconnect());
+      peer.on("disconnected", () => { if (!dead) setTimeout(() => { if (!dead && peer && !peer.destroyed && peer.disconnected) peer.reconnect(); }, 1000); });
     })();
-    return () => { dead = true; clearTimeout(retry); peer?.destroy(); conn.current = null; };
+    // Når telefonen vågner / skifter netværk: forbind straks igen.
+    const wake = () => { if (!document.hidden && !conn.current?.open) connect(); };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("online", wake);
+    const hb = setInterval(() => { if (!document.hidden && !conn.current?.open) connect(); }, 5000);
+    return () => { dead = true; clearTimeout(retry); clearInterval(hb); document.removeEventListener("visibilitychange", wake); window.removeEventListener("online", wake); peer?.destroy(); conn.current = null; };
   }, [target]);
 
   useEffect(() => () => { audioEl.current?.pause(); cache.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
@@ -133,8 +150,9 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
         {back}
         <span className="min-w-0 flex-1 truncate text-sm font-bold">{state?.showName ?? "…"}</span>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${on ? "bg-go text-go-foreground" : "bg-destructive text-destructive-foreground"}`}>
-          {on ? "● Live" : status === "connecting" ? "Forbinder…" : "Afbrudt"}
+          {on ? "● Live" : status === "connecting" ? "Venter på pulten…" : "Genforbinder…"}
         </span>
+        {!backToHub && <button onClick={forget} className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-bold">Skift pult</button>}
         {state?.locked && <span className="shrink-0 text-xs font-bold text-standby" title="Pulten er låst til live">🔒</span>}
         <button disabled={!on} onClick={() => send({ t: "mute", on: !state?.muted })} className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold disabled:opacity-30 ${state?.muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`}>{state?.muted ? "🔇 PA muted" : "🔊 PA"}</button>
       </header>
