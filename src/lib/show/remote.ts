@@ -23,7 +23,8 @@ export type RemoteCmd =
   | { t: "setShow"; show: Show }
   | { t: "testMidi"; msg: MidiMsg }
   | { t: "mute"; on: boolean }
-  | { t: "setMonitorNote"; cueId: string; monitor: string; text: string };
+  | { t: "setMonitorNote"; cueId: string; monitor: string; text: string }
+  | { t: "viewerRole"; monitor: string };
 export type HostMsg =
   | { t: "state"; s: RemoteState }
   | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null };

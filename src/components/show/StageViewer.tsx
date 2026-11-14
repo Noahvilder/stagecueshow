@@ -38,7 +38,10 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [monitorId, setMonitorId] = useState(initialMonitor ?? "");
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const monitorRef = useRef(monitorId);
+  monitorRef.current = monitorId;
   const connRef = useRef<{ open: boolean; send: (d: RemoteCmd) => void } | null>(null);
+  useEffect(() => { if (connRef.current?.open) connRef.current.send({ t: "viewerRole", monitor: monitorId }); }, [monitorId]);
   useEffect(() => {
     const raw = localStorage.getItem(VIEW_KEY);
     const saved = raw ? JSON.parse(raw) as { code?: string; monitor?: string } : {};
@@ -57,7 +60,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       if (dead || !peer) return;
       if (peer.disconnected) { peer.reconnect(); return; }
       const c = peer.connect(PEER_PREFIX + target, { reliable: true, metadata: { role: "viewer" } });
-      c.on("open", () => setOnline(true));
+      c.on("open", () => { setOnline(true); c.send({ t: "viewerRole", monitor: monitorRef.current }); });
       c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") setState(m.s); });
       c.on("close", () => { setOnline(false); clearTimeout(retry); retry = setTimeout(connect, 1500); });
       cur = c; connRef.current = c as unknown as { open: boolean; send: (d: RemoteCmd) => void };
@@ -95,7 +98,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   if (!target) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <h1 className="text-3xl font-black">Scenemonitor</h1>
-      <p className="text-muted-foreground">Skriv pultens 6-cifrede kode</p>
+      <p className="text-muted-foreground">Skriv showets kode (12 tegn) eller scan QR-koden fra pulten</p>
       <input autoCapitalize="characters" maxLength={12} value={code} onChange={(e) => setCode(normCode(e.target.value))} className="w-72 rounded border border-border bg-input p-3 text-center font-mono text-2xl tracking-widest" />
       <button disabled={!isValidCode(code)} onClick={() => setTarget(code)} className="rounded bg-go px-6 py-3 text-lg font-bold text-go-foreground disabled:opacity-40">Forbind</button>
     </div>
@@ -104,7 +107,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   if (!viewMode) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
-      <h1 className="text-3xl font-black">Hvem er du på scenen?</h1>
+      <h1 className="text-3xl font-black">Vælg din rolle på scenen</h1>
       <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>
       {state?.monitors?.map((m) => <Button key={m.id} variant="secondary" className="h-auto min-h-16 w-full max-w-sm whitespace-normal p-4 text-xl font-bold" onClick={() => { setMonitorId(m.id); setMode(null); }}>{m.name}</Button>)}
       <Button onClick={() => { setMonitorId(""); setMode("lyrics"); }} className="h-auto w-full max-w-sm whitespace-normal bg-standby p-5 text-xl font-black text-standby-foreground">Fælles lyrics & akkorder</Button>
@@ -141,7 +144,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex items-baseline justify-between gap-4 border-b border-border px-6 py-3">
         <div className="truncate text-3xl font-black text-standby">{cur?.song ?? "—"}</div>
-        <div className="truncate text-2xl font-bold" style={{ color: cur?.color }}>{cur?.name ?? ""}</div>
+        <div className="flex min-w-0 items-baseline gap-3"><div className="truncate text-2xl font-bold" style={{ color: cur?.color }}>{cur?.name ?? ""}</div><button onClick={() => { setMonitorId(""); setMode(null); }} className="shrink-0 rounded bg-secondary px-3 py-1 text-sm font-bold">{profile?.name ?? "Fælles"} · Skift rolle</button></div>
       </header>
       <main className="min-h-0 flex-1 overflow-auto px-6 py-4">
         {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – prøver igen…</div>}

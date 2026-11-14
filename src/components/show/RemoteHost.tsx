@@ -18,6 +18,9 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
   const [monitor, setMonitor] = useState("");
   const [monitorQr, setMonitorQr] = useState("");
   const conns = useRef(new Set<DataConnection>());
+  const roles = useRef(new Map<DataConnection, string>());
+  const [roleCount, setRoleCount] = useState<Record<string, number>>({});
+  const recount = () => { const r: Record<string, number> = {}; roles.current.forEach((m) => { r[m] = (r[m] ?? 0) + 1; }); setRoleCount(r); };
   const cmdRef = useRef(onCmd);
   cmdRef.current = onCmd;
   const stateRef = useRef(state);
@@ -56,13 +59,14 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
         });
         conn.on("data", async (d) => {
           const c = d as RemoteCmd;
+          if (c.t === "viewerRole") { if (viewer) { roles.current.set(conn, c.monitor); recount(); } return; }
           if (viewer && c.t !== "setMonitorNote") return;
           if (c.t === "getAudio") {
             const b = await audioRef.current(c.id).catch(() => undefined);
             conn.send({ t: "audio", id: c.id, mime: b?.type || "audio/mpeg", buf: b ? await b.arrayBuffer() : null });
           } else cmdRef.current(c);
         });
-        conn.on("close", () => { conns.current.delete(conn); setCount(conns.current.size); });
+        conn.on("close", () => { conns.current.delete(conn); roles.current.delete(conn); recount(); setCount(conns.current.size); });
       });
       peer.on("disconnected", () => { setStatus("Genforbinder…"); if (!dead) setTimeout(() => { if (!dead && peer && !peer.destroyed) peer.reconnect(); }, 1000); });
       peer.on("error", (e) => {
@@ -74,7 +78,7 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
       });
     };
     start();
-    return () => { dead = true; clearTimeout(retry); peer?.destroy(); conns.current.clear(); setCount(0); };
+    return () => { dead = true; clearTimeout(retry); peer?.destroy(); conns.current.clear(); roles.current.clear(); setRoleCount({}); setCount(0); };
   }, [code, enabled]);
 
   useEffect(() => {
@@ -100,6 +104,10 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
       <div className={`w-full rounded px-2 py-1 text-sm font-bold ${count ? "bg-go text-go-foreground" : "bg-muted"}`}>
         {count ? `● ${count} telefon${count > 1 ? "er" : ""} forbundet` : status}
       </div>
+      {(state.monitors?.length ?? 0) > 0 && <div className="w-full rounded border border-border p-2 text-left text-sm">
+        <div className="mb-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Forbundne scenemonitors</div>
+        {[...(state.monitors ?? []), { id: "", name: "Fælles / ingen rolle" }].map((m) => { const n = roleCount[m.id] ?? 0; return <div key={m.id} className="flex justify-between"><span>{m.name}</span><span className={n ? "font-bold text-go" : "text-muted-foreground"}>{n ? `● ${n} online` : "–"}</span></div>; })}
+      </div>}
       {enabled && qr && <img src={qr} alt="QR-kode til telefon" className="rounded bg-foreground p-1" width={200} height={200} />}
       <div className="text-xs text-muted-foreground">Scan én gang – telefonen husker showet og forbinder selv næste gang. Koden er fast for dette show:</div>
       <div className="font-mono text-4xl font-black tracking-[0.3em] text-standby">{code}</div>

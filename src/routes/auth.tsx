@@ -68,6 +68,7 @@ function AuthPage() {
           {mode === "in" ? "Ingen konto? Opret en" : "Har du en konto? Log ind"}
         </button>
       </form>
+      <a href="/view" className="mt-4 block w-full max-w-sm rounded-lg border-2 border-standby p-4 text-center text-lg font-bold text-standby">🎸 Musiker på scenen? Kobl på uden login</a>
     </div>
   );
 }
