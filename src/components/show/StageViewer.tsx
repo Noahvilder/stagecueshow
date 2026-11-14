@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Peer as PeerT } from "peerjs";
-import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
+import { PEER_PREFIX, isValidCode, normCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 import { parseChordPro } from "@/lib/show/chordpro";
 import { monitorBody } from "@/lib/show/monitors";
 import { Button } from "@/components/ui/button";
@@ -96,7 +96,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <h1 className="text-3xl font-black">Scenemonitor</h1>
       <p className="text-muted-foreground">Skriv pultens 6-cifrede kode</p>
-      <input inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="w-48 rounded border border-border bg-input p-3 text-center font-mono text-3xl tracking-widest" />
+      <input autoCapitalize="characters" maxLength={12} value={code} onChange={(e) => setCode(normCode(e.target.value))} className="w-72 rounded border border-border bg-input p-3 text-center font-mono text-2xl tracking-widest" />
       <button disabled={!isValidCode(code)} onClick={() => setTarget(code)} className="rounded bg-go px-6 py-3 text-lg font-bold text-go-foreground disabled:opacity-40">Forbind</button>
     </div>
   );

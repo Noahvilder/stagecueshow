@@ -29,5 +29,11 @@ export type HostMsg =
   | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null };
 
 export const PEER_PREFIX = "stagecue-ctl-";
-export const makeCode = () => String(Math.floor(100000 + Math.random() * 900000));
-export const isValidCode = (c: string) => /^\d{6}$/.test(c);
+const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+/** 12-char code from a cryptographic RNG (~59 bits) – infeasible to guess. */
+export const makeCode = () => {
+  const b = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(b, (x) => ALPHA[x % ALPHA.length]).join("");
+};
+export const normCode = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+export const isValidCode = (c: string) => /^[A-HJKMNP-Z2-9]{12}$/.test(c);
