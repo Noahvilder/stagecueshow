@@ -40,8 +40,8 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [draft, setDraft] = useState("");
   const monitorRef = useRef(monitorId);
   monitorRef.current = monitorId;
-  useEffect(() => { if (connRef.current?.open) connRef.current.send({ t: "viewerRole", monitor: monitorId }); }, [monitorId]);
   const connRef = useRef<{ open: boolean; send: (d: RemoteCmd) => void } | null>(null);
+  useEffect(() => { if (connRef.current?.open) connRef.current.send({ t: "viewerRole", monitor: monitorId }); }, [monitorId]);
   useEffect(() => {
     const raw = localStorage.getItem(VIEW_KEY);
     const saved = raw ? JSON.parse(raw) as { code?: string; monitor?: string } : {};
