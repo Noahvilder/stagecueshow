@@ -54,8 +54,8 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
           conn.send({ t: "state", s: stateRef.current });
         });
         conn.on("data", async (d) => {
-          if (viewer) return;
           const c = d as RemoteCmd;
+          if (viewer && c.t !== "setMonitorNote") return;
           if (c.t === "getAudio") {
             const b = await audioRef.current(c.id).catch(() => undefined);
             conn.send({ t: "audio", id: c.id, mime: b?.type || "audio/mpeg", buf: b ? await b.arrayBuffer() : null });

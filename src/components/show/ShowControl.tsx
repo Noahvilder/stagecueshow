@@ -323,6 +323,15 @@ export function ShowControl({ showId }: { showId: string }) {
     else if (c.t === "setShow") { if (!locked) setShow(c.show); }
     else if (c.t === "mute") toggleMute(c.on);
     else if (c.t === "testMidi") engine().sendMidi(c.msg);
+    else if (c.t === "setMonitorNote") {
+      if (!show.monitors?.some((m) => m.id === c.monitor) || typeof c.text !== "string") return;
+      const text = c.text.slice(0, 20000);
+      const upd = (x: Cue): Cue => {
+        const y = x.id === c.cueId ? { ...x, monitorNotes: { ...(x.monitorNotes ?? {}), [c.monitor]: text } } : x;
+        return y.type === "group" ? { ...y, children: y.children.map(upd) } : y;
+      };
+      setShow({ ...show, songs: show.songs.map((s) => ({ ...s, cues: s.cues.map(upd) })) });
+    }
   };
   const mainRun = active.filter((a) => a.state !== "pre" && a.duration && isFinite(a.duration)).sort((a, b) => b.duration! - b.elapsed - (a.duration! - a.elapsed))[0];
 
