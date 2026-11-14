@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Peer as PeerT } from "peerjs";
-import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteState } from "@/lib/show/remote";
+import { PEER_PREFIX, isValidCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 import { parseChordPro } from "@/lib/show/chordpro";
 import { monitorBody } from "@/lib/show/monitors";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,9 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [online, setOnline] = useState(false);
   const [ui, setUi] = useState(true);
   const [monitorId, setMonitorId] = useState(initialMonitor ?? "");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const connRef = useRef<{ open: boolean; send: (d: RemoteCmd) => void } | null>(null);
   useEffect(() => {
     const raw = localStorage.getItem(VIEW_KEY);
     const saved = raw ? JSON.parse(raw) as { code?: string; monitor?: string } : {};
@@ -57,7 +60,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       c.on("open", () => setOnline(true));
       c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") setState(m.s); });
       c.on("close", () => { setOnline(false); clearTimeout(retry); retry = setTimeout(connect, 1500); });
-      cur = c;
+      cur = c; connRef.current = c as unknown as { open: boolean; send: (d: RemoteCmd) => void };
     };
     let cur: { open: boolean } | null = null;
     (async () => {
@@ -109,6 +112,29 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     </div>
   );
 
+  const editCue = editId ? flat.find((c) => c.id === editId) : undefined;
+  const standard = (c?: typeof cur) => [c?.text, c?.notes].filter(Boolean).join("\n\n");
+  const openEdit = (id?: string) => { const c = flat.find((x) => x.id === id); if (!c) return; setEditId(c.id); setDraft(c.monitorNotes?.[monitorId] || standard(c)); };
+  const save = () => { if (!editCue || !profile) return; connRef.current?.send({ t: "setMonitorNote", cueId: editCue.id, monitor: profile.id, text: draft }); setEditId(null); };
+  if (editCue && profile) return (
+    <div className="flex h-screen flex-col gap-2 bg-background p-3 text-foreground">
+      <div className="flex items-center gap-2">
+        <b className="text-standby">✏️ {profile.name}</b>
+        <select aria-label="Vælg cue" value={editCue.id} onChange={(e) => openEdit(e.target.value)} className="min-w-0 flex-1 rounded border border-input bg-input p-2">
+          {flat.map((c) => <option key={c.id} value={c.id}>{c.song} · {c.name}{c.monitorNotes?.[monitorId] ? " •" : ""}</option>)}
+        </select>
+      </div>
+      <textarea aria-label="Mine noter" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="[Eb]Lights go out and I [Bbm]can't be saved" className="min-h-40 flex-1 rounded border border-input bg-input p-3 font-mono text-lg" />
+      <div className="max-h-[30vh] overflow-auto rounded border border-border p-2"><ChordText src={draft} size="text-xl" /></div>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={save} disabled={!online} className="flex-1 bg-go text-go-foreground">Gem mine noter</Button>
+        <Button variant="secondary" onClick={() => setDraft(standard(editCue))}>Hent standard</Button>
+        <Button variant="secondary" onClick={() => setEditId(null)}>Annullér</Button>
+      </div>
+      {!online && <div className="text-destructive">Ingen forbindelse til pulten – kan ikke gemme.</div>}
+    </div>
+  );
+
   const full = () => document.documentElement.requestFullscreen?.().catch(() => {});
 
   return (
@@ -126,6 +152,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       {next && <footer className="border-t border-border bg-card px-6 py-3 text-2xl"><span className="text-muted-foreground">Næste: </span><b>{next.song !== cur?.song ? `${next.song} · ` : ""}{next.name}</b></footer>}
       <div className={`absolute bottom-16 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap justify-end gap-2 rounded bg-background p-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         {SIZES.map((_, i) => <Button variant="secondary" key={i} onClick={() => setSize(i)} className={size === i ? "bg-standby text-standby-foreground" : ""}>{"A" + "+".repeat(i)}</Button>)}
+        {profile && cur && <Button variant="secondary" onClick={() => openEdit(cur.id)}>✏️ Redigér mine noter</Button>}
         <Button variant="secondary" title="Fuld skærm" onClick={full}>⛶</Button>
         <Button variant="secondary" onClick={() => { setMonitorId(""); setMode(null); }}>Skift</Button>
       </div>
