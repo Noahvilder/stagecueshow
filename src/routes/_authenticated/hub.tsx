@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { emptyShow, parseShow } from "@/lib/show/logic";
+import { isValidCode, normCode } from "@/lib/show/remote";
 
 export const Route = createFileRoute("/_authenticated/hub")({
   head: () => ({
@@ -26,6 +27,9 @@ function Hub() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [email, setEmail] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [join, setJoin] = useState("");
+  const joinCode = normCode(join);
+  const joinOk = isValidCode(joinCode);
 
   const load = async () => {
     const { data } = await supabase.from("shows").select("id,name,updated_at").order("updated_at", { ascending: false });
@@ -76,6 +80,16 @@ function Hub() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-4">
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Forbind til et andet show</h2>
+          <input value={join} onChange={(e) => setJoin(e.target.value)} placeholder="Pultens kode" autoCapitalize="characters" className="w-full rounded-lg border border-border bg-background px-3 py-3 font-mono text-lg tracking-widest" />
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button disabled={!joinOk} onClick={() => nav({ to: "/view", search: { code: joinCode } })} className="rounded-lg bg-go px-3 py-3 font-bold text-go-foreground disabled:opacity-40">🎤 Som musiker</button>
+            <button disabled={!joinOk} onClick={() => nav({ to: "/remote", search: { code: joinCode } })} className="rounded-lg bg-secondary px-3 py-3 font-bold disabled:opacity-40">📱 Fjernbetjening</button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Fjernbetjening virker kun hvis du er logget ind som showets ejer.</p>
         </section>
 
         <section>
