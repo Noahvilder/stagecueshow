@@ -52,7 +52,14 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
       peer.on("open", () => setStatus("Klar – venter på telefon"));
       peer.on("connection", (conn) => {
         const viewer = conn.metadata?.role === "viewer";
-        conn.on("open", () => {
+        // Admin-lås: fjernbetjening kræver login som samme bruger som pulten.
+        let authed: Promise<boolean> = Promise.resolve(viewer);
+        if (!viewer) {
+          const token = typeof conn.metadata?.token === "string" ? conn.metadata.token : "";
+          authed = token ? Promise.all([supabase.auth.getUser(token), supabase.auth.getUser()]).then(([a, b]) => !!a.data.user && a.data.user.id === b.data.user?.id).catch(() => false) : Promise.resolve(false);
+        }
+        conn.on("open", async () => {
+          if (!(await authed)) { conn.send({ t: "denied" }); setTimeout(() => conn.close(), 300); return; }
           conns.current.add(conn);
           setCount(conns.current.size);
           conn.send({ t: "state", s: stateRef.current });
@@ -61,6 +68,7 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
           const c = d as RemoteCmd;
           if (c.t === "viewerRole") { if (viewer) { roles.current.set(conn, c.monitor); recount(); } return; }
           if (viewer && c.t !== "setMonitorNote") return;
+          if (!viewer && !(await authed)) return;
           if (c.t === "getAudio") {
             const b = await audioRef.current(c.id).catch(() => undefined);
             conn.send({ t: "audio", id: c.id, mime: b?.type || "audio/mpeg", buf: b ? await b.arrayBuffer() : null });

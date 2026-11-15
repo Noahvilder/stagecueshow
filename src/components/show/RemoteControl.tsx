@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { DataConnection, Peer as PeerT } from "peerjs";
+import { supabase } from "@/integrations/supabase/client";
 import { MobileBuilder } from "./MobileBuilder";
 import { PEER_PREFIX, isValidCode, normCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
@@ -9,7 +10,7 @@ const SAVED_KEY = "stagecue.paired";
 export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?: string | undefined; backToHub?: boolean; showId?: string }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [target, setTarget] = useState<string | null>(initialCode && isValidCode(initialCode) ? initialCode : null);
-  const [status, setStatus] = useState<"idle" | "connecting" | "on" | "lost">("idle");
+  const [status, setStatus] = useState<"idle" | "connecting" | "on" | "lost" | "denied">("idle");
   const [state, setState] = useState<RemoteState | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
   const [tab, setTab] = useState<"live" | "cues" | "build">("live");
@@ -44,18 +45,21 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
     let peer: PeerT | null = null;
     let dead = false;
     let retry: ReturnType<typeof setTimeout>;
-    const connect = () => {
+    const connect = async () => {
       clearTimeout(retry);
+      if (dead || !peer) return;
+      const token = (await supabase.auth.getSession()).data.session?.access_token ?? "";
       if (dead || !peer) return;
       if (peer.disconnected) { peer.reconnect(); return; }
       setStatus((s) => (s === "on" ? "lost" : "connecting"));
-      const c = peer.connect(PEER_PREFIX + target, { reliable: true });
+      const c = peer.connect(PEER_PREFIX + target, { reliable: true, metadata: { role: "remote", token } });
       conn.current = c;
       c.on("open", () => setStatus("on"));
       const opened = setTimeout(() => { if (!c.open && !dead) { c.close(); retry = setTimeout(connect, 1500); } }, 8000);
       c.on("open", () => clearTimeout(opened));
       c.on("data", (d) => {
         const m = d as HostMsg;
+        if (m.t === "denied") { dead = true; clearTimeout(retry); setStatus("denied"); return; }
         if (m.t === "state") setState(m.s);
         else if (m.t === "audio") {
           if (!m.buf) { setPreview(null); alert("Lydfilen findes ikke på pulten."); return; }
@@ -118,6 +122,17 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
     );
   }
 
+  if (target && status === "denied") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center text-foreground">
+        <div className="text-5xl">🔒</div>
+        <h1 className="text-2xl font-black">Kun showets ejer kan styre pulten</h1>
+        <p className="max-w-sm text-muted-foreground">Fjernbetjening (GO, Panic, test) kræver at du er logget ind med samme konto som pulten. Er du musiker, så åbn scenemonitoren i stedet.</p>
+        <Link to="/view" search={{ code: target }} className="rounded-xl bg-go px-6 py-4 text-lg font-black text-go-foreground">🎤 Åbn scenemonitor</Link>
+        <Link to="/auth" className="text-sm underline text-muted-foreground">Log ind som ejer</Link>
+      </div>
+    );
+  }
   if (!target) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
