@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      licenses: {
+        Row: {
+          current_period_end: string | null
+          plan: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_period_end?: string | null
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_period_end?: string | null
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pult_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          device_name: string
+          id: string
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          device_name?: string
+          id?: string
+          last_seen_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          device_name?: string
+          id?: string
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shows: {
         Row: {
           created_at: string
@@ -49,7 +100,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_pult_device: {
+        Args: { _device_id: string; _device_name: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
