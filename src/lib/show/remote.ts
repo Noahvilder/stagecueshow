@@ -27,7 +27,8 @@ export type RemoteCmd =
   | { t: "viewerRole"; monitor: string };
 export type HostMsg =
   | { t: "state"; s: RemoteState }
-  | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null };
+  | { t: "audio"; id: string; mime: string; buf: ArrayBuffer | null }
+  | { t: "denied" };
 
 export const PEER_PREFIX = "stagecue-ctl-";
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
