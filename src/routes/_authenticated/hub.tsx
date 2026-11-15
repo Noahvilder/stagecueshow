@@ -65,6 +65,7 @@ function Hub() {
           <span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="hidden truncate sm:inline">{email}</span>
+            <button onClick={() => nav({ to: "/konto" })} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Konto</button>
             <button onClick={signOut} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Log ud</button>
           </div>
         </header>

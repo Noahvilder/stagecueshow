@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ShowControl } from "@/components/show/ShowControl";
+import { PultDeviceGate } from "@/components/account/PultDeviceGate";
 
 export const Route = createFileRoute("/_authenticated/pc/$showId")({
   head: () => ({
@@ -17,5 +18,5 @@ export const Route = createFileRoute("/_authenticated/pc/$showId")({
 
 function PcPage() {
   const { showId } = Route.useParams();
-  return <ShowControl key={showId} showId={showId} />;
+  return <PultDeviceGate><ShowControl key={showId} showId={showId} /></PultDeviceGate>;
 }
