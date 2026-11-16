@@ -8,6 +8,6 @@ describe("show backup", () => {
     const z = packArchive(show, { a1: new Uint8Array([1, 2, 3]) });
     const out = unpackArchive(z);
     expect(JSON.parse(out.showJson).name).toBe("X");
-    expect([...out.audio.a1]).toEqual([1, 2, 3]);
+    expect(Array.from(out.audio["a1"] ?? [])).toEqual([1, 2, 3]);
   });
 });
