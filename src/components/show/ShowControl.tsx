@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
+import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
 import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, moveCue, moveSong,
   newCue, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
@@ -277,9 +278,28 @@ export function ShowControl({ showId }: { showId: string }) {
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  const exportBackup = async () => {
+    const audio: Record<string, Uint8Array> = {};
+    for (const id of collectFileIds(show)) {
+      const b = await getAudio(id);
+      if (b) audio[id] = new Uint8Array(await b.arrayBuffer());
+    }
+    const blob = new Blob([packArchive(show, audio) as BlobPart], { type: "application/zip" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
   const importShow = async (f: File) => {
     try {
-      const s = parseShow(await f.text());
+      let text: string;
+      if (f.name.endsWith(".stagecue")) {
+        const { showJson, audio } = unpackArchive(new Uint8Array(await f.arrayBuffer()));
+        for (const [id, bytes] of Object.entries(audio)) await putAudio(id, new Blob([bytes as BlobPart]));
+        text = showJson;
+      } else text = await f.text();
+      const s = parseShow(text);
       engine().panic(0);
       setShow(s);
       setStandbyId(null);
@@ -350,6 +370,7 @@ export function ShowControl({ showId }: { showId: string }) {
         <span className="font-mono text-2xl tabular-nums">{clock}</span>
         {!locked && <Btn onClick={() => fileRef.current?.click()}>Åbn</Btn>}
         <Btn onClick={exportShow}>Gem</Btn>
+        <Btn onClick={exportBackup}>Backup m. lyd</Btn>
         <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}</span>
         <Btn onClick={() => { engine().panic(0); navigate({ to: "/hub" }); }}>← Shows</Btn>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
@@ -367,7 +388,7 @@ export function ShowControl({ showId }: { showId: string }) {
           <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
         </div>}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
-        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
+        <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
 
       {warnings.length > 0 && (
@@ -913,7 +934,7 @@ function Settings(props: {
         <Section title="Panic">
           <Field label="Nød-fade tid (s, 0 = øjeblikkelig)"><Num value={show.panicFade} onChange={(n) => setShow({ ...show, panicFade: Math.max(0, n) })} /></Field>
         </Section>
-        <p className="text-xs text-muted-foreground">Lydfiler gemmes i browseren på denne computer. Show-filen (JSON) indeholder kun filnavne – på en ny computer skal lydfilerne vælges igen.</p>
+        <p className="text-xs text-muted-foreground">Lydfiler gemmes i browseren på denne computer. Show-filen (JSON) indeholder kun filnavne – på en ny computer skal lydfilerne vælges igen. Brug "Backup m. lyd" for at få alt med i én fil.</p>
       </div>
     </div>
   );
