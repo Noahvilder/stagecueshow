@@ -25,7 +25,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
               <Link key={n.to} to={n.to} activeOptions={{ exact: true }} className="rounded px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-bold" }}>{n.label}</Link>
             ))}
           </nav>
-          <Link to="/view" search={{} as never} className="hidden rounded px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground sm:block">🎸 Scenemonitor</Link>
+          <Link to="/view" className="hidden rounded px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground sm:block">🎸 Scenemonitor</Link>
           <Link to="/hub" className="rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground">Åbn pulten</Link>
         </div>
       </header>
