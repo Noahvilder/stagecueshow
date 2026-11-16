@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DownloadRouteImport } from './routes/download'
+import { Route as PriserRouteImport } from './routes/priser'
 import { Route as RemoteRouteImport } from './routes/remote'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as ViewRouteImport } from './routes/view'
 import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
 import { Route as AuthenticatedKontoRouteImport } from './routes/_authenticated/konto'
@@ -33,9 +36,24 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PriserRoute = PriserRouteImport.update({
+  id: '/priser',
+  path: '/priser',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RemoteRoute = RemoteRouteImport.update({
   id: '/remote',
   path: '/remote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ViewRoute = ViewRouteImport.update({
@@ -68,7 +86,10 @@ const AuthenticatedPcShowIdRoute = AuthenticatedPcShowIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/download': typeof DownloadRoute
+  '/priser': typeof PriserRoute
   '/remote': typeof RemoteRoute
+  '/support': typeof SupportRoute
   '/view': typeof ViewRoute
   '/hub': typeof AuthenticatedHubRoute
   '/konto': typeof AuthenticatedKontoRoute
@@ -78,7 +99,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/download': typeof DownloadRoute
+  '/priser': typeof PriserRoute
   '/remote': typeof RemoteRoute
+  '/support': typeof SupportRoute
   '/view': typeof ViewRoute
   '/hub': typeof AuthenticatedHubRoute
   '/konto': typeof AuthenticatedKontoRoute
@@ -90,7 +114,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/download': typeof DownloadRoute
+  '/priser': typeof PriserRoute
   '/remote': typeof RemoteRoute
+  '/support': typeof SupportRoute
   '/view': typeof ViewRoute
   '/_authenticated/hub': typeof AuthenticatedHubRoute
   '/_authenticated/konto': typeof AuthenticatedKontoRoute
@@ -102,7 +129,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/download'
+    | '/priser'
     | '/remote'
+    | '/support'
     | '/view'
     | '/hub'
     | '/konto'
@@ -112,7 +142,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/download'
+    | '/priser'
     | '/remote'
+    | '/support'
     | '/view'
     | '/hub'
     | '/konto'
@@ -123,7 +156,10 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/download'
+    | '/priser'
     | '/remote'
+    | '/support'
     | '/view'
     | '/_authenticated/hub'
     | '/_authenticated/konto'
@@ -135,7 +171,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  DownloadRoute: typeof DownloadRoute
+  PriserRoute: typeof PriserRoute
   RemoteRoute: typeof RemoteRoute
+  SupportRoute: typeof SupportRoute
   ViewRoute: typeof ViewRoute
 }
 
@@ -162,11 +201,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/priser': {
+      id: '/priser'
+      path: '/priser'
+      fullPath: '/priser'
+      preLoaderRoute: typeof PriserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/remote': {
       id: '/remote'
       path: '/remote'
       fullPath: '/remote'
       preLoaderRoute: typeof RemoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/view': {
@@ -228,7 +288,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  DownloadRoute: DownloadRoute,
+  PriserRoute: PriserRoute,
   RemoteRoute: RemoteRoute,
+  SupportRoute: SupportRoute,
   ViewRoute: ViewRoute,
 }
 export const routeTree = rootRouteImport
