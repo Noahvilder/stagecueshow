@@ -33,5 +33,5 @@ export function useT() {
 export const PRICES: Record<Lang, { monthly: string; yearly: string; lifetime: string }> = {
   en: { monthly: "$9.99", yearly: "$79", lifetime: "$149" },
   de: { monthly: "9,99 €", yearly: "79 €", lifetime: "149 €" },
-  da: { monthly: "79 kr.", yearly: "599 kr.", lifetime: "1.099 kr." },
+  da: { monthly: "79 kr.", yearly: "699 kr.", lifetime: "1.499 kr." },
 };
