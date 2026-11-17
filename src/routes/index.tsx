@@ -87,11 +87,11 @@ function Arena() {
     <section ref={ref} style={{ height: `${ARENA.length * 90}vh` }} className="relative bg-foreground text-background">
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         {/* stage lights driven by scroll */}
-        <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse at ${20 + p * 60}% 0%, hsl(var(--go) / .45), transparent 55%), radial-gradient(ellipse at ${80 - p * 60}% 0%, hsl(var(--primary) / .35), transparent 50%)` }} />
+        <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse at ${20 + p * 60}% 0%, color-mix(in oklch, var(--go) 45%, transparent), transparent 55%), radial-gradient(ellipse at ${80 - p * 60}% 0%, color-mix(in oklch, var(--primary) 35%, transparent), transparent 50%)` }} />
         <div className="relative mx-auto w-full max-w-4xl px-4 text-center">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] opacity-70">{t({ en: "The live arena", da: "Livescenen", de: "Die Live-Arena" })}</p>
           <div className="mt-6 text-6xl">{ARENA[i].k}</div>
-          <h2 key={i} className="mt-4 animate-in fade-in slide-in-from-bottom-4 text-4xl font-black duration-500 sm:text-6xl">{t(ARENA[i].t)}</h2>
+          <h2 key={i} className="mt-4 text-4xl font-black sm:text-6xl">{t(ARENA[i].t)}</h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg opacity-80">{t(ARENA[i].d)}</p>
         </div>
       </div>
