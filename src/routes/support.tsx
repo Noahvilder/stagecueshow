@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteShell, meta } from "@/components/site/SiteShell";
+import { FeedbackForm } from "@/components/site/FeedbackForm";
 
 export const Route = createFileRoute("/support")({
   head: () => meta("Support og FAQ – StageCue", "Svar på spørgsmål om lydkort, fodpedaler, MIDI til lys, offline-brug og licenser – og kontakt til StageCue support."),
@@ -7,7 +8,7 @@ export const Route = createFileRoute("/support")({
 });
 
 const FAQ = [
-  ["Virker min Nektar Pacer eller anden MIDI-pedal?", "Ja. Alle USB-MIDI pedaler virker. Åbn Fodpedal-vinduet, tryk 'Lær GO-pedal' og træd på pedalen."],
+  ["Virker min MIDI controller?", "Ja. Alle USB-MIDI controllere virker uden ekstra software. Vælg 'Lær GO' og tryk på en knap på din controller."],
   ["Kan jeg sende lyd til flere udgange?", "Ja. Hvert lyd-cue kan have sin egen udgang – fx VoiceMeeter, et lydkort eller in-ears."],
   ["Hvordan styrer jeg lys i MyDMX?", "Installér loopMIDI, opret en port kaldet 'StageCue', vælg den i dit MIDI-cue og som input i MyDMX. Desktop-versionen får dette indbygget."],
   ["Kræver det internet under showet?", "Desktop-versionen kører helt offline. Telefoner og monitorer forbindes over lokal Wi-Fi."],
@@ -29,6 +30,8 @@ function Support() {
             </details>
           ))}
         </div>
+        <h2 className="mt-12 text-xl font-bold">Fejlmeld, foreslå en ændring eller få hjælp</h2>
+        <FeedbackForm />
         <h2 className="mt-12 text-xl font-bold">Kontakt</h2>
         <p className="mt-2 text-muted-foreground">Skriv til <a href="mailto:support@stagecue.app" className="font-semibold text-go underline">support@stagecue.app</a> – vi svarer typisk inden for 24 timer.</p>
       </section>

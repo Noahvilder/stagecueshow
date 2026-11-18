@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { LangProvider, LANGS, useLang, useT } from "@/lib/site/i18n";
+import { useEffect, useState, type ReactNode } from "react";
+import { Moon, Sun } from "lucide-react";
+import { LangProvider, LANGS, LANG_NAMES, useLang, useT, type Lang } from "@/lib/site/i18n";
 
 const NAV = [
-  { to: "/", l: { en: "Product", da: "Produkt", de: "Produkt" } },
-  { to: "/priser", l: { en: "Pricing", da: "Priser", de: "Preise" } },
+  { to: "/", l: { en: "Product", da: "Produkt", de: "Produkt", fr: "Produit", es: "Producto", sv: "Produkt", no: "Produkt" } },
+  { to: "/priser", l: { en: "Pricing", da: "Priser", de: "Preise", fr: "Tarifs", es: "Precios", sv: "Priser", no: "Priser" } },
   { to: "/download", l: { en: "Download", da: "Download", de: "Download" } },
   { to: "/support", l: { en: "Support", da: "Support", de: "Support" } },
 ] as const;
@@ -12,12 +13,24 @@ const NAV = [
 function LangSwitch() {
   const { lang, setLang } = useLang();
   return (
-    <div className="flex rounded border border-border text-xs font-bold" role="group" aria-label="Language">
-      {LANGS.map((l) => (
-        <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l}
-          className={`px-2 py-1 uppercase ${lang === l ? "bg-go text-go-foreground" : "text-muted-foreground hover:text-foreground"}`}>{l}</button>
-      ))}
-    </div>
+    <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as Lang)}
+      className="rounded border border-border bg-background px-2 py-1 text-xs font-bold text-foreground">
+      {LANGS.map((l) => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}
+    </select>
+  );
+}
+
+const THEME_KEY = "stagecue.theme";
+function ThemeToggle() {
+  const [light, setLight] = useState(false);
+  useEffect(() => { setLight(localStorage.getItem(THEME_KEY) === "light"); }, []);
+  useEffect(() => { document.documentElement.classList.toggle("light", light); }, [light]);
+  const flip = () => { localStorage.setItem(THEME_KEY, light ? "dark" : "light"); setLight(!light); };
+  return (
+    <button onClick={flip} aria-label={light ? "Dark theme" : "Light theme"} title={light ? "Dark theme" : "Light theme"}
+      className="rounded border border-border p-1.5 text-muted-foreground hover:text-foreground">
+      {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+    </button>
   );
 }
 
@@ -35,8 +48,9 @@ function Shell({ children }: { children: ReactNode }) {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <LangSwitch />
-            <Link to="/view" className="rounded border border-border px-3 py-1.5 text-sm font-semibold md:hidden">{t({ en: "Join monitor", da: "Scenemonitor", de: "Monitor" })}</Link>
-            <Link to="/hub" className="hidden rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground md:block">{t({ en: "Open console", da: "Åbn pulten", de: "Pult öffnen" })}</Link>
+            <ThemeToggle />
+            <Link to="/view" className="rounded border border-border px-3 py-1.5 text-sm font-semibold md:hidden">{t({ en: "Join monitor", da: "Scenemonitor", de: "Monitor", fr: "Moniteur", es: "Monitor", sv: "Scenmonitor", no: "Scenemonitor" })}</Link>
+            <Link to="/hub" className="hidden rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground md:block">{t({ en: "Open console", da: "Åbn pulten", de: "Pult öffnen", fr: "Ouvrir la console", es: "Abrir consola", sv: "Öppna konsolen", no: "Åpne konsollen" })}</Link>
           </div>
         </div>
       </header>
