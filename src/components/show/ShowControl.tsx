@@ -30,6 +30,12 @@ const defaultWins = (): Record<WinKey, WinState> => ({
   remote: { x: 756, y: 454, w: 320, h: 470, z: 1, open: false, min: false },
   midimon: { x: 1088, y: 454, w: 560, h: 360, z: 1, open: false, min: false },
 });
+const simpleWins = (): Record<WinKey, WinState> => {
+  const d = defaultWins();
+  for (const k of Object.keys(d) as WinKey[]) d[k].open = k === "stage" || k === "transport" || k === "list";
+  d.list = { ...d.list, w: 760, h: 912 };
+  return d;
+};
 const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon", midimon: "MIDI Monitor" };
 
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo", "group"];
@@ -385,6 +391,9 @@ export function ShowControl({ showId }: { showId: string }) {
               {WIN_TITLES[k]}
             </button>
           ))}
+          <span className="mx-1 h-4 w-px bg-border" />
+          <button title="Kun Scene, Transport og Setliste" onClick={() => setWins(simpleWins())} className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary">🟢 Simpel</button>
+          <button title="Alle værktøjer: Inspector, MIDI Monitor, Fodpedal" onClick={() => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; })} className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary">⚙️ Avanceret</button>
           <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
         </div>}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
@@ -504,16 +513,18 @@ export function ShowControl({ showId }: { showId: string }) {
                       }}
                       onClick={() => setSelectedId(c.id)}
                       onDoubleClick={() => setStandbyId(c.id)}
-                      className={`grid cursor-pointer grid-cols-[28px_44px_1fr_auto_auto] items-center gap-2 border-b border-l-[6px] border-border px-2 py-2 ${
+                      className={`grid cursor-pointer grid-cols-[16px_28px_44px_1fr_auto_auto] items-center gap-2 border-b border-l-[6px] border-border px-2 py-2 ${
                         selectedId === c.id ? "bg-accent" : "bg-card hover:bg-secondary"
-                      } ${dropKey === c.id ? "border-t-2 border-t-standby" : ""} ${isStandby ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
+                      } ${dropKey === c.id ? "border-t-4 border-t-standby" : ""} ${isStandby ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
                       style={{ borderLeftColor: cueColor(show, c) }}
                     >
+                      <span title="Træk for at flytte" className={`select-none text-center text-muted-foreground ${locked ? "opacity-0" : "cursor-grab active:cursor-grabbing"}`}>⋮⋮</span>
                       <span className="text-center font-black text-standby">{isStandby ? "▶" : isRunning ? <span className="text-go">●</span> : ""}</span>
                       <span className="font-mono text-sm text-muted-foreground">{idx + 1}</span>
                       <div className="min-w-0">
                         <div className="truncate font-semibold">{c.name}</div>
                         <div className="truncate text-xs text-muted-foreground">{summary(c, midiPorts)}</div>
+                        {c.stikord && <div className="truncate text-xs font-bold text-standby">⏱ {c.stikord}</div>}
                       </div>
                       <TypeTag show={show} cue={c} />
                       <span className="w-24 text-right font-mono text-xs text-muted-foreground">{followLabel(c)}</span>
@@ -712,6 +723,7 @@ function Inspector(props: {
         </div>
       </div>
       <Field label="Navn"><input className={inputCls} value={cue.name} onChange={(e) => set({ name: e.target.value })} /></Field>
+      <Field label="Stikord (hvornår skal der trykkes GO?)"><input className={inputCls} placeholder="fx Efter guitarsolo" value={cue.stikord ?? ""} onChange={(e) => set({ stikord: e.target.value })} /></Field>
 
       <div className="rounded border border-border p-2">
         <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Afvikling</div>
@@ -979,6 +991,7 @@ function StageView(props: {
             {standby.preWait > 0 && <span className="text-muted-foreground">pre-wait {standby.preWait}s</span>}
           </div>
           <div className="truncate text-5xl font-black leading-tight">{standby.name}</div>
+          {standby.stikord && <div className="mt-2 rounded bg-standby/15 px-3 py-2 text-3xl font-black text-standby">⏱ {standby.stikord}</div>}
           {standby.type === "memo" && standby.text && <div className="mt-1 whitespace-pre-wrap text-2xl text-memo">{standby.text}</div>}
         </div>
       ) : (

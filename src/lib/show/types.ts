@@ -19,6 +19,8 @@ interface Base {
   postWait: number;
   color?: string;
   notes?: string;
+  /** Short trigger phrase: when to press GO for this cue. */
+  stikord?: string;
   monitorNotes?: Record<string, string>;
 }
 
