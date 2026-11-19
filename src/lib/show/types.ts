@@ -21,6 +21,10 @@ interface Base {
   notes?: string;
   /** Short trigger phrase: when to press GO for this cue. */
   stikord?: string;
+  /** User cue number, decimals allowed ("1.5"). Empty = list position. */
+  number?: string;
+  /** Script/manuscript reference. */
+  ref?: string;
   monitorNotes?: Record<string, string>;
 }
 

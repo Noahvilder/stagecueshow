@@ -15,6 +15,7 @@ import { MonitorProfiles } from "./MonitorProfiles";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
+import { ClickGenerator } from "./ClickGenerator";
 import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
@@ -263,6 +264,24 @@ export function ShowControl({ showId }: { showId: string }) {
     });
     setSelectedId(c.id);
   };
+  const [clickOpen, setClickOpen] = useState(false);
+  const createClickCue = async (blob: Blob, name: string) => {
+    const id = uid();
+    await putAudio(id, blob);
+    const c = { ...newCue("audio"), name, fileId: id, fileName: `${name}.wav` } as Cue;
+    setShow((s) => {
+      const songs = [...s.songs];
+      let si = songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedId));
+      if (si < 0) si = songs.length - 1;
+      if (si < 0) return { ...s, songs: [{ id: uid(), name: "Sang 1", cues: [c] }] };
+      const cues = [...songs[si]!.cues];
+      const ci = cues.findIndex((x) => x.id === selectedId);
+      cues.splice(ci < 0 ? cues.length : ci + 1, 0, c);
+      songs[si] = { ...songs[si]!, cues };
+      return { ...s, songs };
+    });
+    setSelectedId(c.id);
+  };
   const deleteCue = (id: string) => {
     setShow((s) => ({ ...s, songs: s.songs.map((sg) => ({ ...sg, cues: sg.cues.filter((c) => c.id !== id) })) }));
     if (selectedId === id) setSelectedId(null);
@@ -396,6 +415,8 @@ export function ShowControl({ showId }: { showId: string }) {
           <button title="Alle værktøjer: Inspector, MIDI Monitor, Fodpedal" onClick={() => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; })} className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary">⚙️ Avanceret</button>
           <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
         </div>}
+        {!locked && <Btn onClick={() => setClickOpen(true)}>⏱️ Click / Optælling</Btn>}
+        {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
         <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
@@ -520,7 +541,7 @@ export function ShowControl({ showId }: { showId: string }) {
                     >
                       <span title="Træk for at flytte" className={`select-none text-center text-muted-foreground ${locked ? "opacity-0" : "cursor-grab active:cursor-grabbing"}`}>⋮⋮</span>
                       <span className="text-center font-black text-standby">{isStandby ? "▶" : isRunning ? <span className="text-go">●</span> : ""}</span>
-                      <span className="font-mono text-sm text-muted-foreground">{idx + 1}</span>
+                      <span className="font-mono text-sm text-muted-foreground" title={c.ref ? `Manuskript: ${c.ref}` : undefined}>{c.number || idx + 1}</span>
                       <div className="min-w-0">
                         <div className="truncate font-semibold">{c.name}</div>
                         <div className="truncate text-xs text-muted-foreground">{summary(c, midiPorts)}</div>
@@ -723,6 +744,10 @@ function Inspector(props: {
         </div>
       </div>
       <Field label="Navn"><input className={inputCls} value={cue.name} onChange={(e) => set({ name: e.target.value })} /></Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Cue-nummer (fx 1, 1.5, 12.25)"><input className={inputCls} inputMode="decimal" placeholder="auto" value={cue.number ?? ""} onChange={(e) => set({ number: e.target.value.replace(",", ".").replace(/[^0-9.]/g, "") })} /></Field>
+        <Field label="Manuskript-ref (side/replik)"><input className={inputCls} placeholder="fx s. 34" value={cue.ref ?? ""} onChange={(e) => set({ ref: e.target.value })} /></Field>
+      </div>
       <Field label="Stikord (hvornår skal der trykkes GO?)"><input className={inputCls} placeholder="fx Efter guitarsolo" value={cue.stikord ?? ""} onChange={(e) => set({ stikord: e.target.value })} /></Field>
 
       <div className="rounded border border-border p-2">
