@@ -43,6 +43,13 @@
       "when": 1795115431089,
       "tag": "0005_create_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795121587584,
+      "tag": "0006_license_stripe_fields",
+      "breakpoints": true
     }
   ]
 }

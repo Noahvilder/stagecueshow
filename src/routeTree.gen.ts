@@ -25,6 +25,7 @@ import { Route as AuthenticatedRemoteRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedViewRouteImport } from './routes/_authenticated/view'
 import { Route as AuthenticatedMobileShowIdRouteImport } from './routes/_authenticated/mobile.$showId'
 import { Route as AuthenticatedPcShowIdRouteImport } from './routes/_authenticated/pc.$showId'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -106,6 +107,12 @@ const AuthenticatedPcShowIdRoute = AuthenticatedPcShowIdRouteImport.update({
   path: '/pc/$showId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/view': typeof AuthenticatedViewRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -140,6 +148,7 @@ export interface FileRoutesByTo {
   '/view': typeof AuthenticatedViewRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -159,6 +168,7 @@ export interface FileRoutesById {
   '/_authenticated/view': typeof AuthenticatedViewRoute
   '/_authenticated/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/_authenticated/pc/$showId': typeof AuthenticatedPcShowIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/view'
     | '/mobile/$showId'
     | '/pc/$showId'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/view'
     | '/mobile/$showId'
     | '/pc/$showId'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -213,6 +225,7 @@ export interface FileRouteTypes {
     | '/_authenticated/view'
     | '/_authenticated/mobile/$showId'
     | '/_authenticated/pc/$showId'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -226,6 +239,7 @@ export interface RootRouteChildren {
   ShowRoute: typeof ShowRoute
   SupportRoute: typeof SupportRoute
   VilkaarRoute: typeof VilkaarRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -342,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPcShowIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -377,6 +398,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShowRoute: ShowRoute,
   SupportRoute: SupportRoute,
   VilkaarRoute: VilkaarRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

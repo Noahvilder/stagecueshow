@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { tryStripeEnvironment } from "@/lib/stripe";
 import { resolveTier, type Tier } from "./plan";
 
 export function usePlan(): { tier: Tier; trialDaysLeft: number; loading: boolean } {
@@ -7,7 +8,8 @@ export function usePlan(): { tier: Tier; trialDaysLeft: number; loading: boolean
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
-      const { data: lic } = await supabase.from("licenses").select("status,current_period_end").maybeSingle();
+      const env = tryStripeEnvironment();
+      const { data: lic } = env ? await supabase.from("licenses").select("status,current_period_end").eq("environment", env).maybeSingle() : { data: null };
       setS({ ...resolveTier(lic ?? null, u.user?.created_at ?? null), loading: false });
     })();
   }, []);

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { tryStripeEnvironment } from "@/lib/stripe";
+import { createPortalSession } from "@/utils/payments.functions";
 
 type Lic = { plan: string; status: string; current_period_end: string | null };
 type Pay = { id: string; description: string; amount_cents: number; currency: string; status: string; receipt_url: string | null; created_at: string };
@@ -12,12 +14,27 @@ const fmtMoney = (c: number, cur: string) => new Intl.NumberFormat("da-DK", { st
 export function Billing() {
   const [lic, setLic] = useState<Lic | null>(null);
   const [pays, setPays] = useState<Pay[] | null>(null);
-  useEffect(() => {
-    supabase.from("licenses").select("plan,status,current_period_end").maybeSingle()
+  const env = tryStripeEnvironment() ?? "live";
+  const load = () => {
+    supabase.from("licenses").select("plan,status,current_period_end").eq("environment", env).maybeSingle()
       .then(({ data }) => setLic(data ?? { plan: "none", status: "inactive", current_period_end: null }));
-    supabase.from("payments").select("id,description,amount_cents,currency,status,receipt_url,created_at")
+    supabase.from("payments").select("id,description,amount_cents,currency,status,receipt_url,created_at").eq("environment", env)
       .order("created_at", { ascending: false }).then(({ data }) => setPays(data ?? []));
+  };
+  useEffect(() => {
+    load();
+    // Payment confirmation arrives a few seconds after checkout; poll briefly.
+    if (window.location.search.includes("checkout=done")) {
+      const t = setInterval(load, 3000); setTimeout(() => clearInterval(t), 30000);
+      return () => clearInterval(t);
+    }
+    return undefined;
   }, []);
+  const portal = async () => {
+    const r = await createPortalSession({ data: { environment: env, returnUrl: window.location.href } });
+    if ("error" in r) return alert(r.error);
+    window.open(r.url, "_blank");
+  };
   const active = lic?.status === "active";
   return (
     <>
@@ -29,6 +46,9 @@ export function Billing() {
           <div><div className="text-xs text-muted-foreground">{lic?.plan === "lifetime" ? "Gyldig" : "Fornyes / udløber"}</div>
             <div className="font-bold">{lic?.plan === "lifetime" && active ? "Altid" : lic?.current_period_end ? fmtDate(lic.current_period_end) : "—"}</div></div>
         </div>
+        {active && lic?.plan !== "lifetime" && (
+          <button onClick={portal} className="mt-2 text-xs underline">Administrér abonnement (betalingskort, opsigelse)</button>
+        )}
       </section>
       <section>
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Tidligere betalinger</h2>

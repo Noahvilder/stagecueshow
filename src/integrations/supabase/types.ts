@@ -16,23 +16,35 @@ export type Database = {
     Tables: {
       licenses: {
         Row: {
+          cancel_at_period_end: boolean
           current_period_end: string | null
+          environment: string
           plan: string
           status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          cancel_at_period_end?: boolean
           current_period_end?: string | null
+          environment?: string
           plan?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          cancel_at_period_end?: boolean
           current_period_end?: string | null
+          environment?: string
           plan?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -44,10 +56,12 @@ export type Database = {
           created_at: string
           currency: string
           description: string
+          environment: string
           id: string
           plan: string | null
           receipt_url: string | null
           status: string
+          stripe_ref: string | null
           user_id: string
         }
         Insert: {
@@ -55,10 +69,12 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          environment?: string
           id?: string
           plan?: string | null
           receipt_url?: string | null
           status?: string
+          stripe_ref?: string | null
           user_id: string
         }
         Update: {
@@ -66,10 +82,12 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string
+          environment?: string
           id?: string
           plan?: string | null
           receipt_url?: string | null
           status?: string
+          stripe_ref?: string | null
           user_id?: string
         }
         Relationships: []

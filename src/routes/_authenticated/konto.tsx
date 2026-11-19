@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PaymentTestModeBanner } from "@/components/payments/PaymentTestModeBanner";
+import { CheckoutDialog } from "@/components/payments/CheckoutDialog";
+import type { PriceId } from "@/lib/payments/plans";
 import { Billing } from "@/components/account/Billing";
 import { DeviceList } from "@/components/account/DeviceList";
 import { MAX_PULT_DEVICES } from "@/lib/show/device";
@@ -21,12 +24,13 @@ export const Route = createFileRoute("/_authenticated/konto")({
 });
 
 const PLANS = [
-  { id: "monthly", name: "Månedlig", price: "79 kr.", per: "/ md.", note: "Fleksibelt – stop når som helst" },
-  { id: "yearly", name: "Årlig", price: "699 kr.", per: "/ år", note: "Spar ca. 25%" },
-  { id: "lifetime", name: "Lifetime", price: "1.499 kr.", per: "engangsbeløb", note: "Ej den for altid" },
+  { id: "pro_monthly", name: "Månedlig", price: "79 kr.", per: "/ md.", note: "Fleksibelt – stop når som helst" },
+  { id: "pro_yearly", name: "Årlig", price: "699 kr.", per: "/ år", note: "Spar ca. 25%" },
+  { id: "pro_lifetime", name: "Lifetime", price: "1.499 kr.", per: "engangsbeløb", note: "Ej den for altid" },
 ] as const;
 
 function Konto() {
+  const [buy, setBuy] = useState<PriceId | null>(null);
   return (
     <div className="min-h-screen bg-background p-4 text-foreground sm:p-8">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -34,7 +38,9 @@ function Konto() {
           <span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span>
           <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link>
         </header>
+        <PaymentTestModeBanner />
         <Billing />
+        {buy && <CheckoutDialog priceId={buy} onClose={() => setBuy(null)} />}
         <section>
           <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Skift plan</h2>
           <div className=" grid gap-3 sm:grid-cols-3">
@@ -44,7 +50,7 @@ function Konto() {
                 <div className="mt-1 text-2xl font-black">{p.price}</div>
                 <div className="text-xs text-muted-foreground">{p.per}</div>
                 <div className="mt-2 flex-1 text-xs">{p.note}</div>
-                <button disabled className="mt-3 rounded bg-go px-3 py-2 font-bold text-go-foreground opacity-50">Betaling kommer snart</button>
+                <button onClick={() => setBuy(p.id)} className="mt-3 rounded bg-go px-3 py-2 font-bold text-go-foreground">Køb</button>
               </div>
             ))}
           </div>

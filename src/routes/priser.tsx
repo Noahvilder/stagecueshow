@@ -55,7 +55,7 @@ function Priser() {
             <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Pro · {t(p.n)}</div>
             <div className="mt-2 text-4xl font-black">{p.p}</div>
             <div className="text-sm text-muted-foreground">{t(p.per)}</div>
-            <button disabled className="mt-6 rounded-lg bg-go px-4 py-3 font-bold text-go-foreground opacity-50">{t({ en: "Checkout opens soon", da: "Betaling åbner snart", de: "Kauf bald verfügbar" })}</button>
+            <Link to="/konto" className="mt-6 rounded-lg bg-go px-4 py-3 text-center font-bold text-go-foreground">{t({ en: "Buy", da: "Køb", de: "Kaufen" })}</Link>
           </div>
         ))}
       </div>
