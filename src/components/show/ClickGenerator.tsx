@@ -28,8 +28,8 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
       const t = ctx.currentTime - t0;
       if (t > end) { stop(); return; }
       let i = 0;
-      while (i + 1 < beats.length && beats[i + 1].time <= t) i++;
-      const cur = beats[i], next = beats[i + 1]?.time ?? end;
+      while (i + 1 < beats.length && beats[i + 1]!.time <= t) i++;
+      const cur = beats[i]!, next = beats[i + 1]?.time ?? end;
       const frac = t < 0 ? 0 : Math.min(1, (t - cur.time) / Math.max(0.001, next - cur.time));
       const dir = i % 2 === 0 ? 1 : -1;
       setAngle(dir * 30 * Math.cos(Math.PI * frac));
