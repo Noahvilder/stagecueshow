@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -60,7 +60,8 @@ function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-5 text-foreground">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-5 text-foreground">
+      <Link to="/" className="absolute left-4 top-4 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground">← Tilbage</Link>
       <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-3 rounded-xl border border-border bg-card p-6">
         <div className="font-mono text-xl font-black tracking-widest text-go">STAGECUE</div>
         <h1 className="text-2xl font-black">{mode === "in" ? "Log ind" : mode === "up" ? "Opret konto" : "Glemt adgangskode"}</h1>
