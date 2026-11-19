@@ -16,7 +16,8 @@ import { MonitorProfiles } from "./MonitorProfiles";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
-import { MenuBar } from "./MenuBar";
+import { MenuBar, type Menu } from "./MenuBar";
+import { CommandPalette } from "./CommandPalette";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
 import { ProDialog } from "./ProGate";
@@ -424,7 +425,7 @@ export function ShowControl({ showId }: { showId: string }) {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background font-sans text-foreground">
-      <MenuBar menus={[
+      {(() => { const menus: Menu[] = [
         { label: "Filer", items: [
           { label: "Åbn show…", keys: "Ctrl+O", onClick: () => fileRef.current?.click(), disabled: locked },
           { label: "Gem show", keys: "Ctrl+S", onClick: exportShow },
@@ -459,7 +460,7 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "Support", onClick: () => window.open("/support", "_blank") },
           { label: "Vilkår", onClick: () => window.open("/vilkaar", "_blank") },
         ] },
-      ]} />
+      ]; return <div className="flex border-b border-border bg-card"><div className="flex-1 [&>div]:border-b-0"><MenuBar menus={menus} /></div><CommandPalette menus={menus} /></div>; })()}
       {/* top bar */}
       <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2">
         <span className="font-mono text-sm font-bold tracking-widest text-go">STAGECUE</span>

@@ -22,6 +22,36 @@ const ARENA: { k: string; t: L; d: L }[] = [
   { k: "📡", t: { en: "100% offline on stage", da: "100% offline på scenen", de: "100% offline auf der Bühne" }, d: { en: "The desktop app runs locally. Phones connect over your own Wi-Fi — no internet required.", da: "Desktop-appen kører lokalt. Telefoner forbindes over jeres eget Wi-Fi – intet internet nødvendigt.", de: "Die Desktop-App läuft lokal. Handys verbinden sich über euer eigenes WLAN – kein Internet nötig." } },
 ];
 
+
+const ALL_FEATURES: { g: L; items: string[] }[] = [
+  { g: { en: "Playback", da: "Afvikling", de: "Wiedergabe" }, items: ["GO / Panic / Hard stop", "Audio, MIDI, fade, stop, memo & group cues", "Auto-next / follow", "Show lock", "Cue numbers (decimals), manuscript ref & cue triggers", "Colour-coded cues", "Drag & drop reordering", "Waveform"] },
+  { g: { en: "Audio & MIDI", da: "Lyd & MIDI", de: "Audio & MIDI" }, items: ["Up to 32-channel output routing", "Pre-fade listen (PFL)", "MIDI notes, CC & program change out", "MIDI controller learn", "Live MIDI monitor", "Custom names for inputs & outputs", "Click track generator with tempo ramps & voice count-in"] },
+  { g: { en: "Band & stage", da: "Band & scene", de: "Band & Bühne" }, items: ["Free wireless stage monitors (QR)", "Lyrics, chords (ChordPro) & bass tabs", "Personal monitor notes & profiles", "Auto-scroll", "Phone remote"] },
+  { g: { en: "Workflow", da: "Arbejdsgang", de: "Workflow" }, items: ["Simple / advanced layout", "Toggleable columns & hover help", "Custom keyboard shortcuts", "Search all functions (Ctrl+F)", "Setlist paste import", ".stagecue backup with audio", "Dark & light theme", "7 languages"] },
+];
+
+function AllFeatures() {
+  const t = useT();
+  return (
+    <section className="mx-auto max-w-6xl px-4 pb-20">
+      <details className="group rounded-2xl border border-border bg-card">
+        <summary className="flex cursor-pointer list-none items-center justify-between p-6 text-xl font-black">
+          {t({ en: "See all features", da: "Se alle funktioner", de: "Alle Funktionen ansehen" })}
+          <span className="transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+        <div className="grid gap-8 border-t border-border p-6 sm:grid-cols-2 lg:grid-cols-4">
+          {ALL_FEATURES.map((f) => (
+            <div key={f.g.en}>
+              <h3 className="mb-3 font-mono text-xs font-bold uppercase tracking-widest text-go">{t(f.g)}</h3>
+              <ul className="space-y-1.5 text-sm">{f.items.map((i) => <li key={i}>✓ {i}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      </details>
+    </section>
+  );
+}
+
 /** Returns 0..1 progress of a tall section scrolled through the viewport. */
 function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -141,6 +171,8 @@ function LandingBody() {
           </table>
         </div>
       </section>
+
+      <AllFeatures />
 
       <section className="mx-auto max-w-6xl px-4 pb-24">
         <div className="rounded-2xl border-2 border-go p-10 text-center">
