@@ -111,6 +111,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
 
   if (!target) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
+      <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-go">StageCue Monitor</div>
       <h1 className="text-3xl font-black">Scenemonitor</h1>
       <p className="text-muted-foreground">Skriv showets kode (12 tegn) eller scan QR-koden fra pulten</p>
       <input autoCapitalize="characters" maxLength={12} value={code} onChange={(e) => setCode(normCode(e.target.value))} className="w-72 rounded border border-border bg-input p-3 text-center font-mono text-2xl tracking-widest" />

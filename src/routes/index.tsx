@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-type L = { en: string; da: string; de: string };
+type L = { en: string; da: string; de: string; fr?: string; es?: string; sv?: string; no?: string };
 
 const ENGINE: { k: string; t: L; d: L }[] = [
   { k: "EASY", t: { en: "Clear from day one", da: "Overskuelig fra dag ét", de: "Klar ab dem ersten Tag" }, d: { en: "Simple layout for beginners, advanced tools when you need them. Search every function and get help on every button.", da: "Simpel visning for nye brugere, avancerede værktøjer når du har brug for dem. Søg i alle funktioner og få hjælp til hver knap.", de: "Einfache Ansicht für Einsteiger, Profi-Werkzeuge bei Bedarf. Alle Funktionen durchsuchen, Hilfe zu jedem Knopf." } },
@@ -137,7 +137,13 @@ function LandingBody() {
     [{ en: "Modern & actively developed", da: "Moderne og vedligeholdt", de: "Modern & aktiv entwickelt" }, "✅", "✅", "❌"],
     [{ en: "MIDI controller learn", da: "MIDI-controller indlæring", de: "MIDI-Controller lernen" }, "✅", "➖", "➖"],
     [{ en: "Free band stage monitors", da: "Gratis scenemonitorer til bandet", de: "Kostenlose Band-Monitore" }, "✅", "❌", "❌"],
-    [{ en: "Phone remote", da: "Telefon-fjernbetjening", de: "Handy-Fernbedienung" }, "✅", "➖", "❌"],
+    [{ en: "Phone remote", da: "Telefon-fjernbetjening", de: "Handy-Fernbedienung", fr: "Télécommande mobile", es: "Control remoto móvil", sv: "Mobilfjärrkontroll", no: "Mobilfjernkontroll" }, "✅", "➖", "❌"],
+    [{ en: "Cue triggers & bass tabs on stage", da: "Stikord og bas-tabs på scenen", de: "Cue-Stichworte & Bass-Tabs auf der Bühne", fr: "Repères & tabs basse sur scène", es: "Pies de cue y tabs de bajo en escena", sv: "Stickord & bastabs på scen", no: "Stikkord & basstabs på scenen" }, "✅", "❌", "❌"],
+    [{ en: "Built-in click track generator", da: "Indbygget clicktrack-generator", de: "Integrierter Click-Generator", fr: "Générateur de clic intégré", es: "Generador de claqueta integrado", sv: "Inbyggd klickgenerator", no: "Innebygd klikkgenerator" }, "✅", "❌", "❌"],
+    [{ en: "Up to 32 audio outputs", da: "Op til 32 lydudgange", de: "Bis zu 32 Audioausgänge", fr: "Jusqu'à 32 sorties audio", es: "Hasta 32 salidas de audio", sv: "Upp till 32 ljudutgångar", no: "Opptil 32 lydutganger" }, "✅", "✅", "✅"],
+    [{ en: "Named inputs & outputs", da: "Navngivne ind- og udgange", de: "Benannte Ein- & Ausgänge", fr: "Entrées/sorties nommées", es: "Entradas y salidas con nombre", sv: "Namngivna in- & utgångar", no: "Navngitte inn- og utganger" }, "✅", "✅", "➖"],
+    [{ en: "Simple & advanced layout", da: "Simpel og avanceret visning", de: "Einfache & erweiterte Ansicht", fr: "Vue simple & avancée", es: "Vista simple y avanzada", sv: "Enkel & avancerad vy", no: "Enkel og avansert visning" }, "✅", "❌", "❌"],
+    [{ en: "Price", da: "Pris", de: "Preis", fr: "Prix", es: "Precio", sv: "Pris", no: "Pris" }, "Free / $9.99", "$$$", "Free / £"],
   ];
   return (
     <>

@@ -6,7 +6,7 @@ export const Route = createFileRoute("/_authenticated/pc/$showId")({
   head: () => ({
     meta: [
       { title: "Pult – StageCue Control" },
-      { name: "description", content: "Fuld show control: GO, lyd, MIDI og fodpedal." },
+      { name: "description", content: "Fuld show control: GO, lyd, MIDI og MIDI-controllere." },
       { property: "og:title", content: "Pult – StageCue Control" },
       { property: "og:description", content: "Fuld show control til live koncerter." },
       { property: "og:type", content: "website" },

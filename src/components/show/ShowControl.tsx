@@ -45,7 +45,7 @@ const simpleWins = (): Record<WinKey, WinState> => {
   d.list = { ...d.list, w: 760, h: 912 };
   return d;
 };
-const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "Fodpedal", remote: "Telefon", midimon: "MIDI Monitor" };
+const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "MIDI-controller", remote: "Telefon", midimon: "MIDI Monitor" };
 
 const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo", "group"];
 const CHILD_TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
@@ -659,7 +659,7 @@ export function ShowControl({ showId }: { showId: string }) {
           )}
         </div>
 </FloatingWindow>
-<FloatingWindow locked={locked} title={"Fodpedal (MIDI)"} state={wins.pedal} onChange={(p) => setWin("pedal", p)} onFocus={() => focusWin("pedal")}>
+<FloatingWindow locked={locked} title={"MIDI-controller"} state={wins.pedal} onChange={(p) => setWin("pedal", p)} onFocus={() => focusWin("pedal")}>
 <PedalPanel map={pedals} learning={learning} last={lastMidi} onLearn={setLearning} onClear={(k) => setPedals((m) => { const n = { ...m }; delete n[k]; return n; })} />
 </FloatingWindow>
 <FloatingWindow locked={locked} title={"MIDI Monitor"} state={wins.midimon} onChange={(p) => setWin("midimon", p)} onFocus={() => focusWin("midimon")}>
@@ -1135,7 +1135,7 @@ function PedalPanel(props: {
 }) {
   return (
     <div className="flex flex-col gap-2 p-3 text-sm">
-      <p className="text-muted-foreground">Tryk "Lær" og træd på kontakten på din Nektar Pacer.</p>
+      <p className="text-muted-foreground">Tryk "Lær" og aktivér en knap, pedal eller tangent på din MIDI-controller.</p>
       {(Object.keys(PEDAL_LABEL) as PedalAction[]).map((a) => (
         <div key={a} className="flex items-center gap-2 rounded bg-muted px-2 py-1.5">
           <span className="w-24 font-bold">{PEDAL_LABEL[a]}</span>
@@ -1234,7 +1234,7 @@ function ShortcutManager({ map, onChange, onClose }: { map: ShortcutMap; onChang
       </div>
       <div className="mt-4 flex justify-between">
         <button onClick={() => onChange({ ...DEFAULT_SHORTCUTS })} className="rounded bg-secondary px-3 py-1.5 text-sm">Nulstil til standard</button>
-        <span className="text-sm text-muted-foreground">MIDI-controllere sættes op i vinduet "Fodpedal".</span>
+        <span className="text-sm text-muted-foreground">MIDI-controllere sættes op i vinduet "MIDI-controller".</span>
       </div>
     </Modal>
   );
