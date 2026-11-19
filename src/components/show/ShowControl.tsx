@@ -15,6 +15,7 @@ import { MonitorProfiles } from "./MonitorProfiles";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
+import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
 import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
@@ -66,6 +67,11 @@ export function ShowControl({ showId }: { showId: string }) {
   const [learning, setLearning] = useState<PedalAction | null>(null);
   const [lastMidi, setLastMidi] = useState<MidiIn | null>(null);
   const [locked, setLocked] = useState(false);
+  const [view, setView] = useState<ViewPrefs>(DEFAULT_VIEW);
+  const [viewOpen, setViewOpen] = useState(false);
+  useEffect(() => { setView(loadView()); }, []);
+  useEffect(() => applyTips(view.tips), [view.tips]);
+  const toggleCol = (k: ColKey) => setView((v) => { const n = { ...v, [k]: !v[k] }; saveView(n); return n; });
   const [muted, setMuted] = useState(false);
   const [midiIns, setMidiIns] = useState<string[]>([]);
   const [midiLog, setMidiLog] = useState<MidiLogRow[]>([]);
@@ -415,6 +421,14 @@ export function ShowControl({ showId }: { showId: string }) {
           <button title="Alle værktøjer: Inspector, MIDI Monitor, Fodpedal" onClick={() => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; })} className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary">⚙️ Avanceret</button>
           <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
         </div>}
+        <div className="relative">
+          <Btn onClick={() => setViewOpen((o) => !o)}>👁 Visning</Btn>
+          {viewOpen && <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border border-border bg-card p-2 shadow-xl">
+            {(Object.keys(COLS) as ColKey[]).map((k) => (
+              <label key={k} className="flex items-center gap-2 px-1 py-1 text-sm"><input type="checkbox" checked={view[k]} onChange={() => toggleCol(k)} />{COLS[k]}</label>
+            ))}
+          </div>}
+        </div>
         {!locked && <Btn onClick={() => setClickOpen(true)}>⏱️ Click / Optælling</Btn>}
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
@@ -534,21 +548,21 @@ export function ShowControl({ showId }: { showId: string }) {
                       }}
                       onClick={() => setSelectedId(c.id)}
                       onDoubleClick={() => setStandbyId(c.id)}
-                      className={`grid cursor-pointer grid-cols-[16px_28px_44px_1fr_auto_auto] items-center gap-2 border-b border-l-[6px] border-border px-2 py-2 ${
+                      style={{ borderLeftColor: cueColor(show, c), gridTemplateColumns: gridCols(view).replaceAll("_", " ") }}
+                      className={`grid cursor-pointer items-center gap-2 border-b border-l-[6px] border-border px-2 py-2 ${
                         selectedId === c.id ? "bg-accent" : "bg-card hover:bg-secondary"
                       } ${dropKey === c.id ? "border-t-4 border-t-standby" : ""} ${isStandby ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
-                      style={{ borderLeftColor: cueColor(show, c) }}
                     >
-                      <span title="Træk for at flytte" className={`select-none text-center text-muted-foreground ${locked ? "opacity-0" : "cursor-grab active:cursor-grabbing"}`}>⋮⋮</span>
+                      {view.handle && <span title="Træk for at flytte" className={`select-none text-center text-muted-foreground ${locked ? "opacity-0" : "cursor-grab active:cursor-grabbing"}`}>⋮⋮</span>}
                       <span className="text-center font-black text-standby">{isStandby ? "▶" : isRunning ? <span className="text-go">●</span> : ""}</span>
-                      <span className="font-mono text-sm text-muted-foreground" title={c.ref ? `Manuskript: ${c.ref}` : undefined}>{c.number || idx + 1}</span>
+                      {view.number && <span className="font-mono text-sm text-muted-foreground" title={c.ref ? `Manuskript: ${c.ref}` : undefined}>{c.number || idx + 1}</span>}
                       <div className="min-w-0">
                         <div className="truncate font-semibold">{c.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">{summary(c, midiPorts)}</div>
-                        {c.stikord && <div className="truncate text-xs font-bold text-standby">⏱ {c.stikord}</div>}
+                        {view.details && <div className="truncate text-xs text-muted-foreground">{summary(c, midiPorts)}</div>}
+                        {view.stikord && c.stikord && <div className="truncate text-xs font-bold text-standby">⏱ {c.stikord}</div>}
                       </div>
-                      <TypeTag show={show} cue={c} />
-                      <span className="w-24 text-right font-mono text-xs text-muted-foreground">{followLabel(c)}</span>
+                      {view.type && <TypeTag show={show} cue={c} />}
+                      {view.follow && <span className="w-24 text-right font-mono text-xs text-muted-foreground">{followLabel(c)}</span>}
                     </div>
                   );
                 })}

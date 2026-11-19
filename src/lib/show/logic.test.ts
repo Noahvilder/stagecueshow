@@ -43,3 +43,11 @@ describe("trimSpan", () => {
   it("end 0 means file end", () => expect(trimSpan(10, 2, 0).end).toBe(10));
   it("invalid end before start falls back to file end", () => expect(trimSpan(10, 5, 3).end).toBe(10));
 });
+
+import { isActive, ACTIVE_MS } from "@/components/show/MidiMonitor";
+describe("midi watcher", () => {
+  it("signal is green under 1.5s, then history", () => {
+    expect(isActive({ t: 1000 }, 1000 + ACTIVE_MS - 1)).toBe(true);
+    expect(isActive({ t: 1000 }, 1000 + ACTIVE_MS)).toBe(false);
+  });
+});
