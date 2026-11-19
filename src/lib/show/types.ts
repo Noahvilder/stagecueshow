@@ -38,6 +38,10 @@ export type AudioCue = Base & {
   fadeOut: number;
   loop: boolean;
   outputId: string;
+  /** First output channel (1-based) of a stereo pair on multichannel interfaces. Empty = 1/2. */
+  channel?: number;
+  /** Send mono to one channel only. */
+  mono?: boolean;
   /** Trim start in seconds (0 = file start). */
   startTime?: number;
   /** Trim end in seconds (0 = file end). */

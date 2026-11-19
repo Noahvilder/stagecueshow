@@ -64,8 +64,31 @@ export class Engine {
   isMuted() { return this.muted; }
   private master(c: AudioContext) {
     let g = this.masters.get(c);
-    if (!g) { g = c.createGain(); g.gain.value = this.muted ? 0 : 1; g.connect(c.destination); this.masters.set(c, g); }
+    if (!g) {
+      const n = Math.min(32, c.destination.maxChannelCount || 2);
+      if (n > 2) { c.destination.channelCount = n; c.destination.channelCountMode = "explicit"; c.destination.channelInterpretation = "discrete"; }
+      g = c.createGain(); g.channelCount = Math.max(2, n); g.channelCountMode = "explicit"; g.channelInterpretation = "discrete";
+      g.gain.value = this.muted ? 0 : 1; g.connect(c.destination); this.masters.set(c, g);
+    }
     return g;
+  }
+  /** Number of hardware channels on an output (ASIO/multichannel interfaces report up to 32). */
+  async channelCount(outputId: string): Promise<number> {
+    const c = await this.ctx(outputId);
+    return Math.max(2, Math.min(32, c.destination.maxChannelCount || 2));
+  }
+  /** Send a stereo node to channels ch/ch+1 (or ch only if mono) of the output. */
+  private route(c: AudioContext, node: AudioNode, ch: number, mono: boolean) {
+    const master = this.master(c);
+    const n = master.channelCount;
+    if (n <= 2 && ch <= 1 && !mono) { node.connect(master); return; }
+    const first = Math.max(0, Math.min(n - 1, ch - 1));
+    const split = c.createChannelSplitter(2);
+    const merge = c.createChannelMerger(n);
+    node.connect(split);
+    if (mono) { split.connect(merge, 0, first); split.connect(merge, 1, first); }
+    else { split.connect(merge, 0, first); split.connect(merge, 1, Math.min(n - 1, first + 1)); }
+    merge.connect(master);
   }
   /** Decoded audio for waveform display. */
   async decoded(fileId: string, outputId = ""): Promise<AudioBuffer> {
@@ -151,7 +174,8 @@ export class Engine {
     const gain = ctx.createGain();
     const pan = ctx.createStereoPanner();
     pan.pan.value = Math.max(-1, Math.min(1, cue.pan));
-    gain.connect(pan).connect(this.master(ctx));
+    gain.connect(pan);
+    this.route(ctx, pan, cue.channel ?? 1, !!cue.mono);
     const span = trimSpan(buffer.duration, cue.startTime, cue.endTime);
     const target = dbToGain(cue.volume);
     const now = ctx.currentTime;

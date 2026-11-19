@@ -18,6 +18,10 @@ import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
+import { ProDialog } from "./ProGate";
+import { usePlan } from "@/lib/show/usePlan";
+import { hasPro, type ProFeature } from "@/lib/show/plan";
+import { SHORTCUT_LABEL, assign, comboOf, findAction, loadShortcuts, prettyCombo, saveShortcuts, DEFAULT_SHORTCUTS, type ShortcutAction, type ShortcutMap } from "@/lib/show/shortcuts";
 import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
@@ -68,6 +72,13 @@ export function ShowControl({ showId }: { showId: string }) {
   const [learning, setLearning] = useState<PedalAction | null>(null);
   const [lastMidi, setLastMidi] = useState<MidiIn | null>(null);
   const [locked, setLocked] = useState(false);
+  const plan = usePlan();
+  const pro = hasPro(plan.tier);
+  const [proAsk, setProAsk] = useState<ProFeature | null>(null);
+  const needPro = useCallback((f: ProFeature) => { if (pro) return true; setProAsk(f); return false; }, [pro]);
+  const [shortcuts, setShortcuts] = useState<ShortcutMap>(DEFAULT_SHORTCUTS);
+  useEffect(() => setShortcuts(loadShortcuts()), []);
+  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {} });
   const [view, setView] = useState<ViewPrefs>(DEFAULT_VIEW);
   const [viewOpen, setViewOpen] = useState(false);
   useEffect(() => { setView(loadView()); }, []);
@@ -164,6 +175,7 @@ export function ShowControl({ showId }: { showId: string }) {
     return undefined;
   }, [warnings]);
   const toggleMute = (on?: boolean) => setMuted((m) => { const v = on ?? !m; engine().setMute(v); return v; });
+  scRef.current.mute = () => toggleMute();
   useEffect(() => {
     if (!loaded) return;
     setSaved("saving");
@@ -197,6 +209,7 @@ export function ShowControl({ showId }: { showId: string }) {
 
   const panic = useCallback(() => engine().panic(show.panicFade), [show.panicFade]);
   const hardStop = () => engine().panic(0);
+  scRef.current.stop = hardStop;
 
   const step = useCallback(
     (d: number) => {
@@ -210,23 +223,22 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if ((e.ctrlKey || e.metaKey) && e.code === "KeyL") { e.preventDefault(); setLocked((l) => !l); return; }
-      if (t.closest("input, textarea, select, [contenteditable]")) return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        if (!e.repeat) go();
-      } else if (e.code === "Escape") {
-        e.preventDefault();
-        panic();
-      } else if (e.key === "?") {
-        setKeysOpen((o) => !o);
-      } else if (e.code === "ArrowDown") {
-        e.preventDefault();
-        step(1);
-      } else if (e.code === "ArrowUp") {
-        e.preventDefault();
-        step(-1);
-      }
+      if (t.closest("[data-shortcut-capture]")) return;
+      const combo = comboOf(e);
+      const a = findAction(scRef.current.map, combo);
+      if (!a) return;
+      const typing = !!t.closest("input, textarea, select, [contenteditable]");
+      if (typing && !(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      if (a === "go") { if (!e.repeat) go(); }
+      else if (a === "panic") panic();
+      else if (a === "hardStop") scRef.current.stop();
+      else if (a === "next") step(1);
+      else if (a === "prev") step(-1);
+      else if (a === "lock") setLocked((l) => !l);
+      else if (a === "help") setKeysOpen((o) => !o);
+      else if (a === "mute") scRef.current.mute();
+      else if (a.startsWith("add:") && !e.repeat) scRef.current.add(a.slice(4) as CueType);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -258,7 +270,11 @@ export function ShowControl({ showId }: { showId: string }) {
       ...s,
       songs: s.songs.map((sg) => ({ ...sg, cues: sg.cues.map((c) => (c.id === id ? ({ ...c, ...patch } as Cue) : c)) })),
     }));
+  scRef.current.map = shortcuts;
+  scRef.current.add = (t) => addCue(t);
   const addCue = (type: CueType) => {
+    if (locked) return;
+    if (type === "group" && !needPro("group")) return;
     const c = newCue(type);
     setShow((s) => {
       const songs = [...s.songs];
@@ -443,10 +459,12 @@ export function ShowControl({ showId }: { showId: string }) {
         {!locked && <Btn onClick={() => setClickOpen(true)}>⏱️ Click / Optælling</Btn>}
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {!locked && <Btn onClick={() => setImportOpen(true)}>📋 Importér setliste</Btn>}
-        <Btn onClick={() => setKeysOpen(true)}>⌨️ Genveje</Btn>
+        <Btn onClick={() => setKeysOpen(true)}>⌨️ Genveje (Ctrl+K)</Btn>
         <Btn onClick={() => window.open("/support#ticket", "_blank")}>💡 Forslag</Btn>
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
-        {keysOpen && <KeysHelp onClose={() => setKeysOpen(false)} />}
+        {keysOpen && <ShortcutManager map={shortcuts} onChange={(m) => { setShortcuts(m); saveShortcuts(m); }} onClose={() => setKeysOpen(false)} />}
+        {proAsk && <ProDialog feature={proAsk} onClose={() => setProAsk(null)} />}
+        {!plan.loading && plan.tier !== "pro" && <a href="/priser" target="_blank" rel="noreferrer" title="Opgrader til Pro" className={`rounded px-2 py-1 text-xs font-bold ${plan.tier === "trial" ? "bg-standby/20 text-standby" : "bg-secondary text-muted-foreground"}`}>{plan.tier === "trial" ? `PRO-prøve: ${plan.trialDaysLeft} dage` : "FREE · Opgrader"}</a>}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
         <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
@@ -619,6 +637,8 @@ export function ShowControl({ showId }: { showId: string }) {
                 updateCue(selected.id, { fileId: id, fileName: f.name, name: selected.name === "Lyd" ? f.name.replace(/\.[^.]+$/, "") : selected.name } as Partial<Cue>);
               }}
               onTestMidi={(m) => engine().sendMidi(m)}
+              needPro={needPro}
+              channelCount={(o) => engine().channelCount(o)}
             />
           ) : (
             <div className="text-muted-foreground">Vælg et cue for at redigere. Dobbeltklik for at sætte det som standby.</div>
@@ -761,6 +781,8 @@ function Inspector(props: {
   onChange: (p: Partial<Cue>) => void; onDelete: () => void; onStandby: () => void; onFire: () => void;
   onFile: (f: File) => void; onTestMidi: (m: MidiMsg) => void;
   loadAudio: (fileId: string, outputId: string) => Promise<AudioBuffer>;
+  needPro: (f: ProFeature) => boolean;
+  channelCount: (outputId: string) => Promise<number>;
 }) {
   const { cue, show, flat, midiPorts, outputs, onChange } = props;
   const set = (p: Record<string, unknown>) => onChange(p as Partial<Cue>);
@@ -825,13 +847,14 @@ function Inspector(props: {
               </div>
             </Field>
           )}
-          {cue.fileId && <Field label="Forlyt (PFL)"><PflButton fileId={cue.fileId} /></Field>}
+          {cue.fileId && <Field label="Forlyt (PFL) · Pro"><PflButton fileId={cue.fileId} allow={() => props.needPro("pfl")} /></Field>}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
               {outputs.map((o) => <option key={o.id} value={o.id}>{ioName(o.label, show.ioAliases?.audio?.[o.id])}</option>)}
               {!outputs.some((o) => o.id === cue.outputId) && <option value={cue.outputId}>(ukendt udgang – scan igen)</option>}
             </select>
           </Field>
+          <ChannelPicker outputId={cue.outputId} channel={cue.channel ?? 1} mono={!!cue.mono} count={props.channelCount} aliases={show.ioAliases?.audio} onChange={(ch, mono) => { if ((ch > 1 || mono) && !props.needPro("channels")) return; set({ channel: ch, mono }); }} />
           <div className="grid grid-cols-2 gap-2">
             <Field label="Volumen (dB)"><Num value={cue.volume} step={0.5} min={-60} max={12} onChange={(n) => set({ volume: n })} /></Field>
             <Field label={`Pan (${cue.pan.toFixed(2)})`}>
@@ -1134,22 +1157,13 @@ function SetlistImport({ onClose, onImport }: { onClose: () => void; onImport: (
   );
 }
 
-const KEYS: [string, string][] = [["Mellemrum", "GO"], ["Esc", "Panic (fade ud)"], ["↑ / ↓", "Flyt standby"], ["Ctrl+L", "Lås / lås op showet"], ["?", "Vis / skjul denne oversigt"]];
-function KeysHelp({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal title="Tastaturgenveje" onClose={onClose}>
-      <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">{KEYS.map(([k, d]) => <Fragment key={k}><kbd className="rounded border border-border bg-secondary px-2 py-0.5 font-mono text-sm">{k}</kbd><span>{d}</span></Fragment>)}</div>
-      <p className="mt-3 text-sm text-muted-foreground">MIDI-controllere og fodpedaler sættes op i vinduet "Fodpedal".</p>
-    </Modal>
-  );
-}
-
-function PflButton({ fileId }: { fileId: string }) {
+function PflButton({ fileId, allow }: { fileId: string; allow: () => boolean }) {
   const ref = useRef<HTMLAudioElement | null>(null);
   const [on, setOn] = useState(false);
   useEffect(() => () => { ref.current?.pause(); }, []);
   const toggle = async () => {
     if (on) { ref.current?.pause(); setOn(false); return; }
+    if (!allow()) return;
     const blob = await getAudio(fileId);
     if (!blob) return;
     const a = new Audio(URL.createObjectURL(blob));
@@ -1159,4 +1173,55 @@ function PflButton({ fileId }: { fileId: string }) {
     setOn(true);
   };
   return <button title="Lyt til filen i standard-udgangen (fx høretelefoner) uden at starte cuet" onClick={toggle} className={`rounded px-3 py-1.5 text-sm font-bold ${on ? "bg-standby text-background" : "bg-secondary"}`}>{on ? "⏹ Stop forlyt" : "🎧 Forlyt"}</button>;
+}
+
+function ChannelPicker({ outputId, channel, mono, count, aliases, onChange }: { outputId: string; channel: number; mono: boolean; count: (o: string) => Promise<number>; aliases?: Record<string, string> | undefined; onChange: (ch: number, mono: boolean) => void }) {
+  const [n, setN] = useState(2);
+  useEffect(() => { count(outputId).then(setN).catch(() => setN(2)); }, [outputId, count]);
+  const max = Math.max(n, channel + (mono ? 0 : 1));
+  const name = (c: number) => aliases?.[`${outputId}#${c}`]?.trim() || `Ch ${c}`;
+  const opts = mono ? Array.from({ length: max }, (_, i) => i + 1) : Array.from({ length: Math.floor(max / 2) }, (_, i) => i * 2 + 1);
+  return (
+    <Field label={`Kanaler (${n} fundet${n > 2 ? "" : " – tilslut lydkort med flere udgange"}) · Pro over 1/2`}>
+      <div className="flex gap-2">
+        <select className={inputCls} value={channel} onChange={(e) => onChange(+e.target.value, mono)}>
+          {opts.map((c) => <option key={c} value={c}>{mono ? name(c) : `${name(c)} / ${name(c + 1)}`}</option>)}
+        </select>
+        <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={mono} onChange={(e) => onChange(e.target.checked ? channel : channel % 2 ? channel : channel - 1, e.target.checked)} />Mono</label>
+      </div>
+    </Field>
+  );
+}
+
+function ShortcutManager({ map, onChange, onClose }: { map: ShortcutMap; onChange: (m: ShortcutMap) => void; onClose: () => void }) {
+  const [capture, setCapture] = useState<ShortcutAction | null>(null);
+  useEffect(() => {
+    if (!capture) return;
+    const h = (e: KeyboardEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
+      if (e.code === "Backspace" || e.code === "Delete") onChange(assign(map, capture, null));
+      else if (e.code !== "Escape") onChange(assign(map, capture, comboOf(e)));
+      setCapture(null);
+    };
+    window.addEventListener("keydown", h, true);
+    return () => window.removeEventListener("keydown", h, true);
+  }, [capture, map, onChange]);
+  return (
+    <Modal title="Genvejs-manager" onClose={onClose}>
+      <p className="mb-3 text-sm text-muted-foreground">Klik på en genvej og tryk den tast (eller kombination) du vil bruge. Backspace fjerner den. Enkelt-taster virker ikke mens du skriver i et felt.</p>
+      <div data-shortcut-capture className="grid max-h-[60vh] grid-cols-[1fr_auto] gap-x-6 gap-y-1 overflow-auto">
+        {(Object.keys(SHORTCUT_LABEL) as ShortcutAction[]).map((a) => (
+          <Fragment key={a}>
+            <span className="py-1">{SHORTCUT_LABEL[a]}</span>
+            <button onClick={() => setCapture(a)} className={`min-w-28 rounded border px-2 py-1 font-mono text-sm ${capture === a ? "border-standby bg-standby/20 text-standby" : "border-border bg-secondary"}`}>{capture === a ? "Tryk en tast…" : prettyCombo(map[a])}</button>
+          </Fragment>
+        ))}
+      </div>
+      <div className="mt-4 flex justify-between">
+        <button onClick={() => onChange({ ...DEFAULT_SHORTCUTS })} className="rounded bg-secondary px-3 py-1.5 text-sm">Nulstil til standard</button>
+        <span className="text-sm text-muted-foreground">MIDI-controllere sættes op i vinduet "Fodpedal".</span>
+      </div>
+    </Modal>
+  );
 }
