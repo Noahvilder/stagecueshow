@@ -1,8 +1,8 @@
 export const METERS = ["1/4","2/4","3/4","4/4","5/4","6/4","3/8","5/8","6/8","7/8","9/8","12/8"] as const;
 export type Meter = (typeof METERS)[number];
-export type ClickSound = "wood" | "beep" | "rim" | "cowbell";
+export type ClickSound = "wood" | "beep" | "rim" | "cowbell" | "voice";
 export const CLICK_SOUNDS: { id: ClickSound; label: string }[] = [
-  { id: "wood", label: "Træblok" }, { id: "beep", label: "Bip" }, { id: "rim", label: "Rim" }, { id: "cowbell", label: "Koklokke" },
+  { id: "wood", label: "Træblok" }, { id: "beep", label: "Bip" }, { id: "rim", label: "Rim" }, { id: "cowbell", label: "Koklokke" }, { id: "voice", label: "Stemme (1-2-3-4)" },
 ];
 
 export interface ClickSettings {
@@ -46,7 +46,8 @@ export function clickLength(s: ClickSettings): number {
 }
 
 function scheduleClick(ctx: BaseAudioContext, dest: AudioNode, at: number, sound: ClickSound, accent: boolean, gain: number) {
-  const base = { wood: 1200, beep: 1000, rim: 2200, cowbell: 800 }[sound];
+  if (sound === "voice") return;
+  const base = { wood: 1200, beep: 1000, rim: 2200, cowbell: 800 }[sound as Exclude<ClickSound, "voice">];
   const freq = accent ? base * 1.5 : base;
   const dur = sound === "beep" ? 0.06 : sound === "cowbell" ? 0.12 : 0.03;
   const o = ctx.createOscillator();
@@ -61,9 +62,29 @@ function scheduleClick(ctx: BaseAudioContext, dest: AudioNode, at: number, sound
   o.stop(at + dur + 0.01);
 }
 
-export function scheduleAll(ctx: BaseAudioContext, s: ClickSettings, offset: number) {
+const voiceCache = new Map<BaseAudioContext, Promise<AudioBuffer[]>>();
+/** Spoken counts "one".."four"; beats above 4 reuse them in a 1-4 cycle. */
+function loadVoice(ctx: BaseAudioContext): Promise<AudioBuffer[]> {
+  let p = voiceCache.get(ctx);
+  if (!p) {
+    p = Promise.all([1, 2, 3, 4].map(async (n) => ctx.decodeAudioData(await (await fetch(`/voice/${n}.wav`)).arrayBuffer())));
+    voiceCache.set(ctx, p);
+  }
+  return p;
+}
+
+export async function scheduleAll(ctx: BaseAudioContext, s: ClickSettings, offset: number) {
+  const voice = s.sound === "voice" ? await loadVoice(ctx) : null;
   for (const b of beatTimes(s)) {
     const g = s.volume * (b.accent ? 1 : 1 - s.accentGain * 0.6);
+    if (voice) {
+      const src = ctx.createBufferSource();
+      src.buffer = voice[(b.beat - 1) % 4]!;
+      const vg = ctx.createGain(); vg.gain.value = g * 1.4;
+      src.connect(vg).connect(ctx.destination);
+      src.start(offset + b.time);
+      continue;
+    }
     scheduleClick(ctx, ctx.destination, offset + b.time, s.sound, b.accent, g);
   }
 }
@@ -72,7 +93,7 @@ export async function renderClickWav(s: ClickSettings): Promise<Blob> {
   const rate = 44100;
   const len = Math.ceil((clickLength(s) + 0.2) * rate);
   const ctx = new OfflineAudioContext(2, len, rate);
-  scheduleAll(ctx, s, 0);
+  await scheduleAll(ctx, s, 0);
   return encodeWav(await ctx.startRendering());
 }
 

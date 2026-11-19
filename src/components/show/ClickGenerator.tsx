@@ -14,12 +14,13 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
   const rafRef = useRef(0);
   const stop = () => { cancelAnimationFrame(rafRef.current); ctxRef.current?.close(); ctxRef.current = null; setPlaying(false); setBeat(-1); setAngle(0); };
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); ctxRef.current?.close(); }, []);
-  const preview = () => {
+  const preview = async () => {
     stop();
     const ctx = new AudioContext();
     ctxRef.current = ctx;
-    const t0 = ctx.currentTime + 0.05;
-    scheduleAll(ctx, eff, t0);
+    const t0 = ctx.currentTime + 0.3;
+    await scheduleAll(ctx, eff, t0).catch(() => {});
+    if (ctxRef.current !== ctx) return;
     const beats = beatTimes(eff);
     const end = clickLength(eff);
     setPlaying(true);
