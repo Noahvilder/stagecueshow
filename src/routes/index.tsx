@@ -154,7 +154,6 @@ function LandingBody() {
         <div className="mt-10 flex flex-wrap gap-3">
           <Link to="/download" className="hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:inline-block">⬇ {t({ en: "Download for Windows", da: "Download til Windows", de: "Für Windows laden" })}</Link>
         </div>
-        <div className="mt-14"><ConsoleMock /></div>
       </section>
 
       <Benefits />
