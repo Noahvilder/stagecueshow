@@ -1,8 +1,13 @@
-StageCue End User License Agreement
+StageCue End User License Agreement (updated 19 November 2026)
 
 By installing StageCue you agree to the Terms of Use at https://stagecueshow.lovable.app/vilkaar
 and the Privacy Policy at https://stagecueshow.lovable.app/privatliv.
 
-StageCue is provided "as is". You may install it on your own computers. You may not resell,
-redistribute or reverse engineer the software. StageCue may request access to audio and MIDI
-devices on your computer to play cues and receive controller input.
+- StageCue is provided "as is". Built-in safety features (double-GO lock, panic stop, crash
+  recovery, Hot-Standby backup PC) reduce risk but do not guarantee an uninterrupted show.
+  You are responsible for testing your show and having a backup plan.
+- A Pro licence is personal and may be active on at most 3 console devices at a time.
+- You may not resell, redistribute, reverse engineer or bypass licence or device limits.
+- StageCue may request access to the local network (firewall), audio devices including ASIO,
+  and MIDI devices/controllers. Nothing is connected without your confirmation.
+- Audio files stay on your computer. This version requires an internet connection.
