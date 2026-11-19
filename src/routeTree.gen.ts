@@ -15,12 +15,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as PriserRouteImport } from './routes/priser'
 import { Route as PrivatlivRouteImport } from './routes/privatliv'
-import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as SupportRouteImport } from './routes/support'
-import { Route as ViewRouteImport } from './routes/view'
 import { Route as VilkaarRouteImport } from './routes/vilkaar'
 import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
 import { Route as AuthenticatedKontoRouteImport } from './routes/_authenticated/konto'
+import { Route as AuthenticatedRemoteRouteImport } from './routes/_authenticated/remote'
+import { Route as AuthenticatedViewRouteImport } from './routes/_authenticated/view'
 import { Route as AuthenticatedMobileShowIdRouteImport } from './routes/_authenticated/mobile.$showId'
 import { Route as AuthenticatedPcShowIdRouteImport } from './routes/_authenticated/pc.$showId'
 
@@ -53,19 +53,9 @@ const PrivatlivRoute = PrivatlivRouteImport.update({
   path: '/privatliv',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RemoteRoute = RemoteRouteImport.update({
-  id: '/remote',
-  path: '/remote',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ViewRoute = ViewRouteImport.update({
-  id: '/view',
-  path: '/view',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VilkaarRoute = VilkaarRouteImport.update({
@@ -81,6 +71,16 @@ const AuthenticatedHubRoute = AuthenticatedHubRouteImport.update({
 const AuthenticatedKontoRoute = AuthenticatedKontoRouteImport.update({
   id: '/konto',
   path: '/konto',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRemoteRoute = AuthenticatedRemoteRouteImport.update({
+  id: '/remote',
+  path: '/remote',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedViewRoute = AuthenticatedViewRouteImport.update({
+  id: '/view',
+  path: '/view',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMobileShowIdRoute =
@@ -101,12 +101,12 @@ export interface FileRoutesByFullPath {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
-  '/remote': typeof RemoteRoute
   '/support': typeof SupportRoute
-  '/view': typeof ViewRoute
   '/vilkaar': typeof VilkaarRoute
   '/hub': typeof AuthenticatedHubRoute
   '/konto': typeof AuthenticatedKontoRoute
+  '/remote': typeof AuthenticatedRemoteRoute
+  '/view': typeof AuthenticatedViewRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
 }
@@ -116,12 +116,12 @@ export interface FileRoutesByTo {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
-  '/remote': typeof RemoteRoute
   '/support': typeof SupportRoute
-  '/view': typeof ViewRoute
   '/vilkaar': typeof VilkaarRoute
   '/hub': typeof AuthenticatedHubRoute
   '/konto': typeof AuthenticatedKontoRoute
+  '/remote': typeof AuthenticatedRemoteRoute
+  '/view': typeof AuthenticatedViewRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
 }
@@ -133,12 +133,12 @@ export interface FileRoutesById {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
-  '/remote': typeof RemoteRoute
   '/support': typeof SupportRoute
-  '/view': typeof ViewRoute
   '/vilkaar': typeof VilkaarRoute
   '/_authenticated/hub': typeof AuthenticatedHubRoute
   '/_authenticated/konto': typeof AuthenticatedKontoRoute
+  '/_authenticated/remote': typeof AuthenticatedRemoteRoute
+  '/_authenticated/view': typeof AuthenticatedViewRoute
   '/_authenticated/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/_authenticated/pc/$showId': typeof AuthenticatedPcShowIdRoute
 }
@@ -150,12 +150,12 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
-    | '/remote'
     | '/support'
-    | '/view'
     | '/vilkaar'
     | '/hub'
     | '/konto'
+    | '/remote'
+    | '/view'
     | '/mobile/$showId'
     | '/pc/$showId'
   fileRoutesByTo: FileRoutesByTo
@@ -165,12 +165,12 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
-    | '/remote'
     | '/support'
-    | '/view'
     | '/vilkaar'
     | '/hub'
     | '/konto'
+    | '/remote'
+    | '/view'
     | '/mobile/$showId'
     | '/pc/$showId'
   id:
@@ -181,12 +181,12 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
-    | '/remote'
     | '/support'
-    | '/view'
     | '/vilkaar'
     | '/_authenticated/hub'
     | '/_authenticated/konto'
+    | '/_authenticated/remote'
+    | '/_authenticated/view'
     | '/_authenticated/mobile/$showId'
     | '/_authenticated/pc/$showId'
   fileRoutesById: FileRoutesById
@@ -198,9 +198,7 @@ export interface RootRouteChildren {
   DownloadRoute: typeof DownloadRoute
   PriserRoute: typeof PriserRoute
   PrivatlivRoute: typeof PrivatlivRoute
-  RemoteRoute: typeof RemoteRoute
   SupportRoute: typeof SupportRoute
-  ViewRoute: typeof ViewRoute
   VilkaarRoute: typeof VilkaarRoute
 }
 
@@ -248,25 +246,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivatlivRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/remote': {
-      id: '/remote'
-      path: '/remote'
-      fullPath: '/remote'
-      preLoaderRoute: typeof RemoteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/support': {
       id: '/support'
       path: '/support'
       fullPath: '/support'
       preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/view': {
-      id: '/view'
-      path: '/view'
-      fullPath: '/view'
-      preLoaderRoute: typeof ViewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vilkaar': {
@@ -290,6 +274,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKontoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/remote': {
+      id: '/_authenticated/remote'
+      path: '/remote'
+      fullPath: '/remote'
+      preLoaderRoute: typeof AuthenticatedRemoteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/view': {
+      id: '/_authenticated/view'
+      path: '/view'
+      fullPath: '/view'
+      preLoaderRoute: typeof AuthenticatedViewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/mobile/$showId': {
       id: '/_authenticated/mobile/$showId'
       path: '/mobile/$showId'
@@ -310,6 +308,8 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedHubRoute: typeof AuthenticatedHubRoute
   AuthenticatedKontoRoute: typeof AuthenticatedKontoRoute
+  AuthenticatedRemoteRoute: typeof AuthenticatedRemoteRoute
+  AuthenticatedViewRoute: typeof AuthenticatedViewRoute
   AuthenticatedMobileShowIdRoute: typeof AuthenticatedMobileShowIdRoute
   AuthenticatedPcShowIdRoute: typeof AuthenticatedPcShowIdRoute
 }
@@ -317,6 +317,8 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHubRoute: AuthenticatedHubRoute,
   AuthenticatedKontoRoute: AuthenticatedKontoRoute,
+  AuthenticatedRemoteRoute: AuthenticatedRemoteRoute,
+  AuthenticatedViewRoute: AuthenticatedViewRoute,
   AuthenticatedMobileShowIdRoute: AuthenticatedMobileShowIdRoute,
   AuthenticatedPcShowIdRoute: AuthenticatedPcShowIdRoute,
 }
@@ -331,9 +333,7 @@ const rootRouteChildren: RootRouteChildren = {
   DownloadRoute: DownloadRoute,
   PriserRoute: PriserRoute,
   PrivatlivRoute: PrivatlivRoute,
-  RemoteRoute: RemoteRoute,
   SupportRoute: SupportRoute,
-  ViewRoute: ViewRoute,
   VilkaarRoute: VilkaarRoute,
 }
 export const routeTree = rootRouteImport

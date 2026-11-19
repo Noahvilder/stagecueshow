@@ -5,6 +5,7 @@ import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (s: Record<string, unknown>): { redirect?: string } => (typeof s["redirect"] === "string" && s["redirect"].startsWith("/") && !s["redirect"].startsWith("//") ? { redirect: s["redirect"] } : {}),
   head: () => ({
     meta: [
       { title: "Log ind – StageCue Control" },
@@ -20,6 +21,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
+  const { redirect: back } = Route.useSearch();
+  const go = () => { if (back) window.location.replace(back); else nav({ to: "/hub", replace: true }); };
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -28,10 +31,10 @@ function AuthPage() {
   const [agree, setAgree] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { if (data.session) nav({ to: "/hub", replace: true }); });
-    const { data } = supabase.auth.onAuthStateChange((e, s) => { if (e === "SIGNED_IN" && s) nav({ to: "/hub", replace: true }); });
+    supabase.auth.getSession().then(({ data }) => { if (data.session) go(); });
+    const { data } = supabase.auth.onAuthStateChange((e, s) => { if (e === "SIGNED_IN" && s) go(); });
     return () => data.subscription.unsubscribe();
-  }, [nav]);
+  }, [nav, back]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +52,7 @@ function AuthPage() {
   };
 
   const google = async () => {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
+    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" + (back ? "?redirect=" + encodeURIComponent(back) : "") });
     if (r.error) setMsg(r.error.message);
   };
 
@@ -76,7 +79,6 @@ function AuthPage() {
           {mode === "in" ? "Ingen konto? Opret en" : "Har du en konto? Log ind"}
         </button>
       </form>
-      <a href="/view" className="mt-4 block w-full max-w-sm rounded-lg border-2 border-standby p-4 text-center text-lg font-bold text-standby">🎸 Musiker på scenen? Kobl på uden login</a>
     </div>
   );
 }
