@@ -14,6 +14,7 @@ function Download() {
       <h1 className="text-4xl font-black sm:text-5xl">{t({ en: "Download StageCue", da: "Download StageCue", de: "StageCue herunterladen" })}</h1>
       <div className="mt-10 rounded-2xl border-2 border-go bg-card p-8">
         <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Windows 10/11 · 64-bit</div>
+        <div className="mt-1 text-xs text-muted-foreground">🇩🇰 Crafted in Denmark for live performers worldwide</div>
         <div className="mt-1 text-2xl font-black">StageCue-Setup.exe · v1.0.0</div>
         <button disabled className="mt-6 hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground opacity-50 md:inline-block">⬇ {t({ en: "Desktop version coming soon", da: "Desktop-versionen kommer snart", de: "Desktop-Version kommt bald" })}</button>
         <div className="mt-6 md:hidden">

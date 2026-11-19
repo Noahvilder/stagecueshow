@@ -497,6 +497,8 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "💡 Foreslå ændring / fejl", onClick: () => window.open("/support#ticket", "_blank") },
           { label: "Support", onClick: () => window.open("/support", "_blank") },
           { label: "Vilkår", onClick: () => window.open("/vilkaar", "_blank") },
+          "sep",
+          { label: "Om StageCue", onClick: () => alert("StageCue — Show control til Windows\n\n🇩🇰 Crafted in Denmark for live performers worldwide\n\n© 2026 StageCue") },
         ] },
       ]; return <div className="flex border-b border-border bg-card"><div className="flex-1 [&>div]:border-b-0"><MenuBar menus={menus} /></div><CommandPalette menus={menus} /></div>; })()}
       {/* top bar */}
