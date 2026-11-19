@@ -9,7 +9,7 @@ export interface RemoteState {
   running: string[];
   muted?: boolean;
   locked?: boolean;
-   songs: { id: string; name: string; cues: { id: string; name: string; type: CueType; color: string; notes: string; monitorNotes?: Record<string, string>; text?: string; hasAudio?: boolean }[] }[];
+   songs: { id: string; name: string; cues: { id: string; name: string; type: CueType; color: string; notes: string; monitorNotes?: Record<string, string>; text?: string; stikord?: string; hasAudio?: boolean }[] }[];
 }
 export type RemoteCmd =
   | { t: "go" }
