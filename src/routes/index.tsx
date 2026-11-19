@@ -147,7 +147,6 @@ function LandingBody() {
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{t({ en: "Easy to learn, powerful when it matters. Audio, MIDI, setlists and stage monitors in one clear workspace — for theatre, touring bands, churches, events and schools.", da: "Nem at lære, stærk når det gælder. Lyd, MIDI, setlister og scenemonitorer samlet i ét overskueligt program – til teater, turnerende bands, kirker, events og skoler.", de: "Leicht zu lernen, stark, wenn es darauf ankommt. Audio, MIDI, Setlisten und Bühnenmonitore in einer klaren Oberfläche – für Theater, Bands auf Tour, Kirchen, Events und Schulen." })}</p>
         <div className="mt-10 flex flex-wrap gap-3">
           <Link to="/download" className="hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:inline-block">⬇ {t({ en: "Download for Windows", da: "Download til Windows", de: "Für Windows laden" })}</Link>
-          <a href="#funktioner" className="px-2 py-3 text-lg font-semibold text-muted-foreground hover:text-foreground">{t({ en: "All features ↓", da: "Alle funktioner ↓", de: "Alle Funktionen ↓" })}</a>
         </div>
         <div className="mt-14"><ConsoleMock /></div>
       </section>
