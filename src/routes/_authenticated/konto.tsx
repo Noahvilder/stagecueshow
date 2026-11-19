@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceList } from "@/components/account/DeviceList";
 import { MAX_PULT_DEVICES } from "@/lib/show/device";
+import { deleteMyAccount } from "@/lib/account/delete.functions";
 
 export const Route = createFileRoute("/_authenticated/konto")({
   head: () => ({
@@ -58,7 +59,27 @@ function Konto() {
           <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Pult-enheder (maks {MAX_PULT_DEVICES})</h2>
           <DeviceList />
         </section>
+        <DeleteAccount />
       </div>
     </div>
+  );
+}
+
+function DeleteAccount() {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (!confirm("Slet din konto og alle gemte shows permanent? Dette kan ikke fortrydes.")) return;
+    setBusy(true);
+    try { await deleteMyAccount(); await supabase.auth.signOut(); window.location.href = "/"; }
+    catch (e) { alert("Sletning fejlede: " + (e as Error).message); setBusy(false); }
+  };
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Konto og data</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 text-sm">
+        <span>Læs <a href="/privatliv" className="underline">privatlivspolitikken</a>. Lydfiler ligger kun på din computer.</span>
+        <button onClick={run} disabled={busy} className="rounded bg-destructive px-3 py-2 font-bold text-destructive-foreground disabled:opacity-50">Slet min konto</button>
+      </div>
+    </section>
   );
 }

@@ -434,7 +434,7 @@ export function ShowControl({ showId }: { showId: string }) {
 
 <div className="relative min-h-0 flex-1 overflow-hidden">
 <FloatingWindow locked={locked} title={"Scene · Nu & Næste"} state={wins.stage} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
-<StageView show={show} flat={flat} standby={standby ?? null} standbyIdx={standbyIdx} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
+<StageView show={show} flat={flat} standby={standby ?? null} standbyIdx={standbyIdx} warn={!!mainRun && mainRun.duration! - mainRun.elapsed <= 10} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
 </FloatingWindow>
 <FloatingWindow locked={locked} title={"Transport"} state={wins.transport} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
 <div className="flex flex-col gap-3 p-3">
@@ -992,7 +992,7 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
 const NOTE_SIZES = ["text-xl", "text-3xl", "text-5xl"];
 
 function StageView(props: {
-  show: Show; flat: Cue[]; standby: Cue | null; standbyIdx: number;
+  show: Show; flat: Cue[]; standby: Cue | null; standbyIdx: number; warn?: boolean;
   size: 0 | 1 | 2; setSize: (n: 0 | 1 | 2) => void; onNotes: (v: string) => void;
 }) {
   const { show, flat, standby, standbyIdx } = props;
@@ -1016,7 +1016,7 @@ function StageView(props: {
             {standby.preWait > 0 && <span className="text-muted-foreground">pre-wait {standby.preWait}s</span>}
           </div>
           <div className="truncate text-5xl font-black leading-tight">{standby.name}</div>
-          {standby.stikord && <div className="mt-2 rounded bg-standby/15 px-3 py-2 text-3xl font-black text-standby">⏱ {standby.stikord}</div>}
+          {standby.stikord && <div className={"mt-2 rounded px-3 py-2 text-3xl font-black text-standby " + (props.warn ? "animate-pulse bg-standby/40 ring-4 ring-standby" : "bg-standby/15")}>⏱ {standby.stikord}</div>}
           {standby.type === "memo" && standby.text && <div className="mt-1 whitespace-pre-wrap text-2xl text-memo">{standby.text}</div>}
         </div>
       ) : (

@@ -14,9 +14,11 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as PriserRouteImport } from './routes/priser'
+import { Route as PrivatlivRouteImport } from './routes/privatliv'
 import { Route as RemoteRouteImport } from './routes/remote'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as ViewRouteImport } from './routes/view'
+import { Route as VilkaarRouteImport } from './routes/vilkaar'
 import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
 import { Route as AuthenticatedKontoRouteImport } from './routes/_authenticated/konto'
 import { Route as AuthenticatedMobileShowIdRouteImport } from './routes/_authenticated/mobile.$showId'
@@ -46,6 +48,11 @@ const PriserRoute = PriserRouteImport.update({
   path: '/priser',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivatlivRoute = PrivatlivRouteImport.update({
+  id: '/privatliv',
+  path: '/privatliv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RemoteRoute = RemoteRouteImport.update({
   id: '/remote',
   path: '/remote',
@@ -59,6 +66,11 @@ const SupportRoute = SupportRouteImport.update({
 const ViewRoute = ViewRouteImport.update({
   id: '/view',
   path: '/view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VilkaarRoute = VilkaarRouteImport.update({
+  id: '/vilkaar',
+  path: '/vilkaar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedHubRoute = AuthenticatedHubRouteImport.update({
@@ -88,9 +100,11 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
+  '/privatliv': typeof PrivatlivRoute
   '/remote': typeof RemoteRoute
   '/support': typeof SupportRoute
   '/view': typeof ViewRoute
+  '/vilkaar': typeof VilkaarRoute
   '/hub': typeof AuthenticatedHubRoute
   '/konto': typeof AuthenticatedKontoRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
@@ -101,9 +115,11 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
+  '/privatliv': typeof PrivatlivRoute
   '/remote': typeof RemoteRoute
   '/support': typeof SupportRoute
   '/view': typeof ViewRoute
+  '/vilkaar': typeof VilkaarRoute
   '/hub': typeof AuthenticatedHubRoute
   '/konto': typeof AuthenticatedKontoRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
@@ -116,9 +132,11 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
+  '/privatliv': typeof PrivatlivRoute
   '/remote': typeof RemoteRoute
   '/support': typeof SupportRoute
   '/view': typeof ViewRoute
+  '/vilkaar': typeof VilkaarRoute
   '/_authenticated/hub': typeof AuthenticatedHubRoute
   '/_authenticated/konto': typeof AuthenticatedKontoRoute
   '/_authenticated/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
@@ -131,9 +149,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/download'
     | '/priser'
+    | '/privatliv'
     | '/remote'
     | '/support'
     | '/view'
+    | '/vilkaar'
     | '/hub'
     | '/konto'
     | '/mobile/$showId'
@@ -144,9 +164,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/download'
     | '/priser'
+    | '/privatliv'
     | '/remote'
     | '/support'
     | '/view'
+    | '/vilkaar'
     | '/hub'
     | '/konto'
     | '/mobile/$showId'
@@ -158,9 +180,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/download'
     | '/priser'
+    | '/privatliv'
     | '/remote'
     | '/support'
     | '/view'
+    | '/vilkaar'
     | '/_authenticated/hub'
     | '/_authenticated/konto'
     | '/_authenticated/mobile/$showId'
@@ -173,9 +197,11 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DownloadRoute: typeof DownloadRoute
   PriserRoute: typeof PriserRoute
+  PrivatlivRoute: typeof PrivatlivRoute
   RemoteRoute: typeof RemoteRoute
   SupportRoute: typeof SupportRoute
   ViewRoute: typeof ViewRoute
+  VilkaarRoute: typeof VilkaarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -215,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PriserRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privatliv': {
+      id: '/privatliv'
+      path: '/privatliv'
+      fullPath: '/privatliv'
+      preLoaderRoute: typeof PrivatlivRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/remote': {
       id: '/remote'
       path: '/remote'
@@ -234,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/view'
       fullPath: '/view'
       preLoaderRoute: typeof ViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vilkaar': {
+      id: '/vilkaar'
+      path: '/vilkaar'
+      fullPath: '/vilkaar'
+      preLoaderRoute: typeof VilkaarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/hub': {
@@ -290,9 +330,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DownloadRoute: DownloadRoute,
   PriserRoute: PriserRoute,
+  PrivatlivRoute: PrivatlivRoute,
   RemoteRoute: RemoteRoute,
   SupportRoute: SupportRoute,
   ViewRoute: ViewRoute,
+  VilkaarRoute: VilkaarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
