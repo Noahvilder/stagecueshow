@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Globe, Moon, Sun } from "lucide-react";
 import { LangProvider, LANGS, LANG_NAMES, useLang, useT, type Lang } from "@/lib/site/i18n";
 
 const NAV = [
@@ -13,10 +13,13 @@ const NAV = [
 function LangSwitch() {
   const { lang, setLang } = useLang();
   return (
-    <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as Lang)}
-      className="rounded border border-border bg-background px-2 py-1 text-xs font-bold text-foreground">
-      {LANGS.map((l) => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}
-    </select>
+    <label className="relative flex items-center rounded border border-border p-1.5 text-muted-foreground hover:text-foreground" title="Language">
+      <Globe className="h-4 w-4" />
+      <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as Lang)}
+        className="absolute inset-0 cursor-pointer opacity-0">
+        {LANGS.map((l) => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}
+      </select>
+    </label>
   );
 }
 
@@ -39,19 +42,21 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pt-3 pb-2">
           <Link to="/" className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</Link>
-          <nav className="order-last flex w-full flex-wrap gap-1 text-sm sm:order-none sm:w-auto sm:flex-1">
-            {NAV.map((n) => (
-              <Link key={n.to} to={n.to} activeOptions={{ exact: true }} className="rounded px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-bold" }}>{t(n.l)}</Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <LangSwitch />
-            <ThemeToggle />
+          <div className="flex items-center gap-2">
             <Link to="/konto" className="rounded border border-border px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-secondary">{t({ en: "Account", da: "Konto", de: "Konto", fr: "Compte", es: "Cuenta", sv: "Konto", no: "Konto" })}</Link>
             <Link to="/show" className="rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen", fr: "Ouvrir le show", es: "Abrir show", sv: "Öppna show", no: "Åpne show" })}</Link>
           </div>
+        </div>
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 pb-2">
+          <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto text-sm">
+            {NAV.map((n) => (
+              <Link key={n.to} to={n.to} activeOptions={{ exact: true }} className="whitespace-nowrap rounded px-2.5 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-bold" }}>{t(n.l)}</Link>
+            ))}
+          </nav>
+          <LangSwitch />
+          <ThemeToggle />
         </div>
       </header>
       <main>{children}</main>
