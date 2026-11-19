@@ -47,10 +47,9 @@ function Shell({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/view" search={{}} title="Stage monitor" className="rounded border border-border px-2 py-1 text-xs font-bold text-muted-foreground hover:text-foreground">🎸 {t({ en: "Monitor", da: "Monitor", de: "Monitor", fr: "Moniteur", es: "Monitor", sv: "Monitor", no: "Monitor" })}</Link>
             <LangSwitch />
             <ThemeToggle />
-            <Link to="/hub" className="hidden rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground md:block">{t({ en: "Open console", da: "Åbn pulten", de: "Pult öffnen", fr: "Ouvrir la console", es: "Abrir consola", sv: "Öppna konsolen", no: "Åpne konsollen" })}</Link>
+            <Link to="/show" className="rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen", fr: "Ouvrir le show", es: "Abrir show", sv: "Öppna show", no: "Åpne show" })}</Link>
           </div>
         </div>
       </header>

@@ -18,7 +18,7 @@ function Download() {
         <button disabled className="mt-6 hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground opacity-50 md:inline-block">⬇ {t({ en: "Desktop version coming soon", da: "Desktop-versionen kommer snart", de: "Desktop-Version kommt bald" })}</button>
         <div className="mt-6 md:hidden">
           <p className="text-sm text-muted-foreground">{t({ en: "The console app runs on a Windows PC. On your phone you can join a stage monitor:", da: "Pult-appen kører på en Windows-pc. På telefonen kan du åbne en scenemonitor:", de: "Die Pult-App läuft auf einem Windows-PC. Am Handy kannst du einen Bühnenmonitor öffnen:" })}</p>
-          <Link to="/view" className="mt-3 inline-block rounded-lg bg-go px-6 py-3 font-black text-go-foreground">🎸 {t({ en: "Join stage monitor", da: "Åbn scenemonitor", de: "Bühnenmonitor öffnen" })}</Link>
+          <Link to="/show" className="mt-3 inline-block rounded-lg bg-go px-6 py-3 font-black text-go-foreground">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen" })}</Link>
         </div>
         <p className="mt-4 hidden text-sm text-muted-foreground md:block">{t({ en: "Until then, use the console in Chrome or Edge:", da: "Indtil da kan du bruge pulten i Chrome eller Edge:", de: "Bis dahin nutze das Pult in Chrome oder Edge:" })} <Link to="/hub" className="underline">{t({ en: "Open web console", da: "Åbn web-pulten", de: "Web-Pult öffnen" })}</Link></p>
       </div>

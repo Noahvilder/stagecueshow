@@ -66,7 +66,7 @@ function Hub() {
     <div className="min-h-screen bg-background p-4 text-foreground sm:p-8">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <header className="flex items-center justify-between">
-          <span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span>
+          <div className="flex items-center gap-3"><button onClick={() => nav({ to: "/show" })} className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</button><span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span></div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="hidden truncate sm:inline">{email}</span>
             <button onClick={() => nav({ to: "/konto" })} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Konto</button>

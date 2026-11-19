@@ -110,7 +110,8 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   }, [scroll]);
 
   if (!target) return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
+      <a href="/show" className="absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
       <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-go">StageCue Monitor</div>
       <h1 className="text-3xl font-black">Scenemonitor</h1>
       <p className="text-muted-foreground">Skriv showets kode (12 tegn) eller scan QR-koden fra pulten</p>
@@ -120,7 +121,8 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   );
 
   if (!viewMode) return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
+      <a href="/show" className="absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
       <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
       <h1 className="text-3xl font-black">Vælg din rolle på scenen</h1>
       <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>

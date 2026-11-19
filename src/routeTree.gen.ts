@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as PriserRouteImport } from './routes/priser'
 import { Route as PrivatlivRouteImport } from './routes/privatliv'
+import { Route as ShowRouteImport } from './routes/show'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as VilkaarRouteImport } from './routes/vilkaar'
 import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
@@ -51,6 +52,11 @@ const PriserRoute = PriserRouteImport.update({
 const PrivatlivRoute = PrivatlivRouteImport.update({
   id: '/privatliv',
   path: '/privatliv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShowRoute = ShowRouteImport.update({
+  id: '/show',
+  path: '/show',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/show': typeof ShowRoute
   '/support': typeof SupportRoute
   '/vilkaar': typeof VilkaarRoute
   '/hub': typeof AuthenticatedHubRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/show': typeof ShowRoute
   '/support': typeof SupportRoute
   '/vilkaar': typeof VilkaarRoute
   '/hub': typeof AuthenticatedHubRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/show': typeof ShowRoute
   '/support': typeof SupportRoute
   '/vilkaar': typeof VilkaarRoute
   '/_authenticated/hub': typeof AuthenticatedHubRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
+    | '/show'
     | '/support'
     | '/vilkaar'
     | '/hub'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
+    | '/show'
     | '/support'
     | '/vilkaar'
     | '/hub'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
+    | '/show'
     | '/support'
     | '/vilkaar'
     | '/_authenticated/hub'
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   DownloadRoute: typeof DownloadRoute
   PriserRoute: typeof PriserRoute
   PrivatlivRoute: typeof PrivatlivRoute
+  ShowRoute: typeof ShowRoute
   SupportRoute: typeof SupportRoute
   VilkaarRoute: typeof VilkaarRoute
 }
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/privatliv'
       fullPath: '/privatliv'
       preLoaderRoute: typeof PrivatlivRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/show': {
+      id: '/show'
+      path: '/show'
+      fullPath: '/show'
+      preLoaderRoute: typeof ShowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -333,6 +353,7 @@ const rootRouteChildren: RootRouteChildren = {
   DownloadRoute: DownloadRoute,
   PriserRoute: PriserRoute,
   PrivatlivRoute: PrivatlivRoute,
+  ShowRoute: ShowRoute,
   SupportRoute: SupportRoute,
   VilkaarRoute: VilkaarRoute,
 }
