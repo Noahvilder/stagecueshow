@@ -49,6 +49,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             <LangSwitch />
             <ThemeToggle />
+            <Link to="/konto" className="rounded border border-border px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-secondary">{t({ en: "Account", da: "Konto", de: "Konto", fr: "Compte", es: "Cuenta", sv: "Konto", no: "Konto" })}</Link>
             <Link to="/show" className="rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen", fr: "Ouvrir le show", es: "Abrir show", sv: "Öppna show", no: "Åpne show" })}</Link>
           </div>
         </div>
