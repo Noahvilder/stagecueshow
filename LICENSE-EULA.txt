@@ -1,0 +1,8 @@
+StageCue End User License Agreement
+
+By installing StageCue you agree to the Terms of Use at https://stagecueshow.lovable.app/vilkaar
+and the Privacy Policy at https://stagecueshow.lovable.app/privatliv.
+
+StageCue is provided "as is". You may install it on your own computers. You may not resell,
+redistribute or reverse engineer the software. StageCue may request access to audio and MIDI
+devices on your computer to play cues and receive controller input.

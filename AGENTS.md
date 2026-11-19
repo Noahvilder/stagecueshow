@@ -11,3 +11,4 @@
 - Shows are stored per user in the `shows` table (JSON in `data`); audio blobs stay in the PC's IndexedDB and reach phones over the PeerJS channel — keeps large files off the cloud.
 - The PC host writes its current remote code to `shows.remote_code` so mobile mode can auto-connect without typing the code.
 - Monitor profiles and per-profile cue notes live in show JSON and travel in PeerJS state snapshots; viewer connections cannot send transport or other editing commands, only `setMonitorNote`.
+- Desktop .exe uses Tauri v2 in `src-tauri/`, built on GitHub Actions (`.github/workflows/release.yml`) since the sandbox is Linux; v1 window loads the published site, so it needs internet until a static offline bundle exists.
