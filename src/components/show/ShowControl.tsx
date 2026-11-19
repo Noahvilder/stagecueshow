@@ -9,6 +9,7 @@ import {
   newCue, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
+import { ioName } from "@/lib/show/types";
 import { RemoteHost } from "./RemoteHost";
 import { MonitorNotes } from "./MonitorNotes";
 import { MonitorProfiles } from "./MonitorProfiles";
@@ -627,7 +628,7 @@ export function ShowControl({ showId }: { showId: string }) {
 <PedalPanel map={pedals} learning={learning} last={lastMidi} onLearn={setLearning} onClear={(k) => setPedals((m) => { const n = { ...m }; delete n[k]; return n; })} />
 </FloatingWindow>
 <FloatingWindow locked={locked} title={"MIDI Monitor"} state={wins.midimon} onChange={(p) => setWin("midimon", p)} onFocus={() => focusWin("midimon")}>
-<MidiMonitor rows={midiLog} paused={monPaused} setPaused={setMonPaused} onClear={() => setMidiLog([])} ins={midiIns} outs={midiPorts} />
+<MidiMonitor rows={show.ioAliases?.midi ? midiLog.map((r) => ({ ...r, port: show.ioAliases?.midi?.[r.port]?.trim() || r.port })) : midiLog} paused={monPaused} setPaused={setMonPaused} onClear={() => setMidiLog([])} ins={midiIns.map((p) => show.ioAliases?.midi?.[p]?.trim() || p)} outs={midiPorts.map((p) => show.ioAliases?.midi?.[p]?.trim() || p)} />
 </FloatingWindow>
 </div>
 
@@ -636,6 +637,7 @@ export function ShowControl({ showId }: { showId: string }) {
           show={show}
           setShow={setShow}
           midiPorts={midiPorts}
+          midiIns={midiIns}
           outputs={outputs}
           onClose={() => setSettings(false)}
           onScanMidi={() => engine().initMidi().then(setMidiPorts).catch((e) => setError(e.message))}
@@ -825,7 +827,7 @@ function Inspector(props: {
           {cue.fileId && <Field label="Forlyt (PFL)"><PflButton fileId={cue.fileId} /></Field>}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
-              {outputs.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              {outputs.map((o) => <option key={o.id} value={o.id}>{ioName(o.label, show.ioAliases?.audio?.[o.id])}</option>)}
               {!outputs.some((o) => o.id === cue.outputId) && <option value={cue.outputId}>(ukendt udgang – scan igen)</option>}
             </select>
           </Field>
@@ -856,7 +858,7 @@ function Inspector(props: {
                 </div>
                 <select className={inputCls} value={m.port} onChange={(e) => upd({ port: e.target.value })}>
                   <option value="">Vælg port…</option>
-                  {midiPorts.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {midiPorts.map((p) => <option key={p} value={p}>{ioName(p, show.ioAliases?.midi?.[p])}</option>)}
                   {m.port && !midiPorts.includes(m.port) && <option value={m.port}>{m.port} (ikke tilsluttet)</option>}
                 </select>
                 {(() => { const k = midiKindInfo(m.kind); return (<>
@@ -959,10 +961,18 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
 }
 
 function Settings(props: {
-  show: Show; setShow: (s: Show) => void; midiPorts: string[]; outputs: Output[]; onClose: () => void;
+  show: Show; setShow: (s: Show) => void; midiPorts: string[]; midiIns: string[]; outputs: Output[]; onClose: () => void;
   onScanMidi: () => void; onScanAudio: () => void; onTestMidi: (port: string) => void;
 }) {
   const { show, setShow } = props;
+  const setAlias = (kind: "audio" | "midi", key: string, v: string) => {
+    const cur = { ...(show.ioAliases?.[kind] ?? {}) };
+    if (v) cur[key] = v; else delete cur[key];
+    setShow({ ...show, ioAliases: { ...show.ioAliases, [kind]: cur } });
+  };
+  const aliasInput = (kind: "audio" | "midi", key: string) => (
+    <input className="w-44 rounded border border-border bg-background px-2 py-1 text-sm" placeholder="Kaldenavn, fx Headphones" title="Dit eget navn for porten – gemmes i showet" value={show.ioAliases?.[kind]?.[key] ?? ""} onChange={(e) => setAlias(kind, key, e.target.value)} />
+  );
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6" onClick={props.onClose}>
       <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
@@ -974,15 +984,22 @@ function Settings(props: {
         <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
           {props.midiPorts.length ? props.midiPorts.map((p) => (
-            <div key={p} className="flex items-center justify-between border-b border-border py-1.5">
-              <span>{p}</span>
+            <div key={p} className="flex items-center justify-between gap-2 border-b border-border py-1.5">
+              <span className="min-w-0 flex-1 truncate">{p}</span>
+              {aliasInput("midi", p)}
               <button className="text-sm font-semibold text-go" onClick={() => props.onTestMidi(p)}>Test (Note 60 ch1)</button>
             </div>
           )) : <p className="text-sm text-muted-foreground">Ingen MIDI-porte fundet. Opret fx loopMIDI-porte på Windows og tryk Scan.</p>}
         </Section>
 
+        <Section title="MIDI-indgange">
+          {props.midiIns.length ? props.midiIns.map((p) => (
+            <div key={p} className="flex items-center justify-between gap-2 border-b border-border py-1.5"><span className="min-w-0 flex-1 truncate">{p}</span>{aliasInput("midi", p)}</div>
+          )) : <p className="text-sm text-muted-foreground">Ingen MIDI-indgange fundet.</p>}
+        </Section>
+
         <Section title="Lydudgange" action={<Btn onClick={props.onScanAudio}>Scan enheder</Btn>}>
-          {props.outputs.map((o) => <div key={o.id} className="border-b border-border py-1.5 text-sm">{o.label}</div>)}
+          {props.outputs.map((o) => <div key={o.id} className="flex items-center justify-between gap-2 border-b border-border py-1.5 text-sm"><span className="min-w-0 flex-1 truncate">{o.label}</span>{aliasInput("audio", o.id)}</div>)}
           <p className="mt-2 text-xs text-muted-foreground">Scan beder om mikrofon-adgang én gang – det er nødvendigt for at browseren viser navne som "VoiceMeeter Input" og "VoiceMeeter AUX Input".</p>
         </Section>
 

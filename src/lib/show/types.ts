@@ -75,10 +75,17 @@ export interface Show {
   typeColors: Partial<Record<CueType, string>>;
   songs: Song[];
   monitors?: MonitorProfile[];
+  /** Friendly names for hardware ports, travels with the show. */
+  ioAliases?: { audio?: Record<string, string>; midi?: Record<string, string> };
 }
 
 export interface MonitorProfile {
   id: string;
   name: string;
   mode: "lyrics" | "hud";
+}
+
+export function ioName(hw: string, alias?: string): string {
+  const a = alias?.trim();
+  return a ? `${a} (${hw})` : hw;
 }
