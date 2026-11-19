@@ -16,6 +16,7 @@ import { MonitorProfiles } from "./MonitorProfiles";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
 import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
+import { MenuBar } from "./MenuBar";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
 import { ProDialog } from "./ProGate";
@@ -78,7 +79,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const needPro = useCallback((f: ProFeature) => { if (pro) return true; setProAsk(f); return false; }, [pro]);
   const [shortcuts, setShortcuts] = useState<ShortcutMap>(DEFAULT_SHORTCUTS);
   useEffect(() => setShortcuts(loadShortcuts()), []);
-  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {} });
+  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
   const [view, setView] = useState<ViewPrefs>(DEFAULT_VIEW);
   const [viewOpen, setViewOpen] = useState(false);
   useEffect(() => { setView(loadView()); }, []);
@@ -224,6 +225,11 @@ export function ShowControl({ showId }: { showId: string }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest("[data-shortcut-capture]")) return;
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        const key = e.key.toLowerCase();
+        if (key === "s") { e.preventDefault(); if (e.shiftKey) scRef.current.backup(); else scRef.current.save(); return; }
+        if (key === "o") { e.preventDefault(); scRef.current.open(); return; }
+      }
       const combo = comboOf(e);
       const a = findAction(scRef.current.map, combo);
       if (!a) return;
@@ -348,7 +354,10 @@ export function ShowControl({ showId }: { showId: string }) {
     a.download = `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue`;
     a.click();
     URL.revokeObjectURL(a.href);
-  };
+  };  scRef.current.save = exportShow;
+  scRef.current.backup = () => { void exportBackup(); };
+  scRef.current.open = () => { if (!locked) fileRef.current?.click(); };
+
   const importShow = async (f: File) => {
     try {
       let text: string;
@@ -415,6 +424,42 @@ export function ShowControl({ showId }: { showId: string }) {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background font-sans text-foreground">
+      <MenuBar menus={[
+        { label: "Filer", items: [
+          { label: "Åbn show…", keys: "Ctrl+O", onClick: () => fileRef.current?.click(), disabled: locked },
+          { label: "Gem show", keys: "Ctrl+S", onClick: exportShow },
+          { label: "Eksportér backup m. lyd (.stagecue)…", keys: "Ctrl+Shift+S", onClick: exportBackup },
+          "sep",
+          { label: "Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
+          "sep",
+          { label: "Tilbage til shows", onClick: () => { engine().panic(0); navigate({ to: "/hub" }); } },
+        ] },
+        { label: "Rediger", items: [
+          ...(["audio", "midi", "fade", "stop", "memo", "group"] as CueType[]).map((t) => ({ label: `Nyt ${t}-cue`, onClick: () => addCue(t), disabled: locked })),
+          "sep",
+          { label: locked ? "Lås show op" : "Lås show til live", keys: "Ctrl+L", onClick: () => setLocked((l) => !l) },
+        ] },
+        { label: "Værktøjer", items: [
+          { label: "⏱️ Click / Optælling…", onClick: () => setClickOpen(true), disabled: locked },
+          { label: "📋 Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
+          { label: "⌨️ Genveje…", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
+        ] },
+        { label: "Visning", items: [
+          { label: "🟢 Simpel visning", onClick: () => setWins(simpleWins()), disabled: locked },
+          { label: "⚙️ Avanceret visning", onClick: () => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; }), disabled: locked },
+          { label: "Nulstil layout", onClick: () => setWins(defaultWins()), disabled: locked },
+          "sep",
+          ...(Object.keys(COLS) as ColKey[]).map((k) => ({ label: COLS[k], checked: view[k], onClick: () => toggleCol(k) })),
+        ] },
+        { label: "Vinduer", items: (Object.keys(WIN_TITLES) as WinKey[]).map((k) => ({ label: WIN_TITLES[k], checked: wins[k].open, disabled: locked, onClick: () => (wins[k].open ? setWin(k, { open: false }) : (setWin(k, { open: true, min: false }), focusWin(k))) })) },
+        { label: "Indstillinger", items: [{ label: "Lyd, MIDI, I/O-navne & monitorer…", onClick: () => setSettings(true), disabled: locked }] },
+        { label: "Hjælp", items: [
+          { label: "⌨️ Tastaturgenveje", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
+          { label: "💡 Foreslå ændring / fejl", onClick: () => window.open("/support#ticket", "_blank") },
+          { label: "Support", onClick: () => window.open("/support", "_blank") },
+          { label: "Vilkår", onClick: () => window.open("/vilkaar", "_blank") },
+        ] },
+      ]} />
       {/* top bar */}
       <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2">
         <span className="font-mono text-sm font-bold tracking-widest text-go">STAGECUE</span>
@@ -426,46 +471,14 @@ export function ShowControl({ showId }: { showId: string }) {
           aria-label="Show navn"
         />
         <span className="font-mono text-2xl tabular-nums">{clock}</span>
-        {!locked && <Btn onClick={() => fileRef.current?.click()}>Åbn</Btn>}
-        <Btn onClick={exportShow}>Gem</Btn>
-        <Btn onClick={exportBackup}>Backup m. lyd</Btn>
         <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}</span>
-        <Btn onClick={() => { engine().panic(0); navigate({ to: "/hub" }); }}>← Shows</Btn>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
         <button onClick={() => setLocked((l) => !l)} title="Ctrl+L" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? "🔒 LÅST TIL LIVE" : "🔓 Lås show"}</button>
-        {!locked && <div className="flex gap-1 border-l border-border pl-3">
-          {(Object.keys(WIN_TITLES) as WinKey[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => (wins[k].open ? setWin(k, { open: false }) : (setWin(k, { open: true, min: false }), focusWin(k)))}
-              className={`rounded px-2 py-1 text-xs font-semibold ${wins[k].open ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary"}`}
-            >
-              {WIN_TITLES[k]}
-            </button>
-          ))}
-          <span className="mx-1 h-4 w-px bg-border" />
-          <button title="Kun Scene, Transport og Setliste" onClick={() => setWins(simpleWins())} className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary">🟢 Simpel</button>
-          <button title="Alle værktøjer: Inspector, MIDI Monitor, Fodpedal" onClick={() => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; })} className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary">⚙️ Avanceret</button>
-          <button onClick={() => setWins(defaultWins())} className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">Nulstil layout</button>
-        </div>}
-        <div className="relative">
-          <Btn onClick={() => setViewOpen((o) => !o)}>👁 Visning</Btn>
-          {viewOpen && <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border border-border bg-card p-2 shadow-xl">
-            {(Object.keys(COLS) as ColKey[]).map((k) => (
-              <label key={k} className="flex items-center gap-2 px-1 py-1 text-sm"><input type="checkbox" checked={view[k]} onChange={() => toggleCol(k)} />{COLS[k]}</label>
-            ))}
-          </div>}
-        </div>
-        {!locked && <Btn onClick={() => setClickOpen(true)}>⏱️ Click / Optælling</Btn>}
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
-        {!locked && <Btn onClick={() => setImportOpen(true)}>📋 Importér setliste</Btn>}
-        <Btn onClick={() => setKeysOpen(true)}>⌨️ Genveje (Ctrl+K)</Btn>
-        <Btn onClick={() => window.open("/support#ticket", "_blank")}>💡 Forslag</Btn>
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
         {keysOpen && <ShortcutManager map={shortcuts} onChange={(m) => { setShortcuts(m); saveShortcuts(m); }} onClose={() => setKeysOpen(false)} />}
         {proAsk && <ProDialog feature={proAsk} onClose={() => setProAsk(null)} />}
         {!plan.loading && plan.tier !== "pro" && <a href="/priser" target="_blank" rel="noreferrer" title="Opgrader til Pro" className={`rounded px-2 py-1 text-xs font-bold ${plan.tier === "trial" ? "bg-standby/20 text-standby" : "bg-secondary text-muted-foreground"}`}>{plan.tier === "trial" ? `PRO-prøve: ${plan.trialDaysLeft} dage` : "FREE · Opgrader"}</a>}
-        {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
         <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
 
