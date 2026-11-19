@@ -8,6 +8,7 @@ const NAV = [
   { to: "/priser", l: { en: "Pricing", da: "Priser", de: "Preise", fr: "Tarifs", es: "Precios", sv: "Priser", no: "Priser" } },
   { to: "/download", l: { en: "Download", da: "Download", de: "Download" } },
   { to: "/support", l: { en: "Support", da: "Support", de: "Support" } },
+  { to: "/view", l: { en: "Open stage monitor", da: "Åbn scenemonitor", de: "Bühnenmonitor öffnen", fr: "Ouvrir le moniteur", es: "Abrir monitor", sv: "Öppna scenmonitor", no: "Åpne scenemonitor" } },
 ] as const;
 
 function LangSwitch() {
@@ -49,7 +50,6 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             <LangSwitch />
             <ThemeToggle />
-            <Link to="/view" className="rounded border border-border px-3 py-1.5 text-sm font-semibold md:hidden">{t({ en: "Join monitor", da: "Scenemonitor", de: "Monitor", fr: "Moniteur", es: "Monitor", sv: "Scenmonitor", no: "Scenemonitor" })}</Link>
             <Link to="/hub" className="hidden rounded bg-go px-4 py-1.5 text-sm font-bold text-go-foreground md:block">{t({ en: "Open console", da: "Åbn pulten", de: "Pult öffnen", fr: "Ouvrir la console", es: "Abrir consola", sv: "Öppna konsolen", no: "Åpne konsollen" })}</Link>
           </div>
         </div>

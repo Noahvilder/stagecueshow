@@ -4,14 +4,14 @@ import { SiteShell, meta } from "@/components/site/SiteShell";
 import { useT } from "@/lib/site/i18n";
 
 export const Route = createFileRoute("/")({
-  head: () => meta("StageCue – Professional show control for Windows", "Cue-based show control for Windows: one big GO button, plug & play MIDI controllers, multi-output audio and free wireless stage monitors for the whole band."),
+  head: () => meta("StageCue – Professional show control for Windows", "Cue-based show control for Windows: an easy, powerful cue list, plug & play MIDI controllers, multi-output audio and free wireless stage monitors for the whole band."),
   component: Landing,
 });
 
 type L = { en: string; da: string; de: string };
 
 const ENGINE: { k: string; t: L; d: L }[] = [
-  { k: "GO", t: { en: "One button. Every cue.", da: "Én knap. Alle cues.", de: "Ein Knopf. Jeder Cue." }, d: { en: "Spacebar, mouse or any controller fires the next cue. Readable from two metres away.", da: "Mellemrum, mus eller enhver controller affyrer næste cue. Læsbart på to meters afstand.", de: "Leertaste, Maus oder jeder Controller löst den nächsten Cue aus. Lesbar aus zwei Metern." } },
+  { k: "EASY", t: { en: "Clear from day one", da: "Overskuelig fra dag ét", de: "Klar ab dem ersten Tag" }, d: { en: "Simple layout for beginners, advanced tools when you need them. Search every function and get help on every button.", da: "Simpel visning for nye brugere, avancerede værktøjer når du har brug for dem. Søg i alle funktioner og få hjælp til hver knap.", de: "Einfache Ansicht für Einsteiger, Profi-Werkzeuge bei Bedarf. Alle Funktionen durchsuchen, Hilfe zu jedem Knopf." } },
   { k: "MIDI", t: { en: "Plug & play MIDI controllers", da: "Plug & play MIDI-controllere", de: "Plug & Play MIDI-Controller" }, d: { en: "Any USB-MIDI pedal, keyboard or pad. Click Learn, tap your hardware — done. No extra software needed.", da: "Enhver USB-MIDI pedal, keyboard eller pad. Klik Lær, tryk på din hardware – færdig. Intet ekstra software.", de: "Jedes USB-MIDI-Pedal, Keyboard oder Pad. Lernen klicken, Hardware antippen – fertig. Keine Zusatzsoftware." } },
   { k: "OUT", t: { en: "Built-in MIDI & audio routing", da: "Indbygget MIDI- og lydrouting", de: "Integriertes MIDI- & Audio-Routing" }, d: { en: "Send notes, CC and program changes to synths, effects and lighting. Route every audio cue to its own output.", da: "Send noder, CC og program changes til synths, effekter og lys. Send hvert lyd-cue til sin egen udgang.", de: "Sende Noten, CC und Program Changes an Synths, Effekte und Licht. Jeder Audio-Cue auf eigenen Ausgang." } },
 ];
@@ -32,11 +32,12 @@ const ALL_FEATURES: { g: L; items: string[] }[] = [
 
 function AllFeatures() {
   const t = useT();
+  const [open, setOpen] = useState(false);
   return (
     <section id="funktioner" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20">
       <h2 className="text-3xl font-black">{t({ en: "Everything in StageCue", da: "Alle funktioner", de: "Alle Funktionen" })}</h2>
-      <div className="mt-8 rounded-2xl border border-border bg-card">
-        <div className="grid gap-8 p-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="relative mt-8 rounded-2xl border border-border bg-card">
+        <div className={"grid gap-8 overflow-hidden p-6 transition-[max-height] duration-500 sm:grid-cols-2 lg:grid-cols-4 " + (open ? "max-h-[2000px]" : "max-h-48")}>
           {ALL_FEATURES.map((f) => (
             <div key={f.g.en}>
               <h3 className="mb-3 font-mono text-xs font-bold uppercase tracking-widest text-go">{t(f.g)}</h3>
@@ -44,6 +45,12 @@ function AllFeatures() {
             </div>
           ))}
         </div>
+        {!open && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 rounded-b-2xl bg-gradient-to-t from-card to-transparent" />}
+      </div>
+      <div className="mt-4 text-center">
+        <button onClick={() => setOpen(!open)} className="rounded-lg border-2 border-border px-6 py-2 font-bold hover:border-go">
+          {open ? t({ en: "Show less ⌃", da: "Vis færre ⌃", de: "Weniger ⌃" }) : t({ en: "See all features ⌄", da: "Se alle funktioner ⌄", de: "Alle Funktionen ⌄" })}
+        </button>
       </div>
     </section>
   );
@@ -137,11 +144,10 @@ function LandingBody() {
       <section className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
         <p className="mb-4 font-mono text-xs font-bold uppercase tracking-[0.3em] text-go">Show control · Windows 10/11</p>
         <h1 className="max-w-4xl text-4xl font-black leading-tight sm:text-6xl">{t({ en: "Professional show control for Windows. Built for the stage.", da: "Professionel show control til Windows. Bygget til scenen.", de: "Professionelle Show-Control für Windows. Gebaut für die Bühne." })}</h1>
-        <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{t({ en: "Audio, MIDI and setlists behind one GO button — for theatre, touring bands, churches, events and schools. A keyboard and mouse is all you need; controllers and phones are a bonus.", da: "Lyd, MIDI og setlister bag én GO-knap – til teater, turnerende bands, kirker, events og skoler. Tastatur og mus er alt, du behøver; controllere og telefoner er en bonus.", de: "Audio, MIDI und Setlisten hinter einem GO-Knopf – für Theater, Bands auf Tour, Kirchen, Events und Schulen. Tastatur und Maus genügen; Controller und Handys sind ein Bonus." })}</p>
+        <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{t({ en: "Easy to learn, powerful when it matters. Audio, MIDI, setlists and stage monitors in one clear workspace — for theatre, touring bands, churches, events and schools.", da: "Nem at lære, stærk når det gælder. Lyd, MIDI, setlister og scenemonitorer samlet i ét overskueligt program – til teater, turnerende bands, kirker, events og skoler.", de: "Leicht zu lernen, stark, wenn es darauf ankommt. Audio, MIDI, Setlisten und Bühnenmonitore in einer klaren Oberfläche – für Theater, Bands auf Tour, Kirchen, Events und Schulen." })}</p>
         <div className="mt-10 flex flex-wrap gap-3">
           <Link to="/download" className="hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:inline-block">⬇ {t({ en: "Download for Windows", da: "Download til Windows", de: "Für Windows laden" })}</Link>
           <Link to="/view" className="rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:hidden">🎸 {t({ en: "Join stage monitor", da: "Åbn scenemonitor", de: "Bühnenmonitor öffnen" })}</Link>
-          <Link to="/priser" className="rounded-lg border-2 border-border px-6 py-3 text-lg font-bold">{t({ en: "Free vs Pro", da: "Gratis vs Pro", de: "Free vs Pro" })}</Link>
           <a href="#funktioner" className="px-2 py-3 text-lg font-semibold text-muted-foreground hover:text-foreground">{t({ en: "All features ↓", da: "Alle funktioner ↓", de: "Alle Funktionen ↓" })}</a>
         </div>
         <div className="mt-14"><ConsoleMock /></div>
