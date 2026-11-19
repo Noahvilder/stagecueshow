@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          description: string
+          id: string
+          plan: string | null
+          receipt_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          plan?: string | null
+          receipt_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          plan?: string | null
+          receipt_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pult_devices: {
         Row: {
           created_at: string

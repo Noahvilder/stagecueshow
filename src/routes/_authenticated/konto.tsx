@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Billing } from "@/components/account/Billing";
 import { DeviceList } from "@/components/account/DeviceList";
 import { MAX_PULT_DEVICES } from "@/lib/show/device";
 import { deleteMyAccount } from "@/lib/account/delete.functions";
@@ -26,11 +27,6 @@ const PLANS = [
 ] as const;
 
 function Konto() {
-  const [lic, setLic] = useState<{ plan: string; status: string } | null>(null);
-  useEffect(() => {
-    supabase.from("licenses").select("plan,status").maybeSingle().then(({ data }) => setLic(data ?? { plan: "none", status: "inactive" }));
-  }, []);
-  const active = lic?.status === "active";
   return (
     <div className="min-h-screen bg-background p-4 text-foreground sm:p-8">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -38,12 +34,10 @@ function Konto() {
           <span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span>
           <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link>
         </header>
+        <Billing />
         <section>
-          <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Pult-licens</h2>
-          <div className="rounded-xl border border-border bg-card p-4">
-            {lic ? (active ? <p className="font-bold text-go">Aktiv · {lic.plan}</p> : <p>Ingen aktiv licens endnu. Scenemonitors er altid gratis.</p>) : "…"}
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Skift plan</h2>
+          <div className=" grid gap-3 sm:grid-cols-3">
             {PLANS.map((p) => (
               <div key={p.id} className="flex flex-col rounded-xl border-2 border-border bg-card p-4">
                 <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{p.name}</div>

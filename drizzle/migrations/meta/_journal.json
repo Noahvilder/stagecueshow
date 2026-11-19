@@ -36,6 +36,13 @@
       "when": 1795112867110,
       "tag": "0004_show_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795115431089,
+      "tag": "0005_create_payments",
+      "breakpoints": true
     }
   ]
 }
