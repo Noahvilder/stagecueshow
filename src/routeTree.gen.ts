@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as PriserRouteImport } from './routes/priser'
 import { Route as PrivatlivRouteImport } from './routes/privatliv'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ShowRouteImport } from './routes/show'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as VilkaarRouteImport } from './routes/vilkaar'
@@ -52,6 +53,11 @@ const PriserRoute = PriserRouteImport.update({
 const PrivatlivRoute = PrivatlivRouteImport.update({
   id: '/privatliv',
   path: '/privatliv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShowRoute = ShowRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
   '/vilkaar': typeof VilkaarRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
   '/vilkaar': typeof VilkaarRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/download': typeof DownloadRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
   '/vilkaar': typeof VilkaarRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
+    | '/reset-password'
     | '/show'
     | '/support'
     | '/vilkaar'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
+    | '/reset-password'
     | '/show'
     | '/support'
     | '/vilkaar'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/download'
     | '/priser'
     | '/privatliv'
+    | '/reset-password'
     | '/show'
     | '/support'
     | '/vilkaar'
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   DownloadRoute: typeof DownloadRoute
   PriserRoute: typeof PriserRoute
   PrivatlivRoute: typeof PrivatlivRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ShowRoute: typeof ShowRoute
   SupportRoute: typeof SupportRoute
   VilkaarRoute: typeof VilkaarRoute
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       path: '/privatliv'
       fullPath: '/privatliv'
       preLoaderRoute: typeof PrivatlivRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/show': {
@@ -353,6 +373,7 @@ const rootRouteChildren: RootRouteChildren = {
   DownloadRoute: DownloadRoute,
   PriserRoute: PriserRoute,
   PrivatlivRoute: PrivatlivRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ShowRoute: ShowRoute,
   SupportRoute: SupportRoute,
   VilkaarRoute: VilkaarRoute,
