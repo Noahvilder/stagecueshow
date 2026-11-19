@@ -31,9 +31,13 @@ function Hub() {
   const joinCode = normCode(join);
   const joinOk = isValidCode(joinCode);
 
+  const [shared, setShared] = useState<{ id: string; name: string; remote_code: string | null }[]>([]);
+  const [inviteFor, setInviteFor] = useState<string | null>(null);
   const load = async () => {
     const { data } = await supabase.from("shows").select("id,name,updated_at").order("updated_at", { ascending: false });
     setRows(data ?? []);
+    const sh = await supabase.rpc("shared_shows");
+    setShared(sh.data ?? []);
   };
   useEffect(() => {
     const m = localStorage.getItem(MODE_KEY);
@@ -83,6 +87,22 @@ function Hub() {
           </div>
         </section>
 
+        {shared.length > 0 && (
+          <section>
+            <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Shows du er inviteret til</h2>
+            <div className="flex flex-col gap-2">
+              {shared.map((s) => (
+                <div key={s.id} className="flex items-center gap-2 rounded-lg bg-card p-3">
+                  <div className="min-w-0 flex-1 truncate text-lg font-bold">{s.name}</div>
+                  {s.remote_code && isValidCode(s.remote_code)
+                    ? <button onClick={() => nav({ to: "/view", search: { code: s.remote_code! } })} className="rounded-lg bg-go px-4 py-2 font-bold text-go-foreground">🎤 Åbn monitor</button>
+                    : <span className="text-xs text-muted-foreground">Pulten er ikke tændt endnu</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="rounded-xl border border-border bg-card p-4">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Forbind til et andet show</h2>
           <input value={join} onChange={(e) => setJoin(e.target.value)} placeholder="Pultens kode" autoCapitalize="characters" className="w-full rounded-lg border border-border bg-background px-3 py-3 font-mono text-lg tracking-widest" />
@@ -109,18 +129,56 @@ function Hub() {
             {rows === null && <div className="text-muted-foreground">Henter…</div>}
             {rows?.length === 0 && <div className="rounded-lg border border-dashed border-border p-6 text-center text-muted-foreground">Ingen shows endnu – opret dit første.</div>}
             {rows?.map((r) => (
-              <div key={r.id} className="flex items-center gap-2 rounded-lg bg-card p-2">
+              <div key={r.id} className="flex flex-col gap-2 rounded-lg bg-card p-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button onClick={() => open(r.id)} className="min-w-0 flex-1 p-2 text-left">
                   <div className="truncate text-lg font-bold">{r.name}</div>
                   <div className="text-xs text-muted-foreground">Ændret {new Date(r.updated_at).toLocaleString("da-DK")}</div>
                 </button>
+                <button onClick={() => setInviteFor(inviteFor === r.id ? null : r.id)} className="rounded px-3 py-2 text-sm font-semibold">👥 Invitér</button>
                 <button onClick={() => del(r)} className="rounded px-3 py-2 text-sm text-destructive">Slet</button>
                 <button onClick={() => open(r.id)} className="rounded-lg bg-go px-4 py-2 font-bold text-go-foreground">Åbn</button>
+              </div>
+              {inviteFor === r.id && <Invites showId={r.id} />}
               </div>
             ))}
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function Invites({ showId }: { showId: string }) {
+  const [list, setList] = useState<{ id: string; email: string }[]>([]);
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const load = async () => {
+    const { data } = await supabase.from("show_invites").select("id,email").eq("show_id", showId).order("created_at");
+    setList(data ?? []);
+  };
+  useEffect(() => { load(); }, [showId]);
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault(); setMsg(null);
+    const v = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return setMsg("Skriv en gyldig email.");
+    const { error } = await supabase.from("show_invites").insert({ show_id: showId, email: v });
+    if (error) return setMsg(error.code === "23505" ? "Den email er allerede inviteret." : error.message);
+    setEmail(""); load();
+  };
+  const remove = async (id: string) => { await supabase.from("show_invites").delete().eq("id", id); load(); };
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <p className="mb-2 text-xs text-muted-foreground">Musikere logger ind med deres egen gratis konto og ser så showet under "Shows du er inviteret til". De kan kun se scenemonitoren – ikke ændre showet.</p>
+      <form onSubmit={add} className="flex gap-2">
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="musiker@email.dk" className="min-w-0 flex-1 rounded-lg border border-border bg-input px-3 py-2" />
+        <button className="rounded-lg bg-go px-3 py-2 font-bold text-go-foreground">Invitér</button>
+      </form>
+      {msg && <p className="mt-2 text-sm text-destructive">{msg}</p>}
+      <ul className="mt-2 flex flex-col gap-1">
+        {list.map((i) => <li key={i.id} className="flex items-center justify-between text-sm"><span className="truncate">{i.email}</span><button onClick={() => remove(i.id)} className="text-destructive">Fjern</button></li>)}
+        {list.length === 0 && <li className="text-sm text-muted-foreground">Ingen inviteret endnu.</li>}
+      </ul>
     </div>
   );
 }

@@ -65,6 +65,38 @@ export type Database = {
         }
         Relationships: []
       }
+      show_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          owner_id: string
+          show_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          owner_id?: string
+          show_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          owner_id?: string
+          show_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_invites_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shows: {
         Row: {
           created_at: string
@@ -142,6 +174,14 @@ export type Database = {
       claim_pult_device: {
         Args: { _device_id: string; _device_name: string }
         Returns: Json
+      }
+      shared_shows: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+          remote_code: string
+        }[]
       }
       submit_ticket: {
         Args: {
