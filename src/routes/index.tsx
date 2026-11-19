@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { SiteShell, meta } from "@/components/site/SiteShell";
 import { useT } from "@/lib/site/i18n";
 
@@ -33,13 +33,10 @@ const ALL_FEATURES: { g: L; items: string[] }[] = [
 function AllFeatures() {
   const t = useT();
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-20">
-      <details className="group rounded-2xl border border-border bg-card">
-        <summary className="flex cursor-pointer list-none items-center justify-between p-6 text-xl font-black">
-          {t({ en: "See all features", da: "Se alle funktioner", de: "Alle Funktionen ansehen" })}
-          <span className="transition-transform group-open:rotate-180">⌄</span>
-        </summary>
-        <div className="grid gap-8 border-t border-border p-6 sm:grid-cols-2 lg:grid-cols-4">
+    <section id="funktioner" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20">
+      <h2 className="text-3xl font-black">{t({ en: "Everything in StageCue", da: "Alle funktioner", de: "Alle Funktionen" })}</h2>
+      <div className="mt-8 rounded-2xl border border-border bg-card">
+        <div className="grid gap-8 p-6 sm:grid-cols-2 lg:grid-cols-4">
           {ALL_FEATURES.map((f) => (
             <div key={f.g.en}>
               <h3 className="mb-3 font-mono text-xs font-bold uppercase tracking-widest text-go">{t(f.g)}</h3>
@@ -47,84 +44,77 @@ function AllFeatures() {
             </div>
           ))}
         </div>
-      </details>
-    </section>
-  );
-}
-
-/** Returns 0..1 progress of a tall section scrolled through the viewport. */
-function useScrollProgress<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [p, setP] = useState(0);
-  useEffect(() => {
-    const on = () => {
-      const el = ref.current; if (!el) return;
-      const r = el.getBoundingClientRect();
-      const total = r.height - window.innerHeight;
-      setP(Math.min(1, Math.max(0, -r.top / (total || 1))));
-    };
-    on(); window.addEventListener("scroll", on, { passive: true }); window.addEventListener("resize", on);
-    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", on); };
-  }, []);
-  return [ref, p] as const;
-}
-
-function Engine() {
-  const t = useT();
-  const [ref, p] = useScrollProgress<HTMLElement>();
-  const i = Math.min(ENGINE.length - 1, Math.floor(p * ENGINE.length));
-  return (
-    <section ref={ref} style={{ height: `${ENGINE.length * 90}vh` }} className="relative border-t border-border">
-      <div className="sticky top-0 flex h-screen items-center">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 md:grid-cols-2">
-          <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-go">{t({ en: "The precision engine", da: "Præcisionsmotoren", de: "Die Präzisions-Engine" })}</p>
-            {ENGINE.map((s, j) => (
-              <div key={s.k} className={`transition-all duration-500 ${j === i ? "mt-6 opacity-100" : "pointer-events-none absolute opacity-0"}`}>
-                <h2 className="text-3xl font-black sm:text-5xl">{t(s.t)}</h2>
-                <p className="mt-4 text-lg text-muted-foreground">{t(s.d)}</p>
-              </div>
-            ))}
-            <div className="mt-8 flex gap-2">{ENGINE.map((s, j) => <span key={s.k} className={`h-1 w-10 rounded ${j <= i ? "bg-go" : "bg-border"}`} />)}</div>
-          </div>
-          {/* Mock console that "zooms" to the active feature */}
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-            <div className="flex h-7 items-center gap-4 border-b border-border px-3 font-mono text-[10px] text-muted-foreground"><span>File</span><span>Edit</span><span>Cues</span><span>Playback</span><span>Windows</span></div>
-            <div className="grid h-[calc(100%-1.75rem)] grid-cols-3 gap-2 p-3 transition-transform duration-700" style={{ transform: `scale(${1 + (i === 0 ? 0.08 : 0)}) translateY(${i * -2}%)` }}>
-              <div className="col-span-2 space-y-1.5">
-                {["01  Intro", "02  Opener – click", "03  Verse light", "04  Chorus FX", "05  Outro fade"].map((r, j) => (
-                  <div key={r} className={`rounded px-2 py-1.5 font-mono text-xs ${j === 1 ? "bg-go text-go-foreground" : "bg-muted text-muted-foreground"}`}>{r}</div>
-                ))}
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className={`flex flex-1 items-center justify-center rounded-xl text-3xl font-black transition-all duration-500 ${i === 0 ? "bg-go text-go-foreground ring-4 ring-go/40" : "bg-muted text-muted-foreground"}`}>GO</div>
-                <div className={`rounded-lg p-2 font-mono text-[10px] transition-all duration-500 ${i === 1 ? "bg-primary text-primary-foreground ring-4 ring-primary/40" : "bg-muted text-muted-foreground"}`}>MIDI IN · Learn ●</div>
-                <div className={`rounded-lg p-2 font-mono text-[10px] transition-all duration-500 ${i === 2 ? "bg-primary text-primary-foreground ring-4 ring-primary/40" : "bg-muted text-muted-foreground"}`}>OUT 1-2 · PC 12 · CC 64</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
 }
 
-function Arena() {
+const BENEFITS = [ENGINE[0]!, ARENA[0]!, ARENA[2]!];
+
+function Benefits() {
   const t = useT();
-  const [ref, p] = useScrollProgress<HTMLElement>();
-  const i = Math.min(ARENA.length - 1, Math.floor(p * ARENA.length));
   return (
-    <section ref={ref} style={{ height: `${ARENA.length * 90}vh` }} className="relative bg-foreground text-background">
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden">
-        {/* stage lights driven by scroll */}
-        <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse at ${20 + p * 60}% 0%, color-mix(in oklch, var(--go) 45%, transparent), transparent 55%), radial-gradient(ellipse at ${80 - p * 60}% 0%, color-mix(in oklch, var(--primary) 35%, transparent), transparent 50%)` }} />
-        <div className="relative mx-auto w-full max-w-4xl px-4 text-center">
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] opacity-70">{t({ en: "The live arena", da: "Livescenen", de: "Die Live-Arena" })}</p>
-          <div className="mt-6 text-6xl">{ARENA[i]!.k}</div>
-          <h2 key={i} className="mt-4 text-4xl font-black sm:text-6xl">{t(ARENA[i]!.t)}</h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg opacity-80">{t(ARENA[i]!.d)}</p>
+    <section className="border-y border-border bg-card/40">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-20 md:grid-cols-3">
+        {BENEFITS.map((b) => (
+          <div key={b.k} className="rounded-2xl border border-border bg-card p-6">
+            <div className="font-mono text-sm font-black text-go">{b.k}</div>
+            <h3 className="mt-3 text-xl font-black">{t(b.t)}</h3>
+            <p className="mt-2 text-muted-foreground">{t(b.d)}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ConsoleMock() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+      <div className="flex h-8 items-center gap-4 border-b border-border px-4 font-mono text-[11px] text-muted-foreground"><span>File</span><span>Edit</span><span>Cues</span><span>Playback</span><span>Windows</span><span className="ml-auto">00:42:17</span></div>
+      <div className="grid gap-3 p-4 sm:grid-cols-[1fr_180px]">
+        <div className="space-y-1.5">
+          {["1    Intro – walk-in", "2    Opener – click", "2.5  Verse light", "3    Chorus FX", "4    Outro fade"].map((r, j) => (
+            <div key={r} className={`rounded px-3 py-2 font-mono text-xs sm:text-sm ${j === 1 ? "bg-go text-go-foreground" : "bg-muted text-muted-foreground"}`}>{r}</div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex min-h-24 flex-1 items-center justify-center rounded-xl bg-go text-4xl font-black text-go-foreground">GO</div>
+          <div className="rounded-lg bg-muted p-2 text-center font-mono text-xs font-bold text-standby">⏱ GO: "…and the lights go down"</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const TABS: { l: L; render: () => ReactNode }[] = [
+  { l: { en: "Console", da: "Pulten", de: "Pult" }, render: () => <ConsoleMock /> },
+  { l: { en: "Stage monitor", da: "Scenemonitor", de: "Bühnenmonitor" }, render: () => (
+    <div className="mx-auto max-w-xs overflow-hidden rounded-[2rem] border-4 border-border bg-card p-5 font-mono shadow-2xl">
+      <div className="text-xs text-muted-foreground">NOW · 2 Opener</div>
+      <div className="mt-3 text-lg font-bold">[Em] Here we go [C] again</div>
+      <pre className="mt-3 overflow-hidden text-xs text-muted-foreground">G|-----------|{"\n"}D|--2--2--4--|{"\n"}A|--2--2--2--|{"\n"}E|--0--0-----|</pre>
+      <div className="mt-4 rounded bg-muted p-2 text-center text-sm font-bold text-standby">⏱ GO: Drums fill</div>
+    </div>) },
+  { l: { en: "Click & tools", da: "Click & værktøjer", de: "Click & Tools" }, render: () => (
+    <div className="mx-auto grid max-w-2xl gap-4 sm:grid-cols-2">
+      <div className="rounded-2xl border border-border bg-card p-6 text-center"><div className="text-5xl font-black">120</div><div className="text-sm text-muted-foreground">BPM · 4/4 · Moderato</div><div className="mt-4 flex justify-center gap-2">{[0,1,2,3].map((i) => <span key={i} className={`h-3 w-3 rounded-full ${i === 0 ? "bg-standby" : "bg-muted"}`} />)}</div></div>
+      <div className="rounded-2xl border border-border bg-card p-4 font-mono text-xs"><div className="font-bold text-go">● Note On C3 · Pedal · 3 B</div><div className="mt-2 text-muted-foreground">CC 64 · Keys · 3 B</div><div className="text-muted-foreground">PC 12 · Helix · 2 B</div></div>
+    </div>) },
+];
+
+function Tour() {
+  const t = useT();
+  const [i, setI] = useState(1);
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-20">
+      <h2 className="text-3xl font-black">{t({ en: "Take a look", da: "Se den i brug", de: "Ein Blick hinein" })}</h2>
+      <div className="mt-6 flex flex-wrap gap-2">
+        {TABS.map((tab, j) => (
+          <button key={tab.l.en} onClick={() => setI(j)} className={`rounded-full px-4 py-2 text-sm font-bold ${i === j ? "bg-foreground text-background" : "border border-border text-muted-foreground"}`}>{t(tab.l)}</button>
+        ))}
+      </div>
+      <div className="mt-8">{TABS[i]!.render()}</div>
     </section>
   );
 }
@@ -152,11 +142,13 @@ function LandingBody() {
           <Link to="/download" className="hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:inline-block">⬇ {t({ en: "Download for Windows", da: "Download til Windows", de: "Für Windows laden" })}</Link>
           <Link to="/view" className="rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:hidden">🎸 {t({ en: "Join stage monitor", da: "Åbn scenemonitor", de: "Bühnenmonitor öffnen" })}</Link>
           <Link to="/priser" className="rounded-lg border-2 border-border px-6 py-3 text-lg font-bold">{t({ en: "Free vs Pro", da: "Gratis vs Pro", de: "Free vs Pro" })}</Link>
+          <a href="#funktioner" className="px-2 py-3 text-lg font-semibold text-muted-foreground hover:text-foreground">{t({ en: "All features ↓", da: "Alle funktioner ↓", de: "Alle Funktionen ↓" })}</a>
         </div>
+        <div className="mt-14"><ConsoleMock /></div>
       </section>
 
-      <Engine />
-      <Arena />
+      <Benefits />
+      <Tour />
 
       <section className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-3xl font-black">{t({ en: "Why StageCue?", da: "Hvorfor StageCue?", de: "Warum StageCue?" })}</h2>
