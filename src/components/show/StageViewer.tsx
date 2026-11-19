@@ -38,6 +38,8 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [monitorId, setMonitorId] = useState(initialMonitor ?? "");
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [scroll, setScroll] = useState(0);
+  const mainRef = useRef<HTMLElement | null>(null);
   const monitorRef = useRef(monitorId);
   monitorRef.current = monitorId;
   const connRef = useRef<{ open: boolean; send: (d: RemoteCmd) => void } | null>(null);
@@ -94,6 +96,18 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const cur = idx >= 0 ? flat[idx] : undefined;
   const next = idx >= 0 ? flat[idx + 1] : undefined;
   const body = (c?: typeof cur) => monitorBody(c, profile?.id);
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [cur?.id]);
+  useEffect(() => {
+    if (!scroll) return;
+    let raf = 0; let last = performance.now(); let acc = 0;
+    const tick = (t: number) => {
+      acc += ((t - last) / 1000) * scroll * 12; last = t;
+      if (acc >= 1 && mainRef.current) { mainRef.current.scrollTop += Math.floor(acc); acc -= Math.floor(acc); }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [scroll]);
 
   if (!target) return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
@@ -146,7 +160,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
         <div className="truncate text-3xl font-black text-standby">{cur?.song ?? "—"}</div>
         <div className="flex min-w-0 items-baseline gap-3"><div className="truncate text-2xl font-bold" style={{ color: cur?.color }}>{cur?.name ?? ""}</div><button onClick={() => { setMonitorId(""); setMode(null); }} className="shrink-0 rounded bg-secondary px-3 py-1 text-sm font-bold">{profile?.name ?? "Fælles"} · Skift rolle</button></div>
       </header>
-      <main className="min-h-0 flex-1 overflow-auto px-6 py-4">
+      <main ref={mainRef} className="min-h-0 flex-1 overflow-auto px-6 py-4">
         {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – prøver igen…</div>}
         {viewMode === "lyrics"
           ? (body(cur) ? <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
@@ -157,6 +171,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       <div className={`absolute bottom-16 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap justify-end gap-2 rounded bg-background p-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         {SIZES.map((_, i) => <Button variant="secondary" key={i} onClick={() => setSize(i)} className={size === i ? "bg-standby text-standby-foreground" : ""}>{"A" + "+".repeat(i)}</Button>)}
         {profile && cur && <Button variant="secondary" onClick={() => openEdit(cur.id)}>✏️ Redigér mine noter</Button>}
+        <Button variant="secondary" title="Rul teksten automatisk – tryk igen for hurtigere" onClick={() => setScroll((v) => (v >= 4 ? 0 : v + 1))} className={scroll ? "bg-standby text-standby-foreground" : ""}>{scroll ? `⇣ Rul ${scroll}x` : "⇣ Auto-rul"}</Button>
         <Button variant="secondary" title="Fuld skærm" onClick={full}>⛶</Button>
         <Button variant="secondary" onClick={() => { setMonitorId(""); setMode(null); }}>Skift</Button>
       </div>
