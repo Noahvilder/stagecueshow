@@ -58,7 +58,7 @@ function Shell({ children }: { children: ReactNode }) {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-4 px-4 py-8 text-sm text-muted-foreground">
           <span>© 2026 StageCue · {t({ en: "Show control for Windows", da: "Show control til Windows", de: "Show-Control für Windows" })}</span>
-          <span className="flex gap-4">{NAV.slice(1).map((n) => <Link key={n.to} to={n.to}>{t(n.l)}</Link>)}<Link to="/privatliv">{t({ en: "Privacy", da: "Privatliv", de: "Datenschutz" })}</Link><Link to="/vilkaar">{t({ en: "Terms", da: "Vilkår", de: "AGB" })}</Link></span>
+          <span className="flex gap-4">{NAV.slice(1).map((n) => <Link key={n.to} to={n.to}>{t(n.l)}</Link>)}<Link to="/privatliv">{t({ en: "Privacy", da: "Privatliv", de: "Datenschutz" })}</Link><Link to="/support" hash="ticket">{t({ en: "💡 Suggest a change", da: "💡 Foreslå ændring", de: "💡 Vorschlag" })}</Link><Link to="/vilkaar">{t({ en: "Terms", da: "Vilkår", de: "AGB" })}</Link></span>
         </div>
       </footer>
     </div>

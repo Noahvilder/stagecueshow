@@ -31,7 +31,7 @@ function Support() {
           ))}
         </div>
         <h2 className="mt-12 text-xl font-bold">Fejlmeld, foreslå en ændring eller få hjælp</h2>
-        <FeedbackForm />
+        <div id="ticket"><FeedbackForm /></div>
         <h2 className="mt-12 text-xl font-bold">Kontakt</h2>
         <p className="mt-2 text-muted-foreground">Skriv til <a href="mailto:support@stagecue.app" className="font-semibold text-go underline">support@stagecue.app</a> – vi svarer typisk inden for 24 timer.</p>
       </section>

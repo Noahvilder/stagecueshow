@@ -95,6 +95,45 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          body: string
+          created_at: string
+          email: string | null
+          id: string
+          kind: string
+          status: string
+          subject: string
+          system_info: string | null
+          ticket_no: number
+          user_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          kind: string
+          status?: string
+          subject: string
+          system_info?: string | null
+          ticket_no?: number
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          kind?: string
+          status?: string
+          subject?: string
+          system_info?: string | null
+          ticket_no?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -103,6 +142,16 @@ export type Database = {
       claim_pult_device: {
         Args: { _device_id: string; _device_name: string }
         Returns: Json
+      }
+      submit_ticket: {
+        Args: {
+          _body: string
+          _email: string
+          _kind: string
+          _subject: string
+          _system_info: string
+        }
+        Returns: number
       }
     }
     Enums: {

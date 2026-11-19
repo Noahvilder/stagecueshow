@@ -444,6 +444,7 @@ export function ShowControl({ showId }: { showId: string }) {
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {!locked && <Btn onClick={() => setImportOpen(true)}>📋 Importér setliste</Btn>}
         <Btn onClick={() => setKeysOpen(true)}>⌨️ Genveje</Btn>
+        <Btn onClick={() => window.open("/support#ticket", "_blank")}>💡 Forslag</Btn>
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
         {keysOpen && <KeysHelp onClose={() => setKeysOpen(false)} />}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
