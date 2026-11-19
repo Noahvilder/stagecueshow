@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
 import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
@@ -217,6 +217,8 @@ export function ShowControl({ showId }: { showId: string }) {
       } else if (e.code === "Escape") {
         e.preventDefault();
         panic();
+      } else if (e.key === "?") {
+        setKeysOpen((o) => !o);
       } else if (e.code === "ArrowDown") {
         e.preventDefault();
         step(1);
@@ -271,6 +273,14 @@ export function ShowControl({ showId }: { showId: string }) {
     setSelectedId(c.id);
   };
   const [clickOpen, setClickOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const importSetlist = (text: string) => {
+    const lines = text.split(/\r?\n/).map((l) => l.replace(/^\s*\d+[.)\-:]?\s*/, "").trim()).filter(Boolean);
+    if (!lines.length) return;
+    setShow((s) => ({ ...s, songs: [...s.songs, ...lines.map((name) => ({ id: uid(), name, cues: [{ ...newCue("memo"), name } as Cue] }))] }));
+    setImportOpen(false);
+  };
   const createClickCue = async (blob: Blob, name: string) => {
     const id = uid();
     await putAudio(id, blob);
@@ -431,6 +441,10 @@ export function ShowControl({ showId }: { showId: string }) {
         </div>
         {!locked && <Btn onClick={() => setClickOpen(true)}>⏱️ Click / Optælling</Btn>}
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
+        {!locked && <Btn onClick={() => setImportOpen(true)}>📋 Importér setliste</Btn>}
+        <Btn onClick={() => setKeysOpen(true)}>⌨️ Genveje</Btn>
+        {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
+        {keysOpen && <KeysHelp onClose={() => setKeysOpen(false)} />}
         {!locked && <Btn onClick={() => setSettings(true)}>Indstillinger</Btn>}
         <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
@@ -645,8 +659,8 @@ function cueColorById(show: Show, id: string) {
 
 function followLabel(c: Cue) {
   const pre = c.preWait > 0 ? `⏱${c.preWait}s ` : "";
-  if (c.follow === "manual") return pre + "GO";
-  return pre + (c.follow === "withStart" ? "→ start" : "→ slut") + (c.postWait ? `+${c.postWait}s` : "");
+  if (c.follow === "manual") return pre + "⏹ Stop";
+  return pre + (c.follow === "withStart" ? "⏩ Auto (start)" : "⏩ Auto (slut)") + (c.postWait ? `+${c.postWait}s` : "");
 }
 
 function summary(c: Cue, ports: string[]): string {
@@ -783,6 +797,7 @@ function Inspector(props: {
 
       <Field label="Farve (kun dette cue)">
         <div className="flex items-center gap-2">
+          {["#ef4444","#f59e0b","#eab308","#22c55e","#3b82f6","#a855f7","#ec4899"].map((col) => <button key={col} title="Vælg farve" onClick={() => set({ color: col })} className="h-6 w-6 rounded-full border border-border" style={{ backgroundColor: col }} />)}
           <input type="color" value={cueColor(show, cue)} onChange={(e) => set({ color: e.target.value })} className="h-8 w-14 cursor-pointer bg-transparent" />
           {cue.color && <button className="text-sm text-muted-foreground underline" onClick={() => set({ color: undefined })}>Brug type-farve</button>}
         </div>
@@ -807,6 +822,7 @@ function Inspector(props: {
               </div>
             </Field>
           )}
+          {cue.fileId && <Field label="Forlyt (PFL)"><PflButton fileId={cue.fileId} /></Field>}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
               {outputs.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
@@ -1076,4 +1092,53 @@ function PedalPanel(props: {
       <div className="font-mono text-xs text-muted-foreground">Sidst modtaget: {props.last ? midiInLabel(props.last) : "intet"}</div>
     </div>
   );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-bold">{title}</h2><button onClick={onClose} aria-label="Luk">✕</button></div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SetlistImport({ onClose, onImport }: { onClose: () => void; onImport: (t: string) => void }) {
+  const [text, setText] = useState("");
+  return (
+    <Modal title="Importér setliste" onClose={onClose}>
+      <p className="mb-2 text-sm text-muted-foreground">Indsæt én sang pr. linje. Numre foran (fx "1.") fjernes automatisk. Hver sang får et memo-cue, du kan bygge videre på.</p>
+      <textarea autoFocus className="h-56 w-full rounded border border-border bg-input p-2 font-mono text-sm" value={text} onChange={(e) => setText(e.target.value)} placeholder={"1. Intro\n2. Første sang\n3. Ballade"} />
+      <div className="mt-3 flex justify-end gap-2"><Btn onClick={onClose}>Annullér</Btn><button className="rounded bg-go px-4 py-1.5 font-bold text-go-foreground" onClick={() => onImport(text)}>Opret sange</button></div>
+    </Modal>
+  );
+}
+
+const KEYS: [string, string][] = [["Mellemrum", "GO"], ["Esc", "Panic (fade ud)"], ["↑ / ↓", "Flyt standby"], ["Ctrl+L", "Lås / lås op showet"], ["?", "Vis / skjul denne oversigt"]];
+function KeysHelp({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal title="Tastaturgenveje" onClose={onClose}>
+      <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">{KEYS.map(([k, d]) => <Fragment key={k}><kbd className="rounded border border-border bg-secondary px-2 py-0.5 font-mono text-sm">{k}</kbd><span>{d}</span></Fragment>)}</div>
+      <p className="mt-3 text-sm text-muted-foreground">MIDI-controllere og fodpedaler sættes op i vinduet "Fodpedal".</p>
+    </Modal>
+  );
+}
+
+function PflButton({ fileId }: { fileId: string }) {
+  const ref = useRef<HTMLAudioElement | null>(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => () => { ref.current?.pause(); }, []);
+  const toggle = async () => {
+    if (on) { ref.current?.pause(); setOn(false); return; }
+    const blob = await getAudio(fileId);
+    if (!blob) return;
+    const a = new Audio(URL.createObjectURL(blob));
+    ref.current = a;
+    a.onended = () => setOn(false);
+    await a.play();
+    setOn(true);
+  };
+  return <button title="Lyt til filen i standard-udgangen (fx høretelefoner) uden at starte cuet" onClick={toggle} className={`rounded px-3 py-1.5 text-sm font-bold ${on ? "bg-standby text-background" : "bg-secondary"}`}>{on ? "⏹ Stop forlyt" : "🎧 Forlyt"}</button>;
 }
