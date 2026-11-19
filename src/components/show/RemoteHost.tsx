@@ -78,7 +78,7 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
       });
       peer.on("disconnected", () => { setStatus("Genforbinder…"); if (!dead) setTimeout(() => { if (!dead && peer && !peer.destroyed) peer.reconnect(); }, 1000); });
       peer.on("error", (e) => {
-        setStatus("Fejl: " + e.type);
+        setStatus(e.type === "unavailable-id" ? "Backup: en anden pult kører koden – overtager automatisk hvis den falder ud" : "Fejl: " + e.type);
         if (e.type !== "peer-unavailable") {
           peer?.destroy();
           retry = setTimeout(start, 3000);
@@ -97,6 +97,8 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
   useEffect(() => {
     conns.current.forEach((c) => c.open && c.send({ t: "state", s: state }));
   }, [state]);
+  // Heartbeat: phones show "waiting for signal" if this stops.
+  useEffect(() => { const t = setInterval(() => conns.current.forEach((c) => c.open && c.send({ t: "state", s: stateRef.current })), 2000); return () => clearInterval(t); }, []);
 
   const newCode = () => { if (confirm("Ny kode afbryder alle parrede telefoner og monitors. Fortsæt?")) setCode(makeCode()); };
 

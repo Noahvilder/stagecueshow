@@ -34,6 +34,10 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [size, setSize] = useState(1);
   const [state, setState] = useState<RemoteState | null>(null);
   const [online, setOnline] = useState(false);
+  const [lastSeen, setLastSeen] = useState(0);
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const stale = online && lastSeen > 0 && tick - lastSeen > 3000;
   const [ui, setUi] = useState(true);
   const [monitorId, setMonitorId] = useState(initialMonitor ?? "");
   const [editId, setEditId] = useState<string | null>(null);
@@ -54,6 +58,11 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const profile = state?.monitors?.find((m) => m.id === monitorId);
   const viewMode = profile?.mode ?? mode;
 
+  // Offline cache: show the last known setlist instantly, even before / without a connection.
+  useEffect(() => {
+    if (!target) return;
+    try { const c = localStorage.getItem("stagecue.viewer.cache." + target); if (c) setState((s) => s ?? JSON.parse(c)); } catch {}
+  }, [target]);
   useEffect(() => {
     if (!target) return;
     let peer: PeerT | null = null; let dead = false; let retry: ReturnType<typeof setTimeout>;
@@ -63,7 +72,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       if (peer.disconnected) { peer.reconnect(); return; }
       const c = peer.connect(PEER_PREFIX + target, { reliable: true, metadata: { role: "viewer" } });
       c.on("open", () => { setOnline(true); c.send({ t: "viewerRole", monitor: monitorRef.current }); });
-      c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") setState(m.s); });
+      c.on("data", (d) => { const m = d as HostMsg; if (m.t === "state") { setState(m.s); setLastSeen(Date.now()); try { localStorage.setItem("stagecue.viewer.cache." + target, JSON.stringify(m.s)); } catch {} } });
       c.on("close", () => { setOnline(false); clearTimeout(retry); retry = setTimeout(connect, 1500); });
       cur = c; connRef.current = c as unknown as { open: boolean; send: (d: RemoteCmd) => void };
     };
@@ -123,7 +132,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   if (!viewMode) return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
       <a href="/show" className="absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
-      <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
+      <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{stale ? "◐ Venter på signal…" : online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
       <h1 className="text-3xl font-black">Vælg din rolle på scenen</h1>
       <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>
       {state?.monitors?.map((m) => <Button key={m.id} variant="secondary" className="h-auto min-h-16 w-full max-w-sm whitespace-normal p-4 text-xl font-bold" onClick={() => { setMonitorId(m.id); setMode(null); }}>{m.name}</Button>)}
@@ -166,7 +175,8 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
         <div className="flex min-w-0 items-baseline gap-3"><div className="truncate text-2xl font-bold" style={{ color: cur?.color }}>{cur?.name ?? ""}</div><button onClick={() => { setMonitorId(""); setMode(null); }} className="shrink-0 rounded bg-secondary px-3 py-1 text-sm font-bold">{profile?.name ?? "Fælles"} · Skift rolle</button></div>
       </header>
       <main ref={mainRef} className="min-h-0 flex-1 overflow-auto px-6 py-4">
-        {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – prøver igen…</div>}
+        {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – viser sidst kendte show, prøver igen…</div>}
+        {stale && <div className="mb-2 animate-pulse text-standby">◐ Venter på signal fra pulten…</div>}
         {viewMode === "lyrics"
           ? (body(cur) ? <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
           : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(cur) && <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} />}</div>}

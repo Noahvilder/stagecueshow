@@ -18,6 +18,7 @@ function Priser() {
     { en: "No time limit", da: "Ingen tidsbegrænsning", de: "Kein Zeitlimit" },
   ];
   const pro = [
+    { en: "Two-PC hot-standby (A/B redundancy)", da: "Hot-standby med to pc'er (A/B-redundans)", de: "Hot-Standby mit zwei PCs (A/B-Redundanz)" },
     { en: "Multi-target MIDI out", da: "Multi-MIDI ud til flere enheder", de: "Multi-Target MIDI-Out" },
     { en: "Multi-channel audio routing", da: "Lydrouting til flere udgange", de: "Mehrkanal-Audio-Routing" },
     { en: "Group cues, waveform & trim", da: "Gruppe-cues, waveform & trim", de: "Gruppen-Cues, Waveform & Trim" },

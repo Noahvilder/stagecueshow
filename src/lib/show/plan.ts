@@ -1,12 +1,13 @@
 export type Tier = "pro" | "trial" | "free";
 export const TRIAL_DAYS = 7;
 export const FREE_MAX_CHANNEL = 2;
-export type ProFeature = "pfl" | "channels" | "group" | "monitors";
+export type ProFeature = "pfl" | "channels" | "group" | "monitors" | "hotStandby";
 export const PRO_LABEL: Record<ProFeature, string> = {
   pfl: "Forlyt (PFL)",
   channels: "Individuel kanal-routing (op til 32 kanaler)",
   group: "Gruppe-cues",
   monitors: "Flere end 2 scenemonitor-profiler",
+  hotStandby: "Hot-Standby med to computere (A/B)",
 };
 
 /** Resolve tier from license row + account creation time. */

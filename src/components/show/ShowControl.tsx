@@ -21,6 +21,8 @@ import { CommandPalette } from "./CommandPalette";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
 import { ProDialog } from "./ProGate";
+import { HotStandby } from "./HotStandby";
+import { DEFAULT_GO_GUARD_MS, acceptGo, isDoubleTap, readPlayhead, savePlayhead, shouldOfferResume, type Playhead } from "@/lib/show/safety";
 import { usePlan } from "@/lib/show/usePlan";
 import { hasPro, type ProFeature } from "@/lib/show/plan";
 import { SHORTCUT_LABEL, assign, comboOf, findAction, loadShortcuts, prettyCombo, saveShortcuts, DEFAULT_SHORTCUTS, type ShortcutAction, type ShortcutMap } from "@/lib/show/shortcuts";
@@ -201,15 +203,45 @@ export function ShowControl({ showId }: { showId: string }) {
     return () => clearInterval(t);
   }, []);
 
+  const [goGuard, setGoGuard] = useState(DEFAULT_GO_GUARD_MS);
+  useEffect(() => { const g = localStorage.getItem("stagecue.goguard"); if (g !== null) setGoGuard(Number(g)); }, []);
+  const [backup, setBackup] = useState(false);
+  const [resume, setResume] = useState<Playhead | null>(null);
+  const lastGoAt = useRef<number | null>(null);
+  const lastEsc = useRef<number | null>(null);
   const go = useCallback(() => {
-    if (standbyIdx < 0) return;
+    if (standbyIdx < 0 || backup) return;
+    const t = performance.now();
+    if (!acceptGo(lastGoAt.current, t, goGuard)) return;
+    lastGoAt.current = t;
     engine().go(flat, standbyIdx);
     setLastGo(performance.now());
     const n = nextStandbyIndex(flat, standbyIdx);
     setStandbyId(n >= 0 ? flat[n]!.id : null);
-  }, [flat, standbyIdx]);
+  }, [flat, standbyIdx, backup, goGuard]);
 
-  const panic = useCallback(() => engine().panic(show.panicFade), [show.panicFade]);
+  // Esc = smooth emergency fade; Esc twice quickly = instant hard cut.
+  const panic = useCallback(() => {
+    const t = performance.now();
+    engine().panic(isDoubleTap(lastEsc.current, t) ? 0 : show.panicFade);
+    lastEsc.current = t;
+  }, [show.panicFade]);
+
+  // Crash recovery: remember the playhead; offer to resume after an unclean exit.
+  useEffect(() => {
+    if (!loaded) return;
+    const p = readPlayhead(showId);
+    if (shouldOfferResume(p, Date.now()) && flat.some((c) => c.id === p.standbyId)) setResume(p);
+    const bye = () => { const q = readPlayhead(showId); if (q) savePlayhead(showId, { ...q, clean: true }); };
+    window.addEventListener("pagehide", bye);
+    return () => { window.removeEventListener("pagehide", bye); bye(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, showId]);
+  useEffect(() => {
+    if (!loaded || resume) return;
+    const c = flat.find((x) => x.id === standbyId);
+    savePlayhead(showId, { standbyId, label: c ? `${c.number ? c.number + " · " : ""}${c.name}` : "", t: Date.now(), clean: false });
+  }, [standbyId, loaded, showId, flat, resume]);
   const hardStop = () => engine().panic(0);
   scRef.current.stop = hardStop;
 
@@ -453,7 +485,13 @@ export function ShowControl({ showId }: { showId: string }) {
           ...(Object.keys(COLS) as ColKey[]).map((k) => ({ label: COLS[k], checked: view[k], onClick: () => toggleCol(k) })),
         ] },
         { label: "Vinduer", items: (Object.keys(WIN_TITLES) as WinKey[]).map((k) => ({ label: WIN_TITLES[k], checked: wins[k].open, disabled: locked, onClick: () => (wins[k].open ? setWin(k, { open: false }) : (setWin(k, { open: true, min: false }), focusWin(k))) })) },
-        { label: "Indstillinger", items: [{ label: "Lyd, MIDI, I/O-navne & monitorer…", onClick: () => setSettings(true), disabled: locked }] },
+        { label: "Indstillinger", items: [
+          { label: "Lyd, MIDI, I/O-navne & monitorer…", onClick: () => setSettings(true), disabled: locked },
+          "sep",
+          ...[0, 300, 500, 1000].map((ms) => ({ label: ms ? `Dobbelt-GO-spærre: ${ms / 1000} s` : "Dobbelt-GO-spærre: fra", checked: goGuard === ms, onClick: () => { setGoGuard(ms); localStorage.setItem("stagecue.goguard", String(ms)); } })),
+          "sep",
+          { label: backup ? "🛡️ Stop Hot-Standby (bliv master)" : "🛡️ Kør som Hot-Standby backup-PC (Pro)…", onClick: () => { if (backup) setBackup(false); else if (needPro("hotStandby")) setBackup(true); } },
+        ] },
         { label: "Hjælp", items: [
           { label: "⌨️ Tastaturgenveje", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
           { label: "💡 Foreslå ændring / fejl", onClick: () => window.open("/support#ticket", "_blank") },
@@ -486,6 +524,14 @@ export function ShowControl({ showId }: { showId: string }) {
       {warnings.length > 0 && (
         <div role="alert" className="animate-pulse bg-destructive px-4 py-2 text-lg font-black text-destructive-foreground">⚠️ {warnings.join(" · ")}</div>
       )}
+      {backup && <HotStandby showId={showId} onStandby={(id) => setStandbyId(id)} onStop={() => setBackup(false)} />}
+      {resume && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 bg-standby px-4 py-2 text-sm font-black text-background">
+          <span>⚡ Showet lukkede uventet. Sidste standby: {resume.label || "ukendt cue"}</span>
+          <button onClick={() => { setStandbyId(resume.standbyId); setResume(null); }} className="rounded bg-background px-3 py-1 text-foreground">Genoptag herfra</button>
+          <button onClick={() => setResume(null)} className="rounded px-3 py-1 underline">Start forfra</button>
+        </div>
+      )}
       {recovered && <div className="bg-go px-4 py-1 text-sm font-bold text-go-foreground">{recovered}</div>}
       {error && (
         <div className="flex items-center justify-between bg-destructive px-4 py-1 text-sm font-semibold text-destructive-foreground">
@@ -507,7 +553,7 @@ export function ShowControl({ showId }: { showId: string }) {
           >
             GO
           </button>
-          <div className="text-center text-xs text-muted-foreground">Mellemrum = GO · ↑↓ = flyt standby · Esc = Panic</div>
+          <div className="text-center text-xs text-muted-foreground">Mellemrum = GO · ↑↓ = flyt standby · Esc = nød-fade · Esc×2 = stop nu</div>
 
           <div className="grid grid-cols-2 gap-2">
             <button onClick={panic} className="h-16 rounded-lg bg-destructive text-lg font-black text-destructive-foreground">

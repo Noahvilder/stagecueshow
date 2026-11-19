@@ -126,6 +126,33 @@ function Tour() {
   );
 }
 
+const REDUNDANCY: { k: string; t: L; d: L; pro?: boolean }[] = [
+  { k: "01", t: { en: "No accidental double GO", da: "Ingen dobbelt-GO ved et uheld", de: "Kein versehentliches Doppel-GO" }, d: { en: "A short lock after each GO ignores nervous double presses. Esc fades out smoothly; press twice for an instant stop. Lock the show to stop edits mid-gig.", da: "En kort spærre efter hvert GO ignorerer nervøse dobbelttryk. Esc fader blødt ud; tryk to gange for øjeblikkeligt stop. Lås showet, så intet kan redigeres midt i koncerten.", de: "Eine kurze Sperre nach jedem GO ignoriert nervöse Doppeldrücke. Esc blendet sanft aus; zweimal drücken stoppt sofort. Show sperren gegen Änderungen live." } },
+  { k: "02", t: { en: "Back in seconds after a crash", da: "Tilbage på sekunder efter et nedbrud", de: "In Sekunden zurück nach einem Absturz" }, d: { en: "StageCue remembers exactly where you were. If the PC crashes or loses power, restart and resume from the same cue with one click. Audio lives locally — no internet needed to play.", da: "StageCue husker præcis, hvor du var. Crasher pc'en eller mister den strøm, så genstart og fortsæt fra samme cue med ét klik. Lyden ligger lokalt – intet internet nødvendigt for at spille.", de: "StageCue merkt sich genau, wo du warst. Nach Absturz oder Stromausfall mit einem Klick am selben Cue weitermachen. Audio liegt lokal – kein Internet zum Abspielen nötig." } },
+  { k: "03", t: { en: "Stage monitors that never go blank", da: "Scenemonitorer der aldrig går i sort", de: "Bühnenmonitore, die nie schwarz werden" }, d: { en: "Phones keep the last known setlist, cue triggers and tabs if the Wi-Fi drops, show a clear 'waiting for signal' dot, and reconnect by themselves.", da: "Telefonerne beholder den sidst kendte setliste, stikord og tabs, hvis Wi-Fi falder ud, viser tydeligt 'venter på signal' og forbinder selv igen.", de: "Handys behalten Setliste, Stichworte und Tabs bei WLAN-Ausfall, zeigen klar 'warte auf Signal' und verbinden sich selbst neu." } },
+  { k: "04", pro: true, t: { en: "Hot-standby with two PCs (A/B)", da: "Hot-standby med to pc'er (A/B)", de: "Hot-Standby mit zwei PCs (A/B)" }, d: { en: "A backup PC follows the main console cue by cue. If the main PC dies, the backup takes over — and the band's stage monitors follow automatically.", da: "En backup-pc følger hovedpulten cue for cue. Dør hoved-pc'en, overtager backuppen – og bandets scenemonitorer følger automatisk med.", de: "Ein Backup-PC folgt der Hauptkonsole Cue für Cue. Fällt der Haupt-PC aus, übernimmt das Backup – die Bühnenmonitore folgen automatisch." } },
+];
+
+function Redundancy() {
+  const t = useT();
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-20">
+      <p className="mb-3 font-mono text-xs font-bold uppercase tracking-[0.3em] text-go">{t({ en: "Redundancy", da: "Redundans", de: "Redundanz" })}</p>
+      <h2 className="max-w-3xl text-3xl font-black sm:text-4xl">{t({ en: "Built so the show goes on. Whatever happens.", da: "Bygget så showet fortsætter. Uanset hvad.", de: "Gebaut, damit die Show weitergeht. Egal was passiert." })}</h2>
+      <p className="mt-4 max-w-2xl text-muted-foreground">{t({ en: "Misclicks, crashes, Wi-Fi dropouts, a dead laptop — every layer has a backup.", da: "Fejltryk, nedbrud, Wi-Fi-udfald, en død bærbar – hvert lag har en backup.", de: "Fehlklicks, Abstürze, WLAN-Ausfälle, ein toter Laptop – jede Ebene hat ein Backup." })}</p>
+      <div className="mt-10 grid gap-4 md:grid-cols-2">
+        {REDUNDANCY.map((r) => (
+          <div key={r.k} className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-center gap-2 font-mono text-sm font-black text-go">{r.k}{r.pro && <span className="rounded bg-go/15 px-2 py-0.5 text-xs">PRO</span>}</div>
+            <h3 className="mt-3 text-xl font-black">{t(r.t)}</h3>
+            <p className="mt-2 text-muted-foreground">{t(r.d)}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Landing() {
   return <SiteShell><LandingBody /></SiteShell>;
 }
@@ -143,6 +170,8 @@ function LandingBody() {
     [{ en: "Up to 32 audio outputs", da: "Op til 32 lydudgange", de: "Bis zu 32 Audioausgänge", fr: "Jusqu'à 32 sorties audio", es: "Hasta 32 salidas de audio", sv: "Upp till 32 ljudutgångar", no: "Opptil 32 lydutganger" }, "✅", "✅", "✅"],
     [{ en: "Named inputs & outputs", da: "Navngivne ind- og udgange", de: "Benannte Ein- & Ausgänge", fr: "Entrées/sorties nommées", es: "Entradas y salidas con nombre", sv: "Namngivna in- & utgångar", no: "Navngitte inn- og utganger" }, "✅", "✅", "➖"],
     [{ en: "Simple & advanced layout", da: "Simpel og avanceret visning", de: "Einfache & erweiterte Ansicht", fr: "Vue simple & avancée", es: "Vista simple y avanzada", sv: "Enkel & avancerad vy", no: "Enkel og avansert visning" }, "✅", "❌", "❌"],
+    [{ en: "Crash recovery & no double GO", da: "Genstart efter nedbrud & dobbelt-GO-spærre", de: "Absturz-Wiederherstellung & Doppel-GO-Sperre", fr: "Reprise après crash & anti double GO", es: "Recuperación tras fallo y anti doble GO", sv: "Återställning efter krasch & dubbel-GO-spärr", no: "Gjenoppretting etter krasj & dobbel-GO-sperre" }, "✅", "➖", "➖"],
+    [{ en: "Two-PC hot-standby (Pro)", da: "Hot-standby med to pc'er (Pro)", de: "Hot-Standby mit zwei PCs (Pro)", fr: "Secours à chaud sur deux PC (Pro)", es: "Respaldo en caliente con dos PC (Pro)", sv: "Hot-standby med två datorer (Pro)", no: "Hot-standby med to PC-er (Pro)" }, "✅", "➖", "❌"],
     [{ en: "Price", da: "Pris", de: "Preis", fr: "Prix", es: "Precio", sv: "Pris", no: "Pris" }, "Free / $9.99", "$$$", "Free / £"],
   ];
   return (
@@ -158,6 +187,7 @@ function LandingBody() {
 
       <Benefits />
       <Tour />
+      <Redundancy />
 
       <section className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-3xl font-black">{t({ en: "Why StageCue?", da: "Hvorfor StageCue?", de: "Warum StageCue?" })}</h2>
