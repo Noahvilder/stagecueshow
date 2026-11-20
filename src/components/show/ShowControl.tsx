@@ -205,6 +205,8 @@ export function ShowControl({ showId }: { showId: string }) {
 
   const [goGuard, setGoGuard] = useState(DEFAULT_GO_GUARD_MS);
   useEffect(() => { const g = localStorage.getItem("stagecue.goguard"); if (g !== null) setGoGuard(Number(g)); }, []);
+  const [timeMode, setTimeMode] = useState<"none" | "elapsed" | "lastgo">("elapsed");
+  useEffect(() => { const m = localStorage.getItem("stagecue.timebox"); if (m === "none" || m === "elapsed" || m === "lastgo") setTimeMode(m); }, []);
   const [backup, setBackup] = useState(false);
   const [resume, setResume] = useState<Playhead | null>(null);
   const lastGoAt = useRef<number | null>(null);
@@ -490,6 +492,8 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           ...[0, 300, 500, 1000].map((ms) => ({ label: ms ? `Dobbelt-GO-spærre: ${ms / 1000} s` : "Dobbelt-GO-spærre: fra", checked: goGuard === ms, onClick: () => { setGoGuard(ms); localStorage.setItem("stagecue.goguard", String(ms)); } })),
           "sep",
+          ...([["elapsed", "Tidsboks: Aktiv spilletid"], ["lastgo", "Tidsboks: Siden sidste GO"], ["none", "Tidsboks: Kun nedtælling"]] as const).map(([m, label]) => ({ label, checked: timeMode === m, onClick: () => { setTimeMode(m); localStorage.setItem("stagecue.timebox", m); } })),
+          "sep",
           { label: backup ? "🛡️ Stop Hot-Standby (bliv master)" : "🛡️ Kør som Hot-Standby backup-PC (Pro)…", onClick: () => { if (backup) setBackup(false); else if (needPro("hotStandby")) setBackup(true); } },
         ] },
         { label: "Hjælp", items: [
@@ -567,8 +571,9 @@ export function ShowControl({ showId }: { showId: string }) {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 font-mono">
-            <TimeBox label="Siden GO" value={fmt(lastGoEl)} />
+          <div className={`grid gap-2 font-mono ${timeMode === "none" ? "grid-cols-1" : "grid-cols-2"}`}>
+            {timeMode === "lastgo" && <TimeBox label="Siden sidste GO" value={fmt(lastGoEl)} />}
+            {timeMode === "elapsed" && <TimeBox label="Spilletid" value={mainRun ? fmt(mainRun.elapsed) : "--:--"} />}
             <TimeBox label="Nedtælling" value={mainRun ? "-" + fmt(mainRun.duration! - mainRun.elapsed) : "--:--"} accent />
           </div>
 
