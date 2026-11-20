@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XML_DIZ_INFO>
+  <MASTER_PAD_VERSION_INFO>
+    <MASTER_PAD_VERSION>4.0</MASTER_PAD_VERSION>
+    <MASTER_PAD_EDITOR>Hand-written</MASTER_PAD_EDITOR>
+    <MASTER_PAD_INFO>Portable Application Description, or PAD for short, is a data set that is used by shareware authors to disseminate information to anyone interested in their software products. To find out more go to http://pad.asp-software.org</MASTER_PAD_INFO>
+  </MASTER_PAD_VERSION_INFO>
+  <Company_Info>
+    <Company_Name>StageCue</Company_Name>
+    <Address_1>Denmark</Address_1>
+    <City_Town></City_Town>
+    <State_Province></State_Province>
+    <Zip_Postal_Code></Zip_Postal_Code>
+    <Country>Denmark</Country>
+    <Company_WebSite_URL>https://stagecueshow.com</Company_WebSite_URL>
+    <Contact_Info>
+      <Author_First_Name>Noah</Author_First_Name>
+      <Author_Last_Name>Vilder</Author_Last_Name>
+      <Author_Email>nnvilder@hotmail.com</Author_Email>
+      <Contact_First_Name>Noah</Contact_First_Name>
+      <Contact_Last_Name>Vilder</Contact_Last_Name>
+      <Contact_Email>nnvilder@hotmail.com</Contact_Email>
+    </Contact_Info>
+    <Support_Info>
+      <Sales_Email>nnvilder@hotmail.com</Sales_Email>
+      <Support_Email>nnvilder@hotmail.com</Support_Email>
+      <General_Email>nnvilder@hotmail.com</General_Email>
+    </Support_Info>
+  </Company_Info>
+  <Program_Info>
+    <Program_Name>StageCue</Program_Name>
+    <Program_Version>1.0.1</Program_Version>
+    <Program_Release_Month>11</Program_Release_Month>
+    <Program_Release_Day>20</Program_Release_Day>
+    <Program_Release_Year>2026</Program_Release_Year>
+    <Program_Cost_Dollars>0</Program_Cost_Dollars>
+    <Program_Cost_Other_Code>DKK</Program_Cost_Other_Code>
+    <Program_Cost_Other>0</Program_Cost_Other>
+    <Program_Type>Freeware</Program_Type>
+    <Program_Release_Status>Major Update</Program_Release_Status>
+    <Program_Install_Support>Install and Uninstall</Program_Install_Support>
+    <Program_OS_Support>Win10,Win11,Windows 10,Windows 11</Program_OS_Support>
+    <Program_Language>English,Danish,German,French,Spanish,Swedish,Norwegian</Program_Language>
+    <Program_Change_Info>Group cue timing, time-gated stage memos, multi-screen pop-out windows, saved monitor history, bass/guitar tabs with transposition.</Program_Change_Info>
+    <Program_Specific_Category>Audio</Program_Specific_Category>
+    <Program_Category_Class>Audio &amp; Multimedia::Other</Program_Category_Class>
+    <Program_System_Requirements>Windows 10/11 64-bit, WebView2, internet connection</Program_System_Requirements>
+    <File_Info>
+      <File_Size_Bytes>1537897</File_Size_Bytes>
+      <File_Size_K>1502</File_Size_K>
+      <File_Size_MB>1.47</File_Size_MB>
+    </File_Info>
+    <Expire_Info>
+      <Has_Expire_Info>N</Has_Expire_Info>
+    </Expire_Info>
+  </Program_Info>
+  <Program_Descriptions>
+    <English>
+      <Keywords>show control, cue player, qlab alternative, theater, live sound, midi, click track, stage monitor, prompter</Keywords>
+      <Char_Desc_45>Show control and cue playback for Windows</Char_Desc_45>
+      <Char_Desc_80>Live show control with audio and MIDI cues and stage monitors on phones</Char_Desc_80>
+      <Char_Desc_250>Modern, low-latency show control and cue playback for Windows and web. Audio and MIDI cues, click track generator, and real-time stage monitors, lyrics and tabs on musicians' phones via QR code. A Windows alternative to QLab.</Char_Desc_250>
+      <Char_Desc_450>StageCue is a show control and cue playback app for theater, bands and live sound. Play audio cues with fades and pre-waits, send and receive MIDI, control everything from a USB foot pedal, and generate click tracks with tempo ramps. Musicians scan a QR code to see lyrics, memos, tabs and Now and Next on their phones. Floating windows with grid and magnet snap, and pop-out for multiple screens. Free tier, Pro optional.</Char_Desc_450>
+      <Char_Desc_2000>StageCue is a modern show control and cue playback application for live sound engineers, theater productions, bands and solo performers - a Windows alternative to Mac-only tools like QLab. Features: low-latency audio cues with fades, pre-wait and auto-continue; groups with timed child cues; MIDI send/receive with MIDI Learn for foot pedals; click track generator with tempo ramps and hold; stage monitors on phones and tablets via QR code with lyrics, time-gated memos, cue notes per role and pro bass/guitar tabs (4-8 strings) with transposition; floating windows with free, grid and magnet snap modes and pop-out to extra screens; autosave to a local .stagecue file; audio stays on your own PC. Available in 7 languages. Free tier available; Pro unlocks advanced features (monthly, yearly or lifetime).</Char_Desc_2000>
+    </English>
+  </Program_Descriptions>
+  <Web_Info>
+    <Application_URLs>
+      <Application_Info_URL>https://stagecueshow.com</Application_Info_URL>
+      <Application_Order_URL>https://stagecueshow.com/priser</Application_Order_URL>
+      <Application_Screenshot_URL>https://stagecueshow.com/icon-512.png</Application_Screenshot_URL>
+      <Application_Icon_URL>https://stagecueshow.com/icon-512.png</Application_Icon_URL>
+      <Application_XML_File_URL>https://stagecueshow.com/pad_file.xml</Application_XML_File_URL>
+    </Application_URLs>
+    <Download_URLs>
+      <Primary_Download_URL>https://stagecueshow.com/__l5e/assets-v1/2f862720-3af4-434b-95c9-2f4b502a4066/StageCue_1.0.1_x64-setup.exe</Primary_Download_URL>
+      <Secondary_Download_URL>https://stagecueshow.com/download</Secondary_Download_URL>
+    </Download_URLs>
+  </Web_Info>
+  <Permissions>
+    <Distribution_Permissions>Free to distribute via software download sites with a link to https://stagecueshow.com.</Distribution_Permissions>
+    <EULA>See https://stagecueshow.com/vilkaar</EULA>
+  </Permissions>
+</XML_DIZ_INFO>
