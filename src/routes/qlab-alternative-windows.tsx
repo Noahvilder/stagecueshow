@@ -16,7 +16,11 @@ export const Route = createFileRoute("/qlab-alternative-windows")({
       { property: "og:url", content: URL },
       { name: "twitter:card", content: "summary" },
     ],
-    links: [{ rel: "canonical", href: URL }],
+    links: [
+      { rel: "canonical", href: URL },
+      { rel: "alternate", hrefLang: "en", href: URL },
+      { rel: "alternate", hrefLang: "de", href: "https://stagecueshow.com/qlab-alternative-windows-de" },
+    ],
     scripts: [{
       type: "application/ld+json",
       children: JSON.stringify({

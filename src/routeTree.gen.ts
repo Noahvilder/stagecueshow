@@ -17,6 +17,7 @@ import { Route as MidiPedalGuideRouteImport } from './routes/midi-pedal-guide'
 import { Route as PriserRouteImport } from './routes/priser'
 import { Route as PrivatlivRouteImport } from './routes/privatliv'
 import { Route as QlabAlternativeWindowsRouteImport } from './routes/qlab-alternative-windows'
+import { Route as QlabAlternativeWindowsDeRouteImport } from './routes/qlab-alternative-windows-de'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ShowRouteImport } from './routes/show'
 import { Route as SupportRouteImport } from './routes/support'
@@ -68,6 +69,12 @@ const QlabAlternativeWindowsRoute = QlabAlternativeWindowsRouteImport.update({
   path: '/qlab-alternative-windows',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QlabAlternativeWindowsDeRoute =
+  QlabAlternativeWindowsDeRouteImport.update({
+    id: '/qlab-alternative-windows-de',
+    path: '/qlab-alternative-windows-de',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
   '/qlab-alternative-windows': typeof QlabAlternativeWindowsRoute
+  '/qlab-alternative-windows-de': typeof QlabAlternativeWindowsDeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
@@ -154,6 +162,7 @@ export interface FileRoutesByTo {
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
   '/qlab-alternative-windows': typeof QlabAlternativeWindowsRoute
+  '/qlab-alternative-windows-de': typeof QlabAlternativeWindowsDeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
@@ -176,6 +185,7 @@ export interface FileRoutesById {
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
   '/qlab-alternative-windows': typeof QlabAlternativeWindowsRoute
+  '/qlab-alternative-windows-de': typeof QlabAlternativeWindowsDeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/priser'
     | '/privatliv'
     | '/qlab-alternative-windows'
+    | '/qlab-alternative-windows-de'
     | '/reset-password'
     | '/show'
     | '/support'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/priser'
     | '/privatliv'
     | '/qlab-alternative-windows'
+    | '/qlab-alternative-windows-de'
     | '/reset-password'
     | '/show'
     | '/support'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/priser'
     | '/privatliv'
     | '/qlab-alternative-windows'
+    | '/qlab-alternative-windows-de'
     | '/reset-password'
     | '/show'
     | '/support'
@@ -261,6 +274,7 @@ export interface RootRouteChildren {
   PriserRoute: typeof PriserRoute
   PrivatlivRoute: typeof PrivatlivRoute
   QlabAlternativeWindowsRoute: typeof QlabAlternativeWindowsRoute
+  QlabAlternativeWindowsDeRoute: typeof QlabAlternativeWindowsDeRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ShowRoute: typeof ShowRoute
   SupportRoute: typeof SupportRoute
@@ -324,6 +338,13 @@ declare module '@tanstack/react-router' {
       path: '/qlab-alternative-windows'
       fullPath: '/qlab-alternative-windows'
       preLoaderRoute: typeof QlabAlternativeWindowsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qlab-alternative-windows-de': {
+      id: '/qlab-alternative-windows-de'
+      path: '/qlab-alternative-windows-de'
+      fullPath: '/qlab-alternative-windows-de'
+      preLoaderRoute: typeof QlabAlternativeWindowsDeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -436,6 +457,7 @@ const rootRouteChildren: RootRouteChildren = {
   PriserRoute: PriserRoute,
   PrivatlivRoute: PrivatlivRoute,
   QlabAlternativeWindowsRoute: QlabAlternativeWindowsRoute,
+  QlabAlternativeWindowsDeRoute: QlabAlternativeWindowsDeRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ShowRoute: ShowRoute,
   SupportRoute: SupportRoute,
