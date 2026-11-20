@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { barsForSeconds, CLICK_SOUNDS, METERS, beatTimes, beatsPerBar, clickLength, renderClickWav, scheduleAll, type ClickSettings } from "@/lib/show/clicktrack";
 
-export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onCreate: (blob: Blob, name: string) => Promise<void> }) {
+export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onCreate: (blob: Blob, name: string, click?: { meter: string; bars: number; startBpm: number; endBpm: number; holdBars?: number }) => Promise<void> }) {
   const [s, setS] = useState<ClickSettings>({ meter: "4/4", bars: 2, startBpm: 120, endBpm: 120, sound: "wood", accent: true, accentGain: 0.5, volume: 0.9 });
   const [ramp, setRamp] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -98,7 +98,7 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
         </div>
         <div className="text-xs text-muted-foreground">Længde: {clickLength(eff).toFixed(1)} sek.</div>
         <div className="flex gap-2">
-          <button disabled={busy} onClick={async () => { setBusy(true); stop(); try { await onCreate(await renderClickWav(eff), name); onClose(); } finally { setBusy(false); } }} className="ml-auto rounded bg-standby px-4 py-2 text-sm font-bold text-background disabled:opacity-50">{busy ? "Laver…" : "Opret som cue"}</button>
+          <button disabled={busy} onClick={async () => { setBusy(true); stop(); try { await onCreate(await renderClickWav(eff), name, { meter: eff.meter, bars: eff.bars, startBpm: eff.startBpm, endBpm: eff.endBpm, ...(eff.holdBars ? { holdBars: eff.holdBars } : {}) }); onClose(); } finally { setBusy(false); } }} className="ml-auto rounded bg-standby px-4 py-2 text-sm font-bold text-background disabled:opacity-50">{busy ? "Laver…" : "Opret som cue"}</button>
         </div>
       </div>
     </div>

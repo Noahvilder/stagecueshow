@@ -1,4 +1,4 @@
-import type { CueType, MidiMsg, Show, MonitorProfile } from "./types";
+import type { ClickInfo, CueType, MidiMsg, Show, MonitorProfile } from "./types";
 
 /** Snapshot the main computer sends to phones. */
 export interface RemoteState {
@@ -8,10 +8,13 @@ export interface RemoteState {
   standbyId: string | null;
   /** Cue that was last GO'd (what is playing now). */
   currentId?: string | null;
+  /** Id of the last GO + how long ago it happened (ms) when sent. */
+  goId?: number | null;
+  goAgoMs?: number;
   running: string[];
   muted?: boolean;
   locked?: boolean;
-   songs: { id: string; name: string; cues: { id: string; name: string; type: CueType; color: string; notes: string; monitorNotes?: Record<string, string>; text?: string; stikord?: string; hasAudio?: boolean }[] }[];
+   songs: { id: string; name: string; cues: { id: string; name: string; type: CueType; color: string; notes: string; monitorNotes?: Record<string, string>; text?: string; stikord?: string; hasAudio?: boolean; click?: ClickInfo }[] }[];
 }
 export type RemoteCmd =
   | { t: "go" }

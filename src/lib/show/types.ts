@@ -26,7 +26,10 @@ interface Base {
   /** Script/manuscript reference. */
   ref?: string;
   monitorNotes?: Record<string, string>;
+  /** Tempo map of a generated click track (shown live on the drummer monitor). */
+  click?: ClickInfo;
 }
+export interface ClickInfo { meter: string; bars: number; startBpm: number; endBpm: number; holdBars?: number }
 
 export type AudioCue = Base & {
   type: "audio";

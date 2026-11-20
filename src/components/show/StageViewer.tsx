@@ -5,6 +5,7 @@ import { parseChordPro } from "@/lib/show/chordpro";
 import { monitorBody, stickyIndex } from "@/lib/show/monitors";
 import { isTabLine, transposeSource } from "@/lib/show/tabs";
 
+import { ClickHud } from "./ClickHud";
 import { readHist, rememberShow, forgetShow, type Hist } from "@/lib/show/showHistory";
 import { Button } from "@/components/ui/button";
 import { trackFeature } from "@/lib/track";
@@ -214,6 +215,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       <main ref={mainRef} className="min-h-0 flex-1 overflow-auto px-6 py-4">
         {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – viser sidst kendte show, prøver igen…</div>}
         {stale && <div className="mb-2 animate-pulse text-standby">◐ Venter på signal fra pulten…</div>}
+        {cur?.click && state?.goId && state.running.includes(cur.id) && <ClickHud click={cur.click} goId={state.goId} goAgoMs={state.goAgoMs ?? 0} />}
         {viewMode === "lyrics"
           ? (body(stickyCue) ? <ChordText src={body(stickyCue)} transpose={transpose} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
           : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(stickyCue) && <ChordText src={body(stickyCue)} transpose={transpose} size={SIZES[size] ?? "text-4xl"} />}</div>}

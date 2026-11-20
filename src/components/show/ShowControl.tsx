@@ -357,10 +357,10 @@ export function ShowControl({ showId }: { showId: string }) {
     setShow((s) => ({ ...s, songs: [...s.songs, ...lines.map((name) => ({ id: uid(), name, cues: [{ ...newCue("memo"), name } as Cue] }))] }));
     setImportOpen(false);
   };
-  const createClickCue = async (blob: Blob, name: string) => {
+  const createClickCue = async (blob: Blob, name: string, click?: Cue["click"]) => {
     const id = uid();
     await putAudio(id, blob);
-    const c = { ...newCue("audio"), name, fileId: id, fileName: `${name}.wav` } as Cue;
+    const c = { ...newCue("audio"), name, fileId: id, fileName: `${name}.wav`, ...(click ? { click } : {}) } as Cue;
     setShow((s) => {
       const songs = [...s.songs];
       let si = songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedId));
@@ -478,14 +478,16 @@ export function ShowControl({ showId }: { showId: string }) {
   const remoteState = useMemo<RemoteState>(() => ({
     showName: show.name,
     currentId: liveId,
+    goId: lastGo,
+    goAgoMs: lastGo ? performance.now() - lastGo : 0,
     monitors: show.monitors ?? [],
     midiPorts,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
     muted,
     locked,
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), ...monitorFields(c, c.id === liveId ? liveReveal : 0), stikord: c.stikord ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
-  }), [show, standbyId, active, midiPorts, muted, locked, liveId, liveReveal]);
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), ...monitorFields(c, c.id === liveId ? liveReveal : 0), stikord: c.stikord ?? "", hasAudio: c.type === "audio" && !!c.fileId, ...(c.click ? { click: c.click } : {}) })) })),
+  }), [show, standbyId, active, midiPorts, muted, locked, liveId, liveReveal, lastGo]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
     else if (c.t === "panic") panic();
