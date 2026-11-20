@@ -125,7 +125,7 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => {
     try {
       const w = localStorage.getItem(WIN_KEY);
-      if (w) setWins({ ...defaultWins(), ...JSON.parse(w) });
+      if (w) { const j = JSON.parse(w); for (const k in j) if (j[k]) j[k].popped = false; setWins({ ...defaultWins(), ...j }); }
       const p = localStorage.getItem(PEDAL_KEY);
       if (p) setPedals(JSON.parse(p));
       const n = localStorage.getItem("stagecue.notesize");

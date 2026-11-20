@@ -65,6 +65,9 @@ const D: Record<string, Row> = {
   "Start forfra": ["Start over", "Von vorn", "Recommencer", "Empezar de nuevo", "Börja om", "Start på nytt"],
 };
 const D2: Record<string, Row> = {
+  "Åbn på anden skærm": ["Open on another screen", "Auf anderem Bildschirm öffnen", "Ouvrir sur un autre écran", "Abrir en otra pantalla", "Öppna på annan skärm", "Åpne på annen skjerm"],
+  "Gendan i pulten": ["Restore to desk", "Ins Pult zurückholen", "Rapatrier dans la console", "Devolver a la consola", "Återställ till pulten", "Gjenopprett i pulten"],
+  "Åbnet i separat vindue": ["Opened in separate window", "In separatem Fenster geöffnet", "Ouvert dans une fenêtre séparée", "Abierto en ventana separada", "Öppnad i separat fönster", "Åpnet i eget vindu"],
   "Lyd": ["Audio", "Audio", "Audio", "Audio", "Ljud", "Lyd"],
   "Vent": ["Wait", "Warten", "Attente", "Espera", "Vänta", "Vent"],
   "Gruppe": ["Group", "Gruppe", "Groupe", "Grupo", "Grupp", "Gruppe"],
