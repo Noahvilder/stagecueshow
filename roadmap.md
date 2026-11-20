@@ -1,3 +1,14 @@
 - [x] Monitor-profiler pr. show og personlige cue-noter på PC og mobil.
 - [x] Personlige QR-links og passiv profilvisning.
 - [x] Test gemning, synkronisering og fallback.
+- [x] Memoer/rolle-noter i grupper på scenemonitor + stående memo.
+- [x] Gruppe: "start efter gruppe-GO" i stedet for næste cue/post-wait; ventende vises i Aktive.
+- [x] Cue-standarder gemt i showet.
+- [x] Monitor husker tidligere shows.
+- [x] Desktop: ingen tilbage/salgssider; Pro-licens læses altid.
+- [x] Søgning og sang-rækkefølge.
+- [x] Tabs 4–8 strenge + transponering.
+- [x] Dialoger øverst; vindues-snap (frit/gitter/magnet).
+- [ ] Sprogskifter inde i pulten (venter: pultens tekster er ikke oversat endnu).
+- [ ] OSC-cues og indbygget virtuel MIDI-port (kræver ny .exe-build).
+- [ ] Eksterne links i systembrowser (kræver opener-plugin i ny .exe-build).

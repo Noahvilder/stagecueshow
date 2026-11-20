@@ -13,7 +13,7 @@ function ShowPicker() {
   return (
     <div className="min-h-screen bg-background p-4 text-foreground sm:p-8">
       <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <Link to="/" className="self-start rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← {t({ en: "Back to home", da: "Tilbage til forsiden", de: "Zurück zur Startseite", fr: "Retour à l'accueil", es: "Volver al inicio", sv: "Tillbaka till startsidan", no: "Tilbake til forsiden" })}</Link>
+        <Link to="/" className="web-only self-start rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← {t({ en: "Back to home", da: "Tilbage til forsiden", de: "Zurück zur Startseite", fr: "Retour à l'accueil", es: "Volver al inicio", sv: "Tillbaka till startsidan", no: "Tilbake til forsiden" })}</Link>
         <div>
           <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-go">StageCue</div>
           <h1 className="mt-2 text-4xl font-black">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen", fr: "Ouvrir le show", es: "Abrir show", sv: "Öppna show", no: "Åpne show" })}</h1>

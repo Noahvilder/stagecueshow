@@ -44,7 +44,7 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
   const name = `Click ${eff.meter} ${eff.startBpm}${ramp ? `→${eff.endBpm}` : ""} BPM`;
   const num = "w-full rounded border border-border bg-background px-2 py-1 font-mono";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4" onClick={() => { stop(); onClose(); }}>
+    <div className="fixed inset-0 z-[100000] flex backdrop-blur-sm items-center justify-center bg-background/70 p-4" onClick={() => { stop(); onClose(); }}>
       <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between"><h2 className="text-lg font-bold">⏱️ Click / Optælling</h2><button onClick={() => { stop(); onClose(); }} className="text-muted-foreground">✕</button></div>
         <div className="flex flex-col items-center gap-2 rounded-md bg-secondary/40 py-3">

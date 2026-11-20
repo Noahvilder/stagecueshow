@@ -281,7 +281,12 @@ export class Engine {
         case "memo":
           break;
         case "group":
-          cue.children.forEach((ch) => (ch.preWait > 0 ? this.later(ch.preWait, () => void this.execute(ch)) : void this.execute(ch)));
+          cue.children.forEach((ch) => {
+            if (ch.preWait <= 0) return void this.execute(ch);
+            const key = `${cue.id}>${ch.id}`;
+            this.pending.set(key, { cueId: ch.id, name: ch.name, type: ch.type, start: performance.now(), dur: ch.preWait });
+            this.later(ch.preWait, () => { if (!this.pending.delete(key)) return; void this.execute(ch); });
+          });
           break;
       }
     } catch (e) {
@@ -330,6 +335,7 @@ export class Engine {
   }
 
   stopCue(id: string) {
+    this.pending.forEach((p, k) => { if (p.cueId === id) this.pending.delete(k); });
     this.removePlayer(id);
   }
 

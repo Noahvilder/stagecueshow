@@ -81,6 +81,8 @@ export interface Show {
   monitors?: MonitorProfile[];
   /** Friendly names for hardware ports, travels with the show. */
   ioAliases?: { audio?: Record<string, string>; midi?: Record<string, string> };
+  /** Per cue type: starting values for newly created cues. */
+  cueDefaults?: Partial<Record<CueType, Record<string, unknown>>>;
 }
 
 export interface MonitorProfile {

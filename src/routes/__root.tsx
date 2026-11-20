@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { installDesktopGuards, isDesktop } from "../lib/desktop";
 
 function NotFoundComponent() {
   return (
@@ -119,6 +120,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  useEffect(() => {
+    if (!isDesktop()) return;
+    document.documentElement.dataset["desktop"] = "1";
+    return installDesktopGuards((to) => void router.navigate({ to, replace: true }));
+  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>

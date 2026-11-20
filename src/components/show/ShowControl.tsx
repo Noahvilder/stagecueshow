@@ -6,7 +6,7 @@ import { putAudio, getAudio } from "@/lib/show/audioStore";
 import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
 import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong,
-  newCue, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
+  newCue, cueAsDefault, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
 import { ioName } from "@/lib/show/types";
@@ -18,6 +18,9 @@ import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
 import { MenuBar, type Menu } from "./MenuBar";
 import { CommandPalette } from "./CommandPalette";
+import { monitorFields } from "@/lib/show/monitors";
+import { snapRect, type SnapMode } from "@/lib/show/snap";
+import { TAB_TUNINGS, tabTemplate } from "@/lib/show/tabs";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
 import { ProDialog } from "./ProGate";
@@ -71,6 +74,9 @@ export function ShowControl({ showId }: { showId: string }) {
   const [lastGo, setLastGo] = useState<number | null>(null);
   const [now, setNow] = useState(0);
   const [wins, setWins] = useState(defaultWins);
+  const [snap, setSnapMode] = useState<SnapMode>("free");
+  useEffect(() => { const m = localStorage.getItem("stagecue.snap"); if (m) setSnapMode(m as SnapMode); }, []);
+  const [songQuery, setSongQuery] = useState("");
   const [noteSize, setNoteSize] = useState<0 | 1 | 2>(1);
   const [pedals, setPedals] = useState<PedalMap>({});
   const [learning, setLearning] = useState<PedalAction | null>(null);
@@ -96,7 +102,14 @@ export function ShowControl({ showId }: { showId: string }) {
   monPausedRef.current = monPaused;
   const logId = useRef(0);
   const [recovered, setRecovered] = useState<string | null>(null);
-  const setWin = (k: WinKey, p: Partial<WinState>) => setWins((w) => ({ ...w, [k]: { ...w[k], ...p } }));
+  const setWin = (k: WinKey, p: Partial<WinState>) => setWins((w) => {
+    let next = { ...w[k], ...p };
+    if (snap !== "free" && ("x" in p || "w" in p)) {
+      const others = (Object.keys(w) as WinKey[]).filter((o) => o !== k && w[o].open).map((o) => w[o]);
+      next = { ...next, ...snapRect(next, others, snap, { w: window.innerWidth, h: window.innerHeight }, "w" in p) };
+    }
+    return { ...w, [k]: next };
+  });
   const focusWin = (k: WinKey) =>
     setWins((w) => {
       const top = Math.max(...Object.values(w).map((x) => x.z));
@@ -318,7 +331,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const addCue = (type: CueType) => {
     if (locked) return;
     if (type === "group" && !needPro("group")) return;
-    const c = newCue(type);
+    const c = newCue(type, show.cueDefaults);
     setShow((s) => {
       const songs = [...s.songs];
       let si = songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedId));
@@ -434,7 +447,7 @@ export function ShowControl({ showId }: { showId: string }) {
     running: [...new Set(active.map((a) => a.cueId))],
     muted,
     locked,
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), notes: c.notes ?? "", monitorNotes: c.monitorNotes ?? {}, text: c.type === "memo" ? c.text : "", stikord: c.stikord ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), ...monitorFields(c), stikord: c.stikord ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
   }), [show, standbyId, active, midiPorts, muted, locked]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
@@ -485,6 +498,8 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "🟢 Simpel visning", onClick: () => setWins(simpleWins()), disabled: locked },
           { label: "⚙️ Avanceret visning", onClick: () => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; }), disabled: locked },
           { label: "Nulstil layout", onClick: () => setWins(defaultWins()), disabled: locked },
+          "sep",
+          ...([["free", "Vinduer: Frit flydende"], ["grid", "Vinduer: Gitter-snap"], ["magnet", "Vinduer: Magnetisk kant-snap"], ["both", "Vinduer: Gitter + magnet"]] as const).map(([m, label]) => ({ label, checked: snap === m, onClick: () => { setSnapMode(m); localStorage.setItem("stagecue.snap", m); } })),
           "sep",
           ...(Object.keys(COLS) as ColKey[]).map((k) => ({ label: COLS[k], checked: view[k], onClick: () => toggleCol(k) })),
         ] },
@@ -610,8 +625,9 @@ export function ShowControl({ showId }: { showId: string }) {
               + Sang
             </button>
           </div>}
+          <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder="🔍 Søg i sange, cues, numre, stikord og noter…" aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {show.songs.map((song, si) => (
+            {show.songs.map((song, si) => { const q = songQuery.trim().toLowerCase(); const songHit = !q || song.name.toLowerCase().includes(q); const cues = songHit ? song.cues : song.cues.filter((c) => cueMatches(c, q, flat.indexOf(c) + 1)); if (q && !cues.length) return null; return (
               <section key={song.id} className="mb-3">
                 <div
                   draggable={!locked}
@@ -631,9 +647,11 @@ export function ShowControl({ showId }: { showId: string }) {
                     className="min-w-0 flex-1 bg-transparent text-lg font-bold outline-none focus:bg-input"
                   />
                   <span className="text-xs text-muted-foreground">{song.cues.length} cues</span>
+                  {!locked && <button disabled={si === 0} onClick={() => setShow((s) => moveSong(s, song.id, s.songs[si - 1]?.id ?? null))} className="px-1 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label="Flyt sang op">▲</button>}
+                  {!locked && <button disabled={si === show.songs.length - 1} onClick={() => setShow((s) => moveSong(s, song.id, s.songs[si + 2]?.id ?? null))} className="px-1 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label="Flyt sang ned">▼</button>}
                   {!locked && <button onClick={() => deleteSong(song.id)} className="px-2 text-muted-foreground hover:text-destructive" aria-label="Slet sang">✕</button>}
                 </div>
-                {song.cues.map((c) => {
+                {cues.map((c) => {
                   const idx = flat.indexOf(c);
                   const isStandby = c.id === standbyId;
                   const isRunning = active.some((a) => a.cueId === c.id);
@@ -680,7 +698,7 @@ export function ShowControl({ showId }: { showId: string }) {
                   className={`h-3 rounded-b bg-muted/40 ${dropKey === "e" + song.id ? "bg-standby" : ""}`}
                 />
               </section>
-            ))}
+            ); })}
             {!show.songs.length && <div className="p-8 text-center text-muted-foreground">Tilføj en sang for at komme i gang</div>}
           </div>
         </div>
@@ -710,6 +728,8 @@ export function ShowControl({ showId }: { showId: string }) {
               onTestMidi={(m) => engine().sendMidi(m)}
               needPro={needPro}
               channelCount={(o) => engine().channelCount(o)}
+              onSaveDefault={(c) => setShow((s) => ({ ...s, cueDefaults: { ...s.cueDefaults, [c.type]: cueAsDefault(c) } }))}
+              onResetDefault={(t) => setShow((s) => { const d = { ...s.cueDefaults }; delete d[t]; return { ...s, cueDefaults: d }; })}
             />
           ) : (
             <div className="text-muted-foreground">Vælg et cue for at redigere. Dobbeltklik for at sætte det som standby.</div>
@@ -854,6 +874,9 @@ function Inspector(props: {
   loadAudio: (fileId: string, outputId: string) => Promise<AudioBuffer>;
   needPro: (f: ProFeature) => boolean;
   channelCount: (outputId: string) => Promise<number>;
+  inGroup?: boolean;
+  onSaveDefault?: (c: Cue) => void;
+  onResetDefault?: (t: CueType) => void;
 }) {
   const { cue, show, flat, midiPorts, outputs, onChange } = props;
   const set = (p: Record<string, unknown>) => onChange(p as Partial<Cue>);
@@ -876,6 +899,7 @@ function Inspector(props: {
 
       <div className="rounded border border-border p-2">
         <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Afvikling</div>
+        {props.inGroup ? <Field label="Start efter gruppe-GO (sekunder, 0 = straks)"><Num value={cue.preWait} onChange={(n) => set({ preWait: Math.max(0, n) })} /></Field> : <>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Pre-wait (s)"><Num value={cue.preWait} onChange={(n) => set({ preWait: Math.max(0, n) })} /></Field>
           <Field label="Post-wait (s)"><Num value={cue.postWait} onChange={(n) => set({ postWait: Math.max(0, n) })} /></Field>
@@ -888,7 +912,7 @@ function Inspector(props: {
               <option value="afterEnd">Auto-follow – når dette cue slutter (+ post-wait)</option>
             </select>
           </Field>
-        </div>
+        </div></>}
       </div>
 
       <Field label="Farve (kun dette cue)">
@@ -998,11 +1022,20 @@ function Inspector(props: {
       {cue.type === "wait" && <Field label="Varighed (s)"><Num value={cue.duration} onChange={(n) => set({ duration: Math.max(0, n) })} /></Field>}
       {cue.type === "memo" && (
         <Field label="Tekst (vises stort i standby)">
-          <textarea rows={6} className={inputCls} value={cue.text} onChange={(e) => set({ text: e.target.value })} />
+          <textarea rows={6} className={`${inputCls} font-mono`} value={cue.text} onChange={(e) => set({ text: e.target.value })} />
+          <div className="mt-1 flex flex-wrap gap-1">
+            <span className="text-xs text-muted-foreground">Indsæt tab:</span>
+            {Object.entries(TAB_TUNINGS).map(([k, strs]) => <button key={k} type="button" onClick={() => set({ text: (cue.text ? cue.text + "\n\n" : "") + tabTemplate(strs) })} className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold hover:bg-accent">{k}</button>)}
+          </div>
         </Field>
       )}
       {cue.type === "group" && <GroupEditor {...props} cue={cue} />}
       <MonitorNotes key={cue.id} cue={cue} monitors={show.monitors ?? []} onChange={onChange} />
+      {props.onSaveDefault && <div className="flex flex-wrap items-center gap-2 rounded border border-dashed border-border p-2 text-xs">
+        <span className="text-muted-foreground">Standard for nye {TYPE_LABEL[cue.type]}-cues i dette show{show.cueDefaults?.[cue.type] ? " (sat)" : ""}:</span>
+        <button type="button" onClick={() => props.onSaveDefault?.(cue)} className="rounded bg-secondary px-2 py-1 font-semibold hover:bg-accent">Gem dette cue som standard</button>
+        {show.cueDefaults?.[cue.type] && <button type="button" onClick={() => props.onResetDefault?.(cue.type)} className="text-muted-foreground underline">Nulstil til fabriksindstillinger</button>}
+      </div>}
     </div>
   );
 }
@@ -1016,12 +1049,12 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
   const child = cue.children.find((c) => c.id === sel);
   return (
     <div className="rounded border-2 p-2" style={{ borderColor: cueColor(show, cue) }}>
-      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Cues i gruppen · starter samtidig</div>
+      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Cues i gruppen · startes ved gruppe-GO (+ evt. forsinkelse)</div>
       <div className="flex flex-col gap-1">
         {cue.children.length === 0 && <div className="text-sm text-muted-foreground">Tom gruppe – tilføj cues nedenfor.</div>}
         {cue.children.map((c, i) => (
           <div key={c.id} className={`flex items-center gap-1 rounded border-l-4 px-2 py-1 text-sm ${sel === c.id ? "bg-accent" : "bg-secondary"}`} style={{ borderLeftColor: cueColor(show, c) }}>
-            <button className="min-w-0 flex-1 truncate text-left font-semibold" onClick={() => setSel(c.id)}>{i + 1}. {c.name}{c.preWait ? ` · ⏱${c.preWait}s` : ""}</button>
+            <button className="min-w-0 flex-1 truncate text-left font-semibold" onClick={() => setSel(c.id)}>{i + 1}. {c.name}{c.preWait ? ` · +${c.preWait}s efter GO` : " · straks"}</button>
             <button title="Op" onClick={() => move(i, -1)}>▲</button>
             <button title="Ned" onClick={() => move(i, 1)}>▼</button>
             <button title="Fjern" className="text-destructive" onClick={() => { setKids(cue.children.filter((x) => x.id !== c.id)); if (sel === c.id) setSel(null); }}>✕</button>
@@ -1030,15 +1063,16 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {CHILD_TYPES.map((t) => (
-          <button key={t} onClick={() => { const n = newCue(t); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {TYPE_LABEL[t]}</button>
+          <button key={t} onClick={() => { const n = newCue(t, show.cueDefaults); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {TYPE_LABEL[t]}</button>
         ))}
       </div>
       {child && (
         <div className="mt-3 rounded border border-border p-2">
-          <div className="mb-2 text-xs font-bold text-muted-foreground">Redigerer: {child.name} (Auto-follow ignoreres inde i en gruppe)</div>
+          <div className="mb-2 text-xs font-bold text-muted-foreground">Redigerer: {child.name} </div>
           <Inspector
             {...props}
             key={child.id}
+            inGroup
             cue={child}
             onChange={(p) => upd(child.id, p)}
             onDelete={() => { setKids(cue.children.filter((x) => x.id !== child.id)); setSel(null); }}
@@ -1069,7 +1103,7 @@ function Settings(props: {
     <input className="w-44 rounded border border-border bg-background px-2 py-1 text-sm" placeholder="Kaldenavn, fx Headphones" title="Dit eget navn for porten – gemmes i showet" value={show.ioAliases?.[kind]?.[key] ?? ""} onChange={(e) => setAlias(kind, key, e.target.value)} />
   );
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6" onClick={props.onClose}>
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-background/80 p-6" onClick={props.onClose}>
       <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Indstillinger</h2>
@@ -1208,7 +1242,7 @@ function PedalPanel(props: {
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100000] flex backdrop-blur-sm items-center justify-center bg-background/70 p-4" onClick={onClose}>
       <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-bold">{title}</h2><button onClick={onClose} aria-label="Luk">✕</button></div>
         {children}
@@ -1295,4 +1329,10 @@ function ShortcutManager({ map, onChange, onClose }: { map: ShortcutMap; onChang
       </div>
     </Modal>
   );
+}
+
+function cueMatches(c: Cue, q: string, pos: number): boolean {
+  const hay = [c.name, c.number ?? String(pos), c.stikord, c.notes, c.ref, c.type === "memo" ? c.text : "", ...Object.values(c.monitorNotes ?? {})];
+  if (c.type === "group") return hay.some((h) => h?.toLowerCase().includes(q)) || c.children.some((k) => cueMatches(k, q, pos));
+  return hay.some((h) => h?.toLowerCase().includes(q));
 }

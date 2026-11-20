@@ -9,7 +9,9 @@ export function usePlan(): { tier: Tier; trialDaysLeft: number; loading: boolean
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       const env = tryStripeEnvironment();
-      const { data: lic } = env ? await supabase.from("licenses").select("status,current_period_end").eq("environment", env).maybeSingle() : { data: null };
+      const q = supabase.from("licenses").select("status,current_period_end").eq("status", "active");
+      const { data: rows } = await (env ? q.eq("environment", env) : q).limit(1);
+      const lic = rows?.[0] ?? null;
       setS({ ...resolveTier(lic ?? null, u.user?.created_at ?? null), loading: false });
     })();
   }, []);

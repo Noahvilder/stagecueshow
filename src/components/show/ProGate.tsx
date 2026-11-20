@@ -2,7 +2,7 @@ import { PRO_LABEL, type ProFeature } from "@/lib/show/plan";
 
 export function ProDialog({ feature, onClose }: { feature: ProFeature; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100000] flex backdrop-blur-sm items-center justify-center bg-background/80 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-xl border border-standby bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">StageCue Pro</div>
         <h2 className="mb-2 text-xl font-bold">{PRO_LABEL[feature]} er en Pro-funktion</h2>

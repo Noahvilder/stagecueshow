@@ -2,17 +2,36 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Peer as PeerT } from "peerjs";
 import { PEER_PREFIX, isValidCode, normCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 import { parseChordPro } from "@/lib/show/chordpro";
-import { monitorBody } from "@/lib/show/monitors";
+import { monitorBody, stickyIndex } from "@/lib/show/monitors";
+import { isTabLine, transposeSource } from "@/lib/show/tabs";
+
+const HIST_KEY = "stagecue.viewer.history";
+type Hist = { code: string; name: string; monitor: string; at: number };
+const readHist = (): Hist[] => { try { return JSON.parse(localStorage.getItem(HIST_KEY) ?? "[]") as Hist[]; } catch { return []; } };
 import { Button } from "@/components/ui/button";
 
 type Mode = "lyrics" | "hud";
 const VIEW_KEY = "stagecue.viewer";
 const SIZES = ["text-2xl", "text-4xl", "text-6xl", "text-8xl"];
 
-export function ChordText({ src, size }: { src: string; size: string }) {
+export function ChordText({ src, size, transpose = 0 }: { src: string; size: string; transpose?: number }) {
+  const blocks = useMemo(() => {
+    const out: { tab: boolean; text: string }[] = [];
+    for (const l of transposeSource(src, transpose).split("\n")) {
+      const tab = isTabLine(l); const last = out[out.length - 1];
+      if (last && last.tab === tab) last.text += "\n" + l; else out.push({ tab, text: l });
+    }
+    return out;
+  }, [src, transpose]);
+  return <div className={size}>{blocks.map((b, i) => b.tab
+    ? <pre key={i} className="my-[0.4em] overflow-x-auto rounded bg-card p-[0.3em] font-mono text-[0.6em] font-bold leading-snug text-foreground">{b.text}</pre>
+    : <ChordLines key={i} src={b.text} />)}</div>;
+}
+
+function ChordLines({ src }: { src: string }) {
   const lines = useMemo(() => parseChordPro(src), [src]);
   return (
-    <div className={`${size} font-semibold leading-tight`}>
+    <div className="font-semibold leading-tight">
       {lines.map((l, i) => !l.segs.length || (l.segs.length === 1 && !l.segs[0]?.text && !l.segs[0]?.chord) ? <div key={i} className="h-[1em]" /> : (
         <div key={i} className="flex flex-wrap items-end">
           {l.segs.map((s, j) => (
@@ -43,6 +62,9 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [scroll, setScroll] = useState(0);
+  const [transpose, setTranspose] = useState(0);
+  const [hist, setHist] = useState<Hist[]>([]);
+  useEffect(() => setHist(readHist()), []);
   const mainRef = useRef<HTMLElement | null>(null);
   const monitorRef = useRef(monitorId);
   monitorRef.current = monitorId;
@@ -55,6 +77,11 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     if (!initialMonitor && !initialCode && saved.monitor) setMonitorId(saved.monitor);
   }, [initialCode, initialMonitor]);
   useEffect(() => { if (target) localStorage.setItem(VIEW_KEY, JSON.stringify({ code: target, monitor: monitorId })); }, [target, monitorId]);
+  useEffect(() => {
+    if (!target || !state?.showName) return;
+    const list = [{ code: target, name: state.showName, monitor: monitorId, at: Date.now() }, ...readHist().filter((h) => h.code !== target)].slice(0, 10);
+    localStorage.setItem(HIST_KEY, JSON.stringify(list)); setHist(list);
+  }, [target, state?.showName, monitorId]);
   const profile = state?.monitors?.find((m) => m.id === monitorId);
   const viewMode = profile?.mode ?? mode;
 
@@ -105,6 +132,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   const cur = idx >= 0 ? flat[idx] : undefined;
   const next = idx >= 0 ? flat[idx + 1] : undefined;
   const body = (c?: typeof cur) => monitorBody(c, profile?.id);
+  const stickyCue = idx >= 0 ? flat[stickyIndex(flat, idx, profile?.id)] : undefined;
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [cur?.id]);
   useEffect(() => {
     if (!scroll) return;
@@ -120,18 +148,25 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
 
   if (!target) return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
-      <a href="/show" className="absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
+      <a href="/show" className="web-only absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
       <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-go">StageCue Monitor</div>
       <h1 className="text-3xl font-black">Scenemonitor</h1>
       <p className="text-muted-foreground">Skriv showets kode (12 tegn) eller scan QR-koden fra pulten</p>
       <input autoCapitalize="characters" maxLength={12} value={code} onChange={(e) => setCode(normCode(e.target.value))} className="w-72 rounded border border-border bg-input p-3 text-center font-mono text-2xl tracking-widest" />
       <button disabled={!isValidCode(code)} onClick={() => setTarget(code)} className="rounded bg-go px-6 py-3 text-lg font-bold text-go-foreground disabled:opacity-40">Forbind</button>
+      {hist.length > 0 && <div className="mt-6 w-full max-w-sm">
+        <div className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Seneste shows</div>
+        {hist.map((h) => <div key={h.code} className="mb-2 flex items-stretch gap-1">
+          <button onClick={() => { setCode(h.code); setMonitorId(h.monitor); setTarget(h.code); }} className="min-w-0 flex-1 rounded bg-secondary p-3 text-left"><div className="truncate text-lg font-bold">{h.name}</div><div className="font-mono text-xs text-muted-foreground">{h.code} · {new Date(h.at).toLocaleDateString()}</div></button>
+          <button aria-label={`Fjern ${h.name}`} onClick={() => { const l = hist.filter((x) => x.code !== h.code); localStorage.setItem(HIST_KEY, JSON.stringify(l)); setHist(l); }} className="rounded bg-secondary px-3 text-muted-foreground hover:text-destructive">✕</button>
+        </div>)}
+      </div>}
     </div>
   );
 
   if (!viewMode) return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-foreground">
-      <a href="/show" className="absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
+      <a href="/show" className="web-only absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
       <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{stale ? "◐ Venter på signal…" : online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
       <h1 className="text-3xl font-black">Vælg din rolle på scenen</h1>
       <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>
@@ -178,13 +213,16 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
         {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – viser sidst kendte show, prøver igen…</div>}
         {stale && <div className="mb-2 animate-pulse text-standby">◐ Venter på signal fra pulten…</div>}
         {viewMode === "lyrics"
-          ? (body(cur) ? <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
-          : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(cur) && <ChordText src={body(cur)} size={SIZES[size] ?? "text-4xl"} />}</div>}
+          ? (body(stickyCue) ? <ChordText src={body(stickyCue)} transpose={transpose} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
+          : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(stickyCue) && <ChordText src={body(stickyCue)} transpose={transpose} size={SIZES[size] ?? "text-4xl"} />}</div>}
       </main>
       {cur?.stikord && <div className="border-t-4 border-standby bg-standby/15 px-6 py-3 text-4xl font-black text-standby">⏱ GO: {cur.stikord}</div>}
       {next && <footer className="border-t border-border bg-card px-6 py-3 text-2xl"><span className="text-muted-foreground">Næste: </span><b>{next.song !== cur?.song ? `${next.song} · ` : ""}{next.name}</b></footer>}
       <div className={`absolute bottom-16 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap justify-end gap-2 rounded bg-background p-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         {SIZES.map((_, i) => <Button variant="secondary" key={i} onClick={() => setSize(i)} className={size === i ? "bg-standby text-standby-foreground" : ""}>{"A" + "+".repeat(i)}</Button>)}
+        <Button variant="secondary" title="Transponér ned" onClick={() => setTranspose((t) => t - 1)}>♭</Button>
+        <Button variant="secondary" title="Nulstil transponering" onClick={() => setTranspose(0)} className={transpose ? "bg-standby text-standby-foreground" : ""}>{transpose > 0 ? `+${transpose}` : transpose}</Button>
+        <Button variant="secondary" title="Transponér op" onClick={() => setTranspose((t) => t + 1)}>♯</Button>
         {profile && cur && <Button variant="secondary" onClick={() => openEdit(cur.id)}>✏️ Redigér mine noter</Button>}
         <Button variant="secondary" title="Rul teksten automatisk – tryk igen for hurtigere" onClick={() => setScroll((v) => (v >= 4 ? 0 : v + 1))} className={scroll ? "bg-standby text-standby-foreground" : ""}>{scroll ? `⇣ Rul ${scroll}x` : "⇣ Auto-rul"}</Button>
         <Button variant="secondary" title="Fuld skærm" onClick={full}>⛶</Button>

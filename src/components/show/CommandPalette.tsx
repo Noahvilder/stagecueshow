@@ -27,7 +27,7 @@ export function CommandPalette({ menus }: { menus: Menu[] }) {
     <>
       <button onClick={() => setOpen(true)} title="Søg efter funktioner og indstillinger (Ctrl+F)" className="ml-auto self-center rounded px-3 text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground">🔍 Søg <span className="font-mono text-xs">Ctrl+F</span></button>
       {open && (
-        <div className="fixed inset-0 z-[200] flex items-start justify-center bg-background/70 pt-24" onMouseDown={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[100001] flex items-start justify-center bg-background/70 pt-24" onMouseDown={() => setOpen(false)}>
           <div className="w-full max-w-xl overflow-hidden rounded-lg border border-border bg-card shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
             <input
               ref={inp}

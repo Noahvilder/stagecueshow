@@ -121,7 +121,25 @@ export function fmtTime(sec: number | null | undefined, mode: "hms" | "sec"): st
   return h ? `${h}:${String(m).padStart(2, "0")}:${r}` : `${String(m).padStart(2, "0")}:${r}`;
 }
 
-export function newCue(type: CueType): Cue {
+export function newCue(type: CueType, defaults?: Show["cueDefaults"]): Cue {
+  const raw = rawCue(type);
+  const d = defaults?.[type];
+  if (!d) return raw;
+  const merged = { ...raw, ...d, id: raw.id, type } as Cue;
+  if (merged.type === "midi") merged.messages = merged.messages.map((m) => ({ ...m, id: uid() }));
+  if (merged.type === "audio") { merged.fileId = null; merged.fileName = ""; }
+  if (merged.type === "group") merged.children = [];
+  return merged;
+}
+
+/** Strip per-instance fields so a cue can serve as the default for its type. */
+export function cueAsDefault(c: Cue): Record<string, unknown> {
+  const { id: _i, monitorNotes: _m, number: _n, ref: _r, ...rest } = c as unknown as Record<string, unknown>;
+  for (const k of ["fileId", "fileName", "startTime", "endTime", "children"]) delete rest[k];
+  return rest;
+}
+
+function rawCue(type: CueType): Cue {
   const base = { id: uid(), name: TYPE_LABEL[type], follow: "manual" as const, preWait: 0, postWait: 0 };
   switch (type) {
     case "audio":

@@ -26,7 +26,7 @@ export function MenuBar({ menus }: { menus: Menu[] }) {
             className={`h-full px-3 ${open === i ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
           >{m.label}</button>
           {open === i && (
-            <div role="menu" className="absolute left-0 top-full z-[100] min-w-60 rounded-b-md border border-border bg-card py-1 shadow-2xl">
+            <div role="menu" className="absolute left-0 top-full z-[100002] min-w-60 rounded-b-md border border-border bg-card py-1 shadow-2xl">
               {m.items.map((it, j) => it === "sep" ? <div key={j} className="my-1 h-px bg-border" /> : (
                 <button
                   key={j}
