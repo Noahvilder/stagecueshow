@@ -31,7 +31,7 @@ import { hasPro, type ProFeature } from "@/lib/show/plan";
 import { SHORTCUT_LABEL, assign, comboOf, findAction, loadShortcuts, prettyCombo, saveShortcuts, DEFAULT_SHORTCUTS, type ShortcutAction, type ShortcutMap } from "@/lib/show/shortcuts";
 import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
 import { trackFeature } from "@/lib/track";
-import { setAppLang, useAppLang, trApp } from "@/lib/show/appI18n";
+import { setAppLang, useAppLang, trApp, useTrApp } from "@/lib/show/appI18n";
 import { LANGS, LANG_NAMES } from "@/lib/site/i18n";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
@@ -379,7 +379,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const addSong = () => setShow((s) => ({ ...s, songs: [...s.songs, { id: uid(), name: `Sang ${s.songs.length + 1}`, cues: [] }] }));
   const renameSong = (id: string, name: string) => setShow((s) => ({ ...s, songs: s.songs.map((sg) => (sg.id === id ? { ...sg, name } : sg)) }));
   const deleteSong = (id: string) => {
-    if (!confirm("Slet sang og alle dens cues?")) return;
+    if (!confirm(tr("Slet sang og alle dens cues?"))) return;
     setShow((s) => ({ ...s, songs: s.songs.filter((sg) => sg.id !== id) }));
   };
 
@@ -614,7 +614,7 @@ export function ShowControl({ showId }: { showId: string }) {
           >
             GO
           </button>
-          <div className="text-center text-xs text-muted-foreground">Mellemrum = GO · ↑↓ = flyt standby · Esc = nød-fade · Esc×2 = stop nu</div>
+          <div className="text-center text-xs text-muted-foreground">{tr("Mellemrum = GO · ↑↓ = flyt standby · Esc = nød-fade · Esc×2 = stop nu")}</div>
 
           <div className="grid grid-cols-2 gap-2">
             <button onClick={panic} className="h-16 rounded-lg bg-destructive text-[clamp(0.8rem,5cqw,1.125rem)] font-black text-destructive-foreground">
@@ -622,7 +622,7 @@ export function ShowControl({ showId }: { showId: string }) {
               <div className="text-xs font-normal">fade {show.panicFade}s</div>
             </button>
             <button onClick={hardStop} className="h-16 rounded-lg border-2 border-destructive text-[clamp(0.8rem,5cqw,1.125rem)] font-black text-destructive">
-              STOP ALT
+              {tr("STOP ALT")}
             </button>
           </div>
 
@@ -633,12 +633,12 @@ export function ShowControl({ showId }: { showId: string }) {
           </div>
 
           <div>
-            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Aktive ({active.length})</div>
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">{tr("Aktive")} ({active.length})</div>
             <div className="flex flex-col gap-1">
               {active.map((a) => (
                 <ActiveBar key={a.key} row={a} color={cueColorById(show, a.cueId)} onStop={() => engine().stopCue(a.cueId)} />
               ))}
-              {!active.length && <div className="text-sm text-muted-foreground">Intet kører</div>}
+              {!active.length && <div className="text-sm text-muted-foreground">{tr("Intet kører")}</div>}
             </div>
           </div>
         </div>
@@ -654,14 +654,14 @@ export function ShowControl({ showId }: { showId: string }) {
                 className="rounded border-l-4 bg-secondary px-3 py-1.5 text-sm font-semibold hover:bg-accent"
                 style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}
               >
-                + {TYPE_LABEL[t]}
+                + {tr(TYPE_LABEL[t])}
               </button>
             ))}
             <button onClick={addSong} className="ml-auto rounded bg-secondary px-3 py-1.5 text-sm font-semibold hover:bg-accent">
-              + Sang
+              {tr("+ Sang")}
             </button>
           </div>}
-          <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder="🔍 Søg i sange, cues, numre, stikord og noter…" aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
+          <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder={tr("🔍 Søg i sange, cues, numre, stikord og noter…")} aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {show.songs.map((song, si) => { const q = songQuery.trim().toLowerCase(); const songHit = !q || song.name.toLowerCase().includes(q); const cues = songHit ? song.cues : song.cues.filter((c) => cueMatches(c, q, flat.indexOf(c) + 1)); if (q && !cues.length) return null; return (
               <section key={song.id} className="mb-3">
@@ -688,7 +688,7 @@ export function ShowControl({ showId }: { showId: string }) {
                   {!locked && <button disabled={si === show.songs.length - 1} onClick={() => setShow((s) => moveSong(s, song.id, s.songs[si + 2]?.id ?? null))} className="px-1 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label="Flyt sang ned">▼</button>}
                   {!locked && <button onClick={() => deleteSong(song.id)} className="px-2 text-muted-foreground hover:text-destructive" aria-label="Slet sang">✕</button>}
                 </div>
-                {!song.cues.length && !locked && <button onClick={() => { setSelectedSongId(song.id); setSelectedId(null); }} className={`w-full border-b border-border bg-card px-3 py-2 text-left text-xs text-muted-foreground hover:bg-secondary ${selectedSongId === song.id && !selectedId ? "text-standby" : ""}`}>Tom sang – klik her, og vælg en cue-type for at tilføje første cue</button>}
+                {!song.cues.length && !locked && <button onClick={() => { setSelectedSongId(song.id); setSelectedId(null); }} className={`w-full border-b border-border bg-card px-3 py-2 text-left text-xs text-muted-foreground hover:bg-secondary ${selectedSongId === song.id && !selectedId ? "text-standby" : ""}`}>{tr("Tom sang – klik her, og vælg en cue-type for at tilføje første cue")}</button>}
                 {cues.map((c) => {
                   const idx = flat.indexOf(c);
                   const isStandby = c.id === standbyId;
@@ -738,7 +738,7 @@ export function ShowControl({ showId }: { showId: string }) {
                 />
               </section>
             ); })}
-            {!show.songs.length && <div className="p-8 text-center text-muted-foreground">Tilføj en sang for at komme i gang</div>}
+            {!show.songs.length && <div className="p-8 text-center text-muted-foreground">{tr("Tilføj en sang for at komme i gang")}</div>}
           </div>
         </div>
 </FloatingWindow>
@@ -846,9 +846,10 @@ function TypeTag({ show, cue }: { show: Show; cue: Cue }) {
 }
 
 function TimeBox({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  const tr = useTrApp();
   return (
     <div className="min-w-0 rounded-lg border border-border bg-card p-2 text-center">
-      <div className="break-words font-sans text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="break-words font-sans text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{tr(label)}</div>
       <div className={`text-[clamp(1rem,7cqw,1.5rem)] tabular-nums ${accent ? "text-standby" : ""}`}>{value}</div>
     </div>
   );
@@ -873,17 +874,19 @@ function ActiveBar({ row, color, onStop }: { row: ActiveRow; color: string; onSt
 }
 
 function Btn({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  const tr = useTrApp();
   return (
     <button onClick={onClick} className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold hover:bg-accent">
-      {children}
+      {typeof children === "string" ? tr(children) : children}
     </button>
   );
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
+  const tr = useTrApp();
   return (
     <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-      {label}
+      {tr(label)}
       <div className="font-normal normal-case tracking-normal text-foreground">{children}</div>
     </label>
   );
@@ -896,9 +899,10 @@ function Num({ value, onChange, step = 0.1, min, max }: { value: number; onChang
 }
 
 function TargetSelect({ value, flat, onChange }: { value: string; flat: Cue[]; onChange: (v: string) => void }) {
+  const tr = useTrApp();
   return (
     <select className={inputCls} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="all">Alle lyd-cues</option>
+      <option value="all">{tr("Alle lyd-cues")}</option>
       {flat.filter((c) => c.type === "audio").map((c) => (
         <option key={c.id} value={c.id}>{c.name}</option>
       ))}
@@ -919,6 +923,7 @@ function Inspector(props: {
 }) {
   const { cue, show, flat, midiPorts, outputs, onChange } = props;
   const set = (p: Record<string, unknown>) => onChange(p as Partial<Cue>);
+  const tr = useTrApp();
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -926,18 +931,18 @@ function Inspector(props: {
         <div className="ml-auto flex gap-1">
           <Btn onClick={props.onStandby}>Standby</Btn>
           <Btn onClick={props.onFire}>Test</Btn>
-          <button onClick={props.onDelete} className="rounded bg-destructive px-3 py-1.5 text-sm font-semibold text-destructive-foreground">Slet</button>
+          <button onClick={props.onDelete} className="rounded bg-destructive px-3 py-1.5 text-sm font-semibold text-destructive-foreground">{tr("Slet")}</button>
         </div>
       </div>
       <Field label="Navn"><input className={inputCls} value={cue.name} onChange={(e) => set({ name: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Cue-nummer (fx 1, 1.5, 12.25)"><input className={inputCls} inputMode="decimal" placeholder="auto" value={cue.number ?? ""} onChange={(e) => set({ number: e.target.value.replace(",", ".").replace(/[^0-9.]/g, "") })} /></Field>
-        <Field label="Manuskript-ref (side/replik)"><input className={inputCls} placeholder="fx s. 34" value={cue.ref ?? ""} onChange={(e) => set({ ref: e.target.value })} /></Field>
+        <Field label="Manuskript-ref (side/replik)"><input className={inputCls} placeholder={tr("fx s. 34")} value={cue.ref ?? ""} onChange={(e) => set({ ref: e.target.value })} /></Field>
       </div>
-      <Field label="Stikord (hvornår skal der trykkes GO?)"><input className={inputCls} placeholder="fx Efter guitarsolo" value={cue.stikord ?? ""} onChange={(e) => set({ stikord: e.target.value })} /></Field>
+      <Field label="Stikord (hvornår skal der trykkes GO?)"><input className={inputCls} placeholder={tr("fx Efter guitarsolo")} value={cue.stikord ?? ""} onChange={(e) => set({ stikord: e.target.value })} /></Field>
 
       <div className="rounded border border-border p-2">
-        <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Afvikling</div>
+        <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">{tr("Afvikling")}</div>
         {props.inGroup ? <Field label="Start efter gruppe-GO (sekunder, 0 = straks)"><Num value={cue.preWait} onChange={(n) => set({ preWait: Math.max(0, n) })} /></Field> : <>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Pre-wait (s)"><Num value={cue.preWait} onChange={(n) => set({ preWait: Math.max(0, n) })} /></Field>
@@ -946,9 +951,9 @@ function Inspector(props: {
         <div className="mt-2">
           <Field label="Næste cue">
             <select className={inputCls} value={cue.follow} onChange={(e) => set({ follow: e.target.value })}>
-              <option value="manual">Manuel – venter på GO</option>
-              <option value="withStart">Auto-follow – når dette cue starter (+ post-wait)</option>
-              <option value="afterEnd">Auto-follow – når dette cue slutter (+ post-wait)</option>
+              <option value="manual">{tr("Manuel – venter på GO")}</option>
+              <option value="withStart">{tr("Auto-follow – når dette cue starter (+ post-wait)")}</option>
+              <option value="afterEnd">{tr("Auto-follow – når dette cue slutter (+ post-wait)")}</option>
             </select>
           </Field>
         </div></>}
@@ -956,9 +961,9 @@ function Inspector(props: {
 
       <Field label="Farve (kun dette cue)">
         <div className="flex items-center gap-2">
-          {["#ef4444","#f59e0b","#eab308","#22c55e","#3b82f6","#a855f7","#ec4899"].map((col) => <button key={col} title="Vælg farve" onClick={() => set({ color: col })} className="h-6 w-6 rounded-full border border-border" style={{ backgroundColor: col }} />)}
+          {["#ef4444","#f59e0b","#eab308","#22c55e","#3b82f6","#a855f7","#ec4899"].map((col) => <button key={col} title={tr("Vælg farve")} onClick={() => set({ color: col })} className="h-6 w-6 rounded-full border border-border" style={{ backgroundColor: col }} />)}
           <input type="color" value={cueColor(show, cue)} onChange={(e) => set({ color: e.target.value })} className="h-8 w-14 cursor-pointer bg-transparent" />
-          {cue.color && <button className="text-sm text-muted-foreground underline" onClick={() => set({ color: undefined })}>Brug type-farve</button>}
+          {cue.color && <button className="text-sm text-muted-foreground underline" onClick={() => set({ color: undefined })}>{tr("Brug type-farve")}</button>}
         </div>
       </Field>
 
@@ -966,7 +971,7 @@ function Inspector(props: {
         <>
           <Field label="Lydfil">
             <input type="file" accept="audio/*" className="text-sm" onChange={(e) => e.target.files?.[0] && props.onFile(e.target.files[0])} />
-            <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || "Ingen fil valgt"}</div>
+            <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || tr("Ingen fil valgt")}</div>
           </Field>
           {cue.fileId && (
             <Field label="Waveform & trim (træk i markørerne)">
@@ -977,7 +982,7 @@ function Inspector(props: {
               </div>
               <div className="mt-1 flex gap-2">
                 <Btn onClick={props.onFire}>▶ Afspil trim-udsnit</Btn>
-                {(cue.startTime || cue.endTime) ? <button className="text-sm text-muted-foreground underline" onClick={() => set({ startTime: 0, endTime: 0 })}>Nulstil trim</button> : null}
+                {(cue.startTime || cue.endTime) ? <button className="text-sm text-muted-foreground underline" onClick={() => set({ startTime: 0, endTime: 0 })}>{tr("Nulstil trim")}</button> : null}
               </div>
             </Field>
           )}
@@ -985,7 +990,7 @@ function Inspector(props: {
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
               {outputs.map((o) => <option key={o.id} value={o.id}>{ioName(o.label, show.ioAliases?.audio?.[o.id])}</option>)}
-              {!outputs.some((o) => o.id === cue.outputId) && <option value={cue.outputId}>(ukendt udgang – scan igen)</option>}
+              {!outputs.some((o) => o.id === cue.outputId) && <option value={cue.outputId}>{tr("(ukendt udgang – scan igen)")}</option>}
             </select>
           </Field>
           <ChannelPicker outputId={cue.outputId} channel={cue.channel ?? 1} mono={!!cue.mono} count={props.channelCount} aliases={show.ioAliases?.audio} onChange={(ch, mono) => { if ((ch > 1 || mono) && !props.needPro("channels")) return; set({ channel: ch, mono }); }} />
@@ -997,7 +1002,7 @@ function Inspector(props: {
             <Field label="Fade-in (s)"><Num value={cue.fadeIn} onChange={(n) => set({ fadeIn: Math.max(0, n) })} /></Field>
             <Field label="Fade-out (s)"><Num value={cue.fadeOut} onChange={(n) => set({ fadeOut: Math.max(0, n) })} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cue.loop} onChange={(e) => set({ loop: e.target.checked })} /> Loop</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cue.loop} onChange={(e) => set({ loop: e.target.checked })} /> {tr("Loop")}</label>
         </>
       )}
 
@@ -1008,28 +1013,28 @@ function Inspector(props: {
             return (
               <div key={m.id} className="rounded border border-border p-2">
                 <div className="mb-1 flex items-center justify-between text-xs font-bold text-muted-foreground">
-                  Besked {i + 1}
+                  {tr("Besked")} {i + 1}
                   <span className="flex gap-2">
-                    <button className="text-go" onClick={() => props.onTestMidi(m)}>Send</button>
-                    <button className="text-destructive" onClick={() => set({ messages: cue.messages.filter((x) => x.id !== m.id) })}>Fjern</button>
+                    <button className="text-go" onClick={() => props.onTestMidi(m)}>{tr("Send")}</button>
+                    <button className="text-destructive" onClick={() => set({ messages: cue.messages.filter((x) => x.id !== m.id) })}>{tr("Fjern")}</button>
                   </span>
                 </div>
                 <select className={inputCls} value={m.port} onChange={(e) => upd({ port: e.target.value })}>
-                  <option value="">Vælg port…</option>
+                  <option value="">{tr("Vælg port…")}</option>
                   {midiPorts.map((p) => <option key={p} value={p}>{ioName(p, show.ioAliases?.midi?.[p])}</option>)}
-                  {m.port && !midiPorts.includes(m.port) && <option value={m.port}>{m.port} (ikke tilsluttet)</option>}
+                  {m.port && !midiPorts.includes(m.port) && <option value={m.port}>{m.port} ({tr("ikke tilsluttet")})</option>}
                 </select>
                 {(() => { const k = midiKindInfo(m.kind); return (<>
                 <div className="mt-2 grid grid-cols-4 gap-1">
                   <select className={inputCls + " col-span-4"} value={m.kind} onChange={(e) => { const nk = midiKindInfo(e.target.value as MidiMsg["kind"]); upd({ kind: nk.kind, ...(nk.def1 != null ? { data1: nk.def1 } : {}) }); }}>
                     {MIDI_KINDS.map((x) => <option key={x.kind} value={x.kind}>{x.label}</option>)}
                   </select>
-                  {k.channel && <input title="Kanal" type="number" min={1} max={16} className={inputCls} value={m.channel} onChange={(e) => upd({ channel: +e.target.value })} />}
+                  {k.channel && <input title={tr("Kanal")} type="number" min={1} max={16} className={inputCls} value={m.channel} onChange={(e) => upd({ channel: +e.target.value })} />}
                   {k.d1 && <input title={k.d1.label} type="number" min={0} max={k.d1.max} className={inputCls + (k.d1.max > 127 ? " col-span-2" : "")} value={m.data1} onChange={(e) => upd({ data1: +e.target.value })} />}
                   {k.d2 && <input title={k.d2.label} type="number" min={0} max={k.d2.max} className={inputCls} value={m.data2} onChange={(e) => upd({ data2: +e.target.value })} />}
                 </div>
                 <div className="mt-1 grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
-                  {k.channel && <span>Kanal</span>}{k.d1 && <span className={k.d1.max > 127 ? "col-span-2" : ""}>{k.d1.label}{k.d1.note ? ` (${noteName(m.data1)})` : ""}</span>}{k.d2 && <span>{k.d2.label}</span>}
+                  {k.channel && <span>{tr("Kanal")}</span>}{k.d1 && <span className={k.d1.max > 127 ? "col-span-2" : ""}>{k.d1.label}{k.d1.note ? ` (${noteName(m.data1)})` : ""}</span>}{k.d2 && <span>{k.d2.label}</span>}
                 </div>
                 </>); })()}
                             </div>
@@ -1046,7 +1051,7 @@ function Inspector(props: {
             <Field label="Til volumen (dB)"><Num value={cue.volume} step={0.5} min={-60} max={12} onChange={(n) => set({ volume: n })} /></Field>
             <Field label="Varighed (s)"><Num value={cue.duration} onChange={(n) => set({ duration: Math.max(0, n) })} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cue.stopAfter} onChange={(e) => set({ stopAfter: e.target.checked })} /> Stop efter fade</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cue.stopAfter} onChange={(e) => set({ stopAfter: e.target.checked })} /> {tr("Stop efter fade")}</label>
         </>
       )}
       {cue.type === "stop" && (
@@ -1063,7 +1068,7 @@ function Inspector(props: {
         <Field label="Tekst (vises stort i standby)">
           <textarea rows={6} className={`${inputCls} font-mono`} value={cue.text} onChange={(e) => set({ text: e.target.value })} />
           <div className="mt-1 flex flex-wrap gap-1">
-            <span className="text-xs text-muted-foreground">Indsæt tab:</span>
+            <span className="text-xs text-muted-foreground">{tr("Indsæt tab:")}</span>
             {Object.entries(TAB_TUNINGS).map(([k, strs]) => <button key={k} type="button" onClick={() => set({ text: (cue.text ? cue.text + "\n\n" : "") + tabTemplate(strs) })} className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold hover:bg-accent">{k}</button>)}
           </div>
         </Field>
@@ -1071,9 +1076,9 @@ function Inspector(props: {
       {cue.type === "group" && <GroupEditor {...props} cue={cue} />}
       <MonitorNotes key={cue.id} cue={cue} monitors={show.monitors ?? []} onChange={onChange} />
       {props.onSaveDefault && <div className="flex flex-wrap items-center gap-2 rounded border border-dashed border-border p-2 text-xs">
-        <span className="text-muted-foreground">Standard for nye {TYPE_LABEL[cue.type]}-cues i dette show{show.cueDefaults?.[cue.type] ? " (sat)" : ""}:</span>
-        <button type="button" onClick={() => props.onSaveDefault?.(cue)} className="rounded bg-secondary px-2 py-1 font-semibold hover:bg-accent">Gem dette cue som standard</button>
-        {show.cueDefaults?.[cue.type] && <button type="button" onClick={() => props.onResetDefault?.(cue.type)} className="text-muted-foreground underline">Nulstil til fabriksindstillinger</button>}
+        <span className="text-muted-foreground">{tr("Standard for nye cues af typen")} {tr(TYPE_LABEL[cue.type])}{show.cueDefaults?.[cue.type] ? ` (${tr("sat")})` : ""}:</span>
+        <button type="button" onClick={() => props.onSaveDefault?.(cue)} className="rounded bg-secondary px-2 py-1 font-semibold hover:bg-accent">{tr("Gem dette cue som standard")}</button>
+        {show.cueDefaults?.[cue.type] && <button type="button" onClick={() => props.onResetDefault?.(cue.type)} className="text-muted-foreground underline">{tr("Nulstil til fabriksindstillinger")}</button>}
       </div>}
     </div>
   );
@@ -1086,28 +1091,29 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
   const upd = (id: string, p: Partial<Cue>) => setKids(cue.children.map((c) => (c.id === id ? ({ ...c, ...p } as Cue) : c)));
   const move = (i: number, d: number) => { const j = i + d; if (j < 0 || j >= cue.children.length) return; const a = [...cue.children]; [a[i], a[j]] = [a[j]!, a[i]!]; setKids(a); };
   const child = cue.children.find((c) => c.id === sel);
+  const tr = useTrApp();
   return (
     <div className="rounded border-2 p-2" style={{ borderColor: cueColor(show, cue) }}>
-      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">Cues i gruppen · startes ved gruppe-GO (+ evt. forsinkelse)</div>
+      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">{tr("Cues i gruppen · startes ved gruppe-GO (+ evt. forsinkelse)")}</div>
       <div className="flex flex-col gap-1">
-        {cue.children.length === 0 && <div className="text-sm text-muted-foreground">Tom gruppe – tilføj cues nedenfor.</div>}
+        {cue.children.length === 0 && <div className="text-sm text-muted-foreground">{tr("Tom gruppe – tilføj cues nedenfor.")}</div>}
         {cue.children.map((c, i) => (
           <div key={c.id} className={`flex items-center gap-1 rounded border-l-4 px-2 py-1 text-sm ${sel === c.id ? "bg-accent" : "bg-secondary"}`} style={{ borderLeftColor: cueColor(show, c) }}>
-            <button className="min-w-0 flex-1 truncate text-left font-semibold" onClick={() => setSel(c.id)}>{i + 1}. {c.name}{c.preWait ? ` · +${c.preWait}s efter GO` : " · straks"}</button>
-            <button title="Op" onClick={() => move(i, -1)}>▲</button>
-            <button title="Ned" onClick={() => move(i, 1)}>▼</button>
-            <button title="Fjern" className="text-destructive" onClick={() => { setKids(cue.children.filter((x) => x.id !== c.id)); if (sel === c.id) setSel(null); }}>✕</button>
+            <button className="min-w-0 flex-1 truncate text-left font-semibold" onClick={() => setSel(c.id)}>{i + 1}. {c.name}{c.preWait ? ` · +${c.preWait}s ${tr("efter GO")}` : ` · ${tr("straks")}`}</button>
+            <button title={tr("Op")} onClick={() => move(i, -1)}>▲</button>
+            <button title={tr("Ned")} onClick={() => move(i, 1)}>▼</button>
+            <button title={tr("Fjern")} className="text-destructive" onClick={() => { setKids(cue.children.filter((x) => x.id !== c.id)); if (sel === c.id) setSel(null); }}>✕</button>
           </div>
         ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {CHILD_TYPES.map((t) => (
-          <button key={t} onClick={() => { const n = newCue(t, show.cueDefaults); trackFeature(`cue.${t}`); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {TYPE_LABEL[t]}</button>
+          <button key={t} onClick={() => { const n = newCue(t, show.cueDefaults); trackFeature(`cue.${t}`); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {tr(TYPE_LABEL[t])}</button>
         ))}
       </div>
       {child && (
         <div className="mt-3 rounded border border-border p-2">
-          <div className="mb-2 text-xs font-bold text-muted-foreground">Redigerer: {child.name} </div>
+          <div className="mb-2 text-xs font-bold text-muted-foreground">{tr("Redigerer:")} {child.name} </div>
           <Inspector
             {...props}
             key={child.id}
@@ -1217,16 +1223,17 @@ function StageView(props: {
   const nIdx = standbyIdx >= 0 ? nextStandbyIndex(flat, standbyIdx) : -1;
   const after = nIdx >= 0 ? flat[nIdx] : null;
   const afterSong = after ? show.songs.find((s) => s.cues.some((c) => c.id === after.id)) : null;
+  const tr = useTrApp();
   return (
     <div className="flex h-full flex-col gap-2 p-3">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="shrink-0 font-mono text-[clamp(0.75rem,3.5cqw,1.125rem)] font-bold text-muted-foreground">SANG {songIdx >= 0 ? songIdx + 1 : "–"}/{show.songs.length}</span>
-        <span className="min-w-0 flex-1 break-words text-[clamp(1.1rem,7cqw,2.25rem)] font-black uppercase leading-tight">{song?.name ?? "Slut på show"}</span>
+        <span className="shrink-0 font-mono text-[clamp(0.75rem,3.5cqw,1.125rem)] font-bold text-muted-foreground">{tr("SANG")} {songIdx >= 0 ? songIdx + 1 : "–"}/{show.songs.length}</span>
+        <span className="min-w-0 flex-1 break-words text-[clamp(1.1rem,7cqw,2.25rem)] font-black uppercase leading-tight">{song?.name ?? tr("Slut på show")}</span>
       </div>
       {standby ? (
         <div className="rounded-lg border-l-[12px] bg-muted px-4 py-3" style={{ borderLeftColor: cueColor(show, standby) }}>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[clamp(0.65rem,2.8cqw,0.875rem)] font-bold uppercase tracking-widest text-standby">
-            <span>Næste GO · cue {cueInSong}/{song?.cues.length}</span>
+            <span>{tr("Næste GO")} · cue {cueInSong}/{song?.cues.length}</span>
             <TypeTag show={show} cue={standby} />
             {standby.preWait > 0 && <span className="text-muted-foreground">pre-wait {standby.preWait}s</span>}
           </div>
@@ -1235,10 +1242,10 @@ function StageView(props: {
           {standby.type === "memo" && standby.text && <div className="mt-1 whitespace-pre-wrap text-[clamp(0.9rem,5cqw,1.5rem)] text-memo">{standby.text}</div>}
         </div>
       ) : (
-        <div className="rounded-lg bg-muted px-4 py-6 text-[clamp(1rem,6cqw,1.875rem)] font-bold text-muted-foreground">Ingen flere cues</div>
+        <div className="rounded-lg bg-muted px-4 py-6 text-[clamp(1rem,6cqw,1.875rem)] font-bold text-muted-foreground">{tr("Ingen flere cues")}</div>
       )}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Noter til næste cue</span>
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{tr("Noter til næste cue")}</span>
         <div className="ml-auto flex gap-1">
           {(["A", "A+", "A++"] as const).map((l, i) => (
             <button key={l} onClick={() => props.setSize(i as 0 | 1 | 2)} className={`rounded px-2 text-xs font-bold ${props.size === i ? "bg-standby text-background" : "bg-secondary"}`}>{l}</button>
@@ -1249,11 +1256,11 @@ function StageView(props: {
         value={standby?.notes ?? ""}
         disabled={!standby}
         onChange={(e) => props.onNotes(e.target.value)}
-        placeholder="Skriv noter til dette cue…"
+        placeholder={tr("Skriv noter til dette cue…")}
         className={`min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 font-semibold leading-snug text-memo outline-none focus:border-standby ${NOTE_SIZES[props.size]}`}
       />
       <div className="break-words border-t border-border pt-2 text-[clamp(0.8rem,3.5cqw,1.125rem)] text-muted-foreground">
-        Derefter: {after ? <><span className="font-bold text-foreground">{after.name}</span>{afterSong && afterSong !== song && <span className="ml-2 text-standby">→ ny sang: {afterSong.name}</span>}</> : "—"}
+        {tr("Derefter:")} {after ? <><span className="font-bold text-foreground">{after.name}</span>{afterSong && afterSong !== song && <span className="ml-2 text-standby">→ {tr("ny sang:")} {afterSong.name}</span>}</> : "—"}
       </div>
     </div>
   );
@@ -1263,18 +1270,20 @@ function PedalPanel(props: {
   map: PedalMap; learning: PedalAction | null; last: MidiIn | null;
   onLearn: (a: PedalAction | null) => void; onClear: (a: PedalAction) => void;
 }) {
+  const tr = useTrApp();
+  const lbl = (m?: MidiIn) => tr(midiInLabel(m));
   return (
     <div className="flex flex-col gap-2 p-3 text-sm">
-      <p className="text-muted-foreground">Tryk "Lær" og aktivér en knap, pedal eller tangent på din MIDI-controller.</p>
+      <p className="text-muted-foreground">{tr('Tryk "Lær" og aktivér en knap, pedal eller tangent på din MIDI-controller.')}</p>
       {(Object.keys(PEDAL_LABEL) as PedalAction[]).map((a) => (
         <div key={a} className="flex items-center gap-2 rounded bg-muted px-2 py-1.5">
-          <span className="w-24 font-bold">{PEDAL_LABEL[a]}</span>
-          <span className="flex-1 font-mono text-xs text-muted-foreground">{props.learning === a ? "Venter på pedal…" : midiInLabel(props.map[a])}</span>
-          <button onClick={() => props.onLearn(props.learning === a ? null : a)} className={`rounded px-2 py-1 text-xs font-bold ${props.learning === a ? "bg-standby text-background" : "bg-secondary"}`}>{props.learning === a ? "Annullér" : "Lær"}</button>
-          {props.map[a] && <button onClick={() => props.onClear(a)} className="px-1 text-muted-foreground hover:text-destructive" aria-label="Fjern">✕</button>}
+          <span className="w-24 font-bold">{tr(PEDAL_LABEL[a])}</span>
+          <span className="flex-1 font-mono text-xs text-muted-foreground">{props.learning === a ? tr("Venter på pedal…") : lbl(props.map[a])}</span>
+          <button onClick={() => props.onLearn(props.learning === a ? null : a)} className={`rounded px-2 py-1 text-xs font-bold ${props.learning === a ? "bg-standby text-background" : "bg-secondary"}`}>{props.learning === a ? tr("Annullér") : tr("Lær")}</button>
+          {props.map[a] && <button onClick={() => props.onClear(a)} className="px-1 text-muted-foreground hover:text-destructive" aria-label={tr("Fjern")}>✕</button>}
         </div>
       ))}
-      <div className="font-mono text-xs text-muted-foreground">Sidst modtaget: {props.last ? midiInLabel(props.last) : "intet"}</div>
+      <div className="font-mono text-xs text-muted-foreground">{tr("Sidst modtaget:")} {props.last ? lbl(props.last) : tr("intet")}</div>
     </div>
   );
 }

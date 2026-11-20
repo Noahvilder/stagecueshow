@@ -79,9 +79,11 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   }, [initialCode, initialMonitor]);
   useEffect(() => { if (target) localStorage.setItem(VIEW_KEY, JSON.stringify({ code: target, monitor: monitorId })); }, [target, monitorId]);
   useEffect(() => {
-    if (!target || !state?.showName) return;
-    trackFeature("monitor.connect", true);
-    const list = [{ code: target, name: state.showName, monitor: monitorId, at: Date.now() }, ...readHist().filter((h) => h.code !== target)].slice(0, 10);
+    if (!target) return;
+    if (state?.showName) trackFeature("monitor.connect", true);
+    const prev = readHist();
+    const name = state?.showName || prev.find((h) => h.code === target)?.name || `Show ${target}`;
+    const list = [{ code: target, name, monitor: monitorId, at: Date.now() }, ...prev.filter((h) => h.code !== target)].slice(0, 10);
     localStorage.setItem(HIST_KEY, JSON.stringify(list)); setHist(list);
   }, [target, state?.showName, monitorId]);
   const profile = state?.monitors?.find((m) => m.id === monitorId);
@@ -209,7 +211,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
     <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <header className="flex items-baseline justify-between gap-4 border-b border-border px-6 py-3">
         <div className="truncate text-3xl font-black text-standby">{cur?.song ?? "—"}</div>
-        <div className="flex min-w-0 items-baseline gap-3"><div className="truncate text-2xl font-bold" style={{ color: cur?.color }}>{cur?.name ?? ""}</div><button onClick={() => { setMonitorId(""); setMode(null); }} className="shrink-0 rounded bg-secondary px-3 py-1 text-sm font-bold">{profile?.name ?? "Fælles"} · Skift rolle</button></div>
+        <div className="flex min-w-0 items-baseline gap-3"><div className="truncate text-2xl font-bold" style={{ color: cur?.color }}>{cur?.name ?? ""}</div><button onClick={() => { setMonitorId(""); setMode(null); }} className="shrink-0 rounded bg-secondary px-3 py-1 text-sm font-bold">{profile?.name ?? "Fælles"} · Skift rolle</button><button onClick={() => { localStorage.removeItem(VIEW_KEY); setHist(readHist()); setTarget(""); setState(null); }} className="shrink-0 rounded bg-secondary px-3 py-1 text-sm font-bold">⇄ Skift show</button></div>
       </header>
       <main ref={mainRef} className="min-h-0 flex-1 overflow-auto px-6 py-4">
         {!online && <div className="mb-2 text-destructive">○ Forbindelse tabt – viser sidst kendte show, prøver igen…</div>}
