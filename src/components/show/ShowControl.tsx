@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
+import { downloadBlob, renderClickVideo, safeName } from "@/lib/show/clickExport";
 import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
 import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong, insertCue, shiftCue,
@@ -917,6 +918,26 @@ function TargetSelect({ value, flat, onChange }: { value: string; flat: Cue[]; o
   );
 }
 
+function ClickExport({ fileId, name, click }: { fileId: string; name: string; click: NonNullable<Cue["click"]> }) {
+  const tr = useTrApp();
+  const [prog, setProg] = useState<number | null>(null);
+  const wav = async () => { const b = await getAudio(fileId); if (b) downloadBlob(new Blob([b], { type: "audio/wav" }), `${safeName(name)}.wav`); };
+  const mp4 = async () => {
+    const b = await getAudio(fileId); if (!b) return;
+    setProg(0);
+    try { const v = await renderClickVideo(b, click, setProg); downloadBlob(v.blob, `${safeName(name)}.${v.ext}`); } finally { setProg(null); }
+  };
+  return (
+    <Field label="Eksportér click">
+      <div className="flex flex-wrap items-center gap-2">
+        <Btn onClick={wav}>⬇ WAV</Btn>
+        <Btn onClick={() => { if (prog === null) void mp4(); }}>{prog === null ? "⬇ MP4 (video)" : `${tr("Laver video…")} ${Math.round(prog * 100)}%`}</Btn>
+      </div>
+      <div className="mt-1 text-xs text-muted-foreground">{tr("Videoen optages i realtid, så den tager lige så lang tid som clicket.")}</div>
+    </Field>
+  );
+}
+
 function Inspector(props: {
   cue: Cue; show: Show; flat: Cue[]; midiPorts: string[]; outputs: Output[];
   onChange: (p: Partial<Cue>) => void; onDelete: () => void; onStandby: () => void; onFire: () => void;
@@ -993,6 +1014,7 @@ function Inspector(props: {
               </div>
             </Field>
           )}
+          {cue.fileId && cue.click && <ClickExport fileId={cue.fileId} name={cue.name} click={cue.click} />}
           {cue.fileId && <Field label="Forlyt (PFL) · Pro"><PflButton fileId={cue.fileId} allow={() => props.needPro("pfl")} /></Field>}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
