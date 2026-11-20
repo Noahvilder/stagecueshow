@@ -31,6 +31,8 @@ import { hasPro, type ProFeature } from "@/lib/show/plan";
 import { SHORTCUT_LABEL, assign, comboOf, findAction, loadShortcuts, prettyCombo, saveShortcuts, DEFAULT_SHORTCUTS, type ShortcutAction, type ShortcutMap } from "@/lib/show/shortcuts";
 import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
 import { trackFeature } from "@/lib/track";
+import { setAppLang, useAppLang, trApp } from "@/lib/show/appI18n";
+import { LANGS, LANG_NAMES } from "@/lib/site/i18n";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
 type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon";
@@ -60,6 +62,8 @@ type Output = { id: string; label: string };
 
 export function ShowControl({ showId }: { showId: string }) {
   const navigate = useNavigate();
+  const lang = useAppLang();
+  const tr = (x: string) => trApp(x, lang);
   const engineRef = useRef<Engine | null>(null);
   const [show, setShow] = useState<Show>(emptyShow);
   const [loaded, setLoaded] = useState(false);
@@ -552,6 +556,7 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           { label: backup ? "🛡️ Stop Hot-Standby (bliv master)" : "🛡️ Kør som Hot-Standby backup-PC (Pro)…", onClick: () => { if (backup) setBackup(false); else if (needPro("hotStandby")) setBackup(true); } },
         ] },
+        { label: "Sprog", items: LANGS.map((l) => ({ label: `🌐 ${LANG_NAMES[l]}`, checked: lang === l, onClick: () => { trackFeature(`lang.${l}`); setAppLang(l); } })) },
         { label: "Hjælp", items: [
           { label: "⌨️ Tastaturgenveje", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
           { label: "💡 Foreslå ændring / fejl", onClick: () => window.open("/support#ticket", "_blank") },
@@ -572,14 +577,14 @@ export function ShowControl({ showId }: { showId: string }) {
           aria-label="Show navn"
         />
         <span className="font-mono text-2xl tabular-nums">{clock}</span>
-        <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
+        <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? tr("Gemmer…") : saved === "error" ? tr("Ikke gemt!") : tr("✓ Gemt i skyen")}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
-        <button onClick={() => setLocked((l) => !l)} title="Ctrl+L" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? "🔒 LÅST TIL LIVE" : "🔓 Lås show"}</button>
+        <button onClick={() => setLocked((l) => !l)} title="Ctrl+L" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
         {keysOpen && <ShortcutManager map={shortcuts} onChange={(m) => { setShortcuts(m); saveShortcuts(m); }} onClose={() => setKeysOpen(false)} />}
         {proAsk && <ProDialog feature={proAsk} onClose={() => setProAsk(null)} />}
-        {!plan.loading && plan.tier !== "pro" && <a href="/priser" target="_blank" rel="noreferrer" title="Opgrader til Pro" className={`rounded px-2 py-1 text-xs font-bold ${plan.tier === "trial" ? "bg-standby/20 text-standby" : "bg-secondary text-muted-foreground"}`}>{plan.tier === "trial" ? `PRO-prøve: ${plan.trialDaysLeft} dage` : "FREE · Opgrader"}</a>}
+        {!plan.loading && plan.tier !== "pro" && <a href="/priser" target="_blank" rel="noreferrer" title="Opgrader til Pro" className={`rounded px-2 py-1 text-xs font-bold ${plan.tier === "trial" ? "bg-standby/20 text-standby" : "bg-secondary text-muted-foreground"}`}>{plan.tier === "trial" ? tr(`PRO-prøve: ${plan.trialDaysLeft} dage`) : tr("FREE · Opgrader")}</a>}
         <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
 
@@ -590,8 +595,8 @@ export function ShowControl({ showId }: { showId: string }) {
       {resume && (
         <div role="alert" className="flex flex-wrap items-center gap-3 bg-standby px-4 py-2 text-sm font-black text-background">
           <span>⚡ Showet lukkede uventet. Sidste standby: {resume.label || "ukendt cue"}</span>
-          <button onClick={() => { setStandbyId(resume.standbyId); setResume(null); }} className="rounded bg-background px-3 py-1 text-foreground">Genoptag herfra</button>
-          <button onClick={() => setResume(null)} className="rounded px-3 py-1 underline">Start forfra</button>
+          <button onClick={() => { setStandbyId(resume.standbyId); setResume(null); }} className="rounded bg-background px-3 py-1 text-foreground">{tr("Genoptag herfra")}</button>
+          <button onClick={() => setResume(null)} className="rounded px-3 py-1 underline">{tr("Start forfra")}</button>
         </div>
       )}
       {recovered && <div className="bg-go px-4 py-1 text-sm font-bold text-go-foreground">{recovered}</div>}

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useTrApp } from "@/lib/show/appI18n";
 
 export type MenuItem = { label: string; keys?: string; onClick?: () => void; checked?: boolean; disabled?: boolean } | "sep";
 export type Menu = { label: string; items: MenuItem[] };
 
 /** Classic thin desktop menu bar (File, Edit, ...). Click to open, hover to switch. */
 export function MenuBar({ menus }: { menus: Menu[] }) {
+  const tr = useTrApp();
   const [open, setOpen] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -24,7 +26,7 @@ export function MenuBar({ menus }: { menus: Menu[] }) {
             onClick={() => setOpen(open === i ? null : i)}
             onMouseEnter={() => open !== null && setOpen(i)}
             className={`h-full px-3 ${open === i ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
-          >{m.label}</button>
+          >{tr(m.label)}</button>
           {open === i && (
             <div role="menu" className="absolute left-0 top-full z-[100002] min-w-60 rounded-b-md border border-border bg-card py-1 shadow-2xl">
               {m.items.map((it, j) => it === "sep" ? <div key={j} className="my-1 h-px bg-border" /> : (
@@ -36,7 +38,7 @@ export function MenuBar({ menus }: { menus: Menu[] }) {
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent"
                 >
                   <span className="w-4 text-center text-go">{it.checked ? "✓" : ""}</span>
-                  <span className="flex-1">{it.label}</span>
+                  <span className="flex-1">{tr(it.label)}</span>
                   {it.keys && <span className="font-mono text-xs text-muted-foreground">{it.keys}</span>}
                 </button>
               ))}

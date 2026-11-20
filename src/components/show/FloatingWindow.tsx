@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from "react";
+import { useTrApp } from "@/lib/show/appI18n";
 
 export type WinState = { x: number; y: number; w: number; h: number; z: number; open: boolean; min: boolean };
 
@@ -11,6 +12,7 @@ export function FloatingWindow(props: {
   locked?: boolean;
   children: ReactNode;
 }) {
+  const tr = useTrApp();
   const { state: s, onChange, onFocus } = props;
   const start = useRef<{ mx: number; my: number; x: number; y: number; w: number; h: number } | null>(null);
   if (!s.open) return null;
@@ -49,7 +51,7 @@ export function FloatingWindow(props: {
         onDoubleClick={() => !props.locked && onChange({ min: !s.min })}
         className={`flex ${props.locked ? "" : "cursor-move"} select-none items-center gap-2 border-b border-border bg-muted px-3 py-1.5`}
       >
-        <span className={`flex-1 truncate text-xs font-bold uppercase tracking-widest ${props.accent ? "text-standby" : "text-muted-foreground"}`}>{props.title}</span>
+        <span className={`flex-1 truncate text-xs font-bold uppercase tracking-widest ${props.accent ? "text-standby" : "text-muted-foreground"}`}>{tr(props.title)}</span>
         {props.locked ? <span className="text-xs" aria-label="Låst">🔒</span> : <>
         <button onClick={() => onChange({ min: !s.min })} className="px-1.5 text-muted-foreground hover:text-foreground" aria-label="Minimer">{s.min ? "▢" : "–"}</button>
         <button onClick={() => onChange({ open: false })} className="px-1.5 text-muted-foreground hover:text-destructive" aria-label="Luk">✕</button></>}
