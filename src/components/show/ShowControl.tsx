@@ -5,7 +5,7 @@ import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
 import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
 import {
-  DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong,
+  DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong, insertCue, shiftCue,
   newCue, cueAsDefault, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
@@ -70,6 +70,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const [saved, setSaved] = useState<"ok" | "saving" | "error">("ok");
   const [standbyId, setStandbyId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [active, setActive] = useState<ActiveRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [midiPorts, setMidiPorts] = useState<string[]>([]);
@@ -93,7 +94,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const needPro = useCallback((f: ProFeature) => { if (pro) return true; setProAsk(f); return false; }, [pro]);
   const [shortcuts, setShortcuts] = useState<ShortcutMap>(DEFAULT_SHORTCUTS);
   useEffect(() => setShortcuts(loadShortcuts()), []);
-  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
+  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void; shift?: (d: -1 | 1) => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
   const [view, setView] = useState<ViewPrefs>(DEFAULT_VIEW);
   const [viewOpen, setViewOpen] = useState(false);
   useEffect(() => { setView(loadView()); }, []);
@@ -281,6 +282,7 @@ export function ShowControl({ showId }: { showId: string }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest("[data-shortcut-capture]")) return;
+      if (e.altKey && !e.ctrlKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); scRef.current.shift?.(e.key === "ArrowUp" ? -1 : 1); return; }
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
         const key = e.key.toLowerCase();
         if (key === "s") { e.preventDefault(); if (e.shiftKey) scRef.current.backup(); else scRef.current.save(); return; }
@@ -334,22 +336,14 @@ export function ShowControl({ showId }: { showId: string }) {
     }));
   scRef.current.map = shortcuts;
   scRef.current.add = (t) => addCue(t);
+  scRef.current.shift = (d: -1 | 1) => { if (!locked && selectedId) setShow((s) => shiftCue(s, selectedId, d)); };
   const addCue = (type: CueType) => {
     if (locked) return;
     if (type === "group" && !needPro("group")) return;
     const c = newCue(type, show.cueDefaults);
     trackFeature(`cue.${type}`);
-    setShow((s) => {
-      const songs = [...s.songs];
-      let si = songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedId));
-      if (si < 0) si = songs.length - 1;
-      if (si < 0) return { ...s, songs: [{ id: uid(), name: "Sang 1", cues: [c] }] };
-      const cues = [...songs[si]!.cues];
-      const ci = cues.findIndex((x) => x.id === selectedId);
-      cues.splice(ci < 0 ? cues.length : ci + 1, 0, c);
-      songs[si] = { ...songs[si]!, cues };
-      return { ...s, songs };
-    });
+    setShow((s) => insertCue(s, c, selectedId, selectedSongId));
+    setStandbyId(c.id);
     setSelectedId(c.id);
   };
   const [clickOpen, setClickOpen] = useState(false);
@@ -679,7 +673,8 @@ export function ShowControl({ showId }: { showId: string }) {
                     setDropKey("s" + song.id);
                   }}
                   onDrop={() => onDropCue(song.id, null)}
-                  className={`flex cursor-grab items-center gap-2 rounded-t bg-muted px-3 py-2 ${dropKey === "s" + song.id ? "ring-2 ring-standby" : ""}`}
+                  onClick={(e) => { if ((e.target as HTMLElement).closest("button")) return; setSelectedSongId(song.id); setSelectedId(null); }}
+                  className={`flex cursor-grab items-center gap-2 rounded-t bg-muted px-3 py-2 ${dropKey === "s" + song.id ? "ring-2 ring-standby" : ""} ${selectedSongId === song.id && !selectedId ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
                 >
                   <span className="font-mono text-sm text-muted-foreground">{si + 1}</span>
                   <input
@@ -693,6 +688,7 @@ export function ShowControl({ showId }: { showId: string }) {
                   {!locked && <button disabled={si === show.songs.length - 1} onClick={() => setShow((s) => moveSong(s, song.id, s.songs[si + 2]?.id ?? null))} className="px-1 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label="Flyt sang ned">▼</button>}
                   {!locked && <button onClick={() => deleteSong(song.id)} className="px-2 text-muted-foreground hover:text-destructive" aria-label="Slet sang">✕</button>}
                 </div>
+                {!song.cues.length && !locked && <button onClick={() => { setSelectedSongId(song.id); setSelectedId(null); }} className={`w-full border-b border-border bg-card px-3 py-2 text-left text-xs text-muted-foreground hover:bg-secondary ${selectedSongId === song.id && !selectedId ? "text-standby" : ""}`}>Tom sang – klik her, og vælg en cue-type for at tilføje første cue</button>}
                 {cues.map((c) => {
                   const idx = flat.indexOf(c);
                   const isStandby = c.id === standbyId;
@@ -711,7 +707,7 @@ export function ShowControl({ showId }: { showId: string }) {
                         e.stopPropagation();
                         onDropCue(song.id, c.id);
                       }}
-                      onClick={() => { setSelectedId(c.id); setStandbyId(c.id); }}
+                      onClick={() => { setSelectedId(c.id); setSelectedSongId(song.id); setStandbyId(c.id); }}
                       onDoubleClick={() => setStandbyId(c.id)}
                       style={{ borderLeftColor: cueColor(show, c), gridTemplateColumns: gridCols(view).replaceAll("_", " ") }}
                       className={`grid cursor-pointer items-center gap-2 border-b border-l-4 border-border px-2 py-0.5 text-sm leading-tight ${
@@ -728,6 +724,7 @@ export function ShowControl({ showId }: { showId: string }) {
                       </div>
                       {view.type && <TypeTag show={show} cue={c} />}
                       {view.follow && <span className="w-24 text-right font-mono text-xs text-muted-foreground">{followLabel(c)}</span>}
+                      {!locked && selectedId === c.id && <span className="col-span-full flex gap-1 pb-0.5"><button onClick={(e) => { e.stopPropagation(); setShow((s) => shiftCue(s, c.id, -1)); }} className="rounded bg-secondary px-2 text-xs hover:bg-accent" aria-label="Flyt cue op">▲ Op</button><button onClick={(e) => { e.stopPropagation(); setShow((s) => shiftCue(s, c.id, 1)); }} className="rounded bg-secondary px-2 text-xs hover:bg-accent" aria-label="Flyt cue ned">▼ Ned</button><span className="text-xs text-muted-foreground">Alt+↑/↓</span></span>}
                     </div>
                   );
                 })}

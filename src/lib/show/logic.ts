@@ -212,3 +212,30 @@ export function trimSpan(dur: number, startTime = 0, endTime = 0): { start: numb
   if (end <= start) end = dur;
   return { start, end, len: end - start };
 }
+
+/** Insert a new cue: right after the selected cue, else first in the selected song, else last in the last song. */
+export function insertCue(show: Show, cue: Cue, selectedCueId: string | null, selectedSongId: string | null): Show {
+  const songs = [...show.songs];
+  let si = selectedCueId ? songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedCueId)) : -1;
+  if (si >= 0) {
+    const cues = [...songs[si]!.cues];
+    cues.splice(cues.findIndex((x) => x.id === selectedCueId) + 1, 0, cue);
+    songs[si] = { ...songs[si]!, cues };
+    return { ...show, songs };
+  }
+  si = selectedSongId ? songs.findIndex((sg) => sg.id === selectedSongId) : -1;
+  if (si >= 0) { songs[si] = { ...songs[si]!, cues: [cue, ...songs[si]!.cues] }; return { ...show, songs }; }
+  si = songs.length - 1;
+  if (si < 0) return { ...show, songs: [{ id: uid(), name: "Sang 1", cues: [cue] }] };
+  songs[si] = { ...songs[si]!, cues: [...songs[si]!.cues, cue] };
+  return { ...show, songs };
+}
+
+/** Move a cue one step up/down within its song. */
+export function shiftCue(show: Show, cueId: string, d: -1 | 1): Show {
+  return { ...show, songs: show.songs.map((sg) => {
+    const i = sg.cues.findIndex((c) => c.id === cueId); const j = i + d;
+    if (i < 0 || j < 0 || j >= sg.cues.length) return sg;
+    const cues = [...sg.cues]; [cues[i], cues[j]] = [cues[j]!, cues[i]!]; return { ...sg, cues };
+  }) };
+}
