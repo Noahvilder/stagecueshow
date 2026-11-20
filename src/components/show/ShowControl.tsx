@@ -650,7 +650,7 @@ export function ShowControl({ showId }: { showId: string }) {
                       onClick={() => { setSelectedId(c.id); setStandbyId(c.id); }}
                       onDoubleClick={() => setStandbyId(c.id)}
                       style={{ borderLeftColor: cueColor(show, c), gridTemplateColumns: gridCols(view).replaceAll("_", " ") }}
-                      className={`grid cursor-pointer items-center gap-2 border-b border-l-[6px] border-border px-2 py-2 ${
+                      className={`grid cursor-pointer items-center gap-2 border-b border-l-4 border-border px-2 py-0.5 text-sm leading-tight ${
                         selectedId === c.id ? "bg-accent" : "bg-card hover:bg-secondary"
                       } ${dropKey === c.id ? "border-t-4 border-t-standby" : ""} ${isStandby ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
                     >
@@ -776,7 +776,7 @@ function summary(c: Cue, ports: string[]): string {
 
 function TypeTag({ show, cue }: { show: Show; cue: Cue }) {
   return (
-    <span className="rounded px-2 py-0.5 text-xs font-bold uppercase text-background" style={{ backgroundColor: cueColor(show, cue) }}>
+    <span className="rounded px-1.5 py-0 text-[10px] font-bold uppercase text-background" style={{ backgroundColor: cueColor(show, cue) }}>
       {TYPE_LABEL[cue.type]}
     </span>
   );
