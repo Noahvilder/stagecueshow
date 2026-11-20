@@ -68,6 +68,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.5rem;
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.98 0 0);
@@ -155,6 +156,7 @@
 
 /* Website light theme (default is dark stage look) */
 .light {
+  color-scheme: light;
   --background: oklch(0.98 0 0);
   --foreground: oklch(0.16 0 0);
   --card: oklch(1 0 0);
@@ -175,3 +177,8 @@
 }
 
 [data-desktop] .web-only { display: none !important; }
+
+select option {
+  background-color: var(--background);
+  color: var(--foreground);
+}

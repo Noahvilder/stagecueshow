@@ -16,8 +16,8 @@ function LangSwitch() {
     <label className="relative flex items-center rounded border border-border p-1.5 text-muted-foreground hover:text-foreground" title="Language">
       <Globe className="h-4 w-4" />
       <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as Lang)}
-        className="absolute inset-0 cursor-pointer opacity-0">
-        {LANGS.map((l) => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}
+        className="absolute inset-0 cursor-pointer bg-background text-foreground opacity-0">
+        {LANGS.map((l) => <option key={l} value={l} className="bg-background text-foreground">{LANG_NAMES[l]}</option>)}
       </select>
     </label>
   );
