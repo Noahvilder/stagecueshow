@@ -13,8 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as MidiPedalGuideRouteImport } from './routes/midi-pedal-guide'
 import { Route as PriserRouteImport } from './routes/priser'
 import { Route as PrivatlivRouteImport } from './routes/privatliv'
+import { Route as QlabAlternativeWindowsRouteImport } from './routes/qlab-alternative-windows'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ShowRouteImport } from './routes/show'
 import { Route as SupportRouteImport } from './routes/support'
@@ -46,6 +48,11 @@ const DownloadRoute = DownloadRouteImport.update({
   path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MidiPedalGuideRoute = MidiPedalGuideRouteImport.update({
+  id: '/midi-pedal-guide',
+  path: '/midi-pedal-guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PriserRoute = PriserRouteImport.update({
   id: '/priser',
   path: '/priser',
@@ -54,6 +61,11 @@ const PriserRoute = PriserRouteImport.update({
 const PrivatlivRoute = PrivatlivRouteImport.update({
   id: '/privatliv',
   path: '/privatliv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QlabAlternativeWindowsRoute = QlabAlternativeWindowsRouteImport.update({
+  id: '/qlab-alternative-windows',
+  path: '/qlab-alternative-windows',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -118,8 +130,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
+  '/midi-pedal-guide': typeof MidiPedalGuideRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/qlab-alternative-windows': typeof QlabAlternativeWindowsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
@@ -136,8 +150,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
+  '/midi-pedal-guide': typeof MidiPedalGuideRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/qlab-alternative-windows': typeof QlabAlternativeWindowsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
@@ -156,8 +172,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
+  '/midi-pedal-guide': typeof MidiPedalGuideRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
+  '/qlab-alternative-windows': typeof QlabAlternativeWindowsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/show': typeof ShowRoute
   '/support': typeof SupportRoute
@@ -176,8 +194,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/download'
+    | '/midi-pedal-guide'
     | '/priser'
     | '/privatliv'
+    | '/qlab-alternative-windows'
     | '/reset-password'
     | '/show'
     | '/support'
@@ -194,8 +214,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/download'
+    | '/midi-pedal-guide'
     | '/priser'
     | '/privatliv'
+    | '/qlab-alternative-windows'
     | '/reset-password'
     | '/show'
     | '/support'
@@ -213,8 +235,10 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/download'
+    | '/midi-pedal-guide'
     | '/priser'
     | '/privatliv'
+    | '/qlab-alternative-windows'
     | '/reset-password'
     | '/show'
     | '/support'
@@ -233,8 +257,10 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   DownloadRoute: typeof DownloadRoute
+  MidiPedalGuideRoute: typeof MidiPedalGuideRoute
   PriserRoute: typeof PriserRoute
   PrivatlivRoute: typeof PrivatlivRoute
+  QlabAlternativeWindowsRoute: typeof QlabAlternativeWindowsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ShowRoute: typeof ShowRoute
   SupportRoute: typeof SupportRoute
@@ -272,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/midi-pedal-guide': {
+      id: '/midi-pedal-guide'
+      path: '/midi-pedal-guide'
+      fullPath: '/midi-pedal-guide'
+      preLoaderRoute: typeof MidiPedalGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/priser': {
       id: '/priser'
       path: '/priser'
@@ -284,6 +317,13 @@ declare module '@tanstack/react-router' {
       path: '/privatliv'
       fullPath: '/privatliv'
       preLoaderRoute: typeof PrivatlivRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qlab-alternative-windows': {
+      id: '/qlab-alternative-windows'
+      path: '/qlab-alternative-windows'
+      fullPath: '/qlab-alternative-windows'
+      preLoaderRoute: typeof QlabAlternativeWindowsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -392,8 +432,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DownloadRoute: DownloadRoute,
+  MidiPedalGuideRoute: MidiPedalGuideRoute,
   PriserRoute: PriserRoute,
   PrivatlivRoute: PrivatlivRoute,
+  QlabAlternativeWindowsRoute: QlabAlternativeWindowsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ShowRoute: ShowRoute,
   SupportRoute: SupportRoute,
