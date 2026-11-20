@@ -30,6 +30,7 @@ import { usePlan } from "@/lib/show/usePlan";
 import { hasPro, type ProFeature } from "@/lib/show/plan";
 import { SHORTCUT_LABEL, assign, comboOf, findAction, loadShortcuts, prettyCombo, saveShortcuts, DEFAULT_SHORTCUTS, type ShortcutAction, type ShortcutMap } from "@/lib/show/shortcuts";
 import { MidiMonitor, type MidiLogRow } from "./MidiMonitor";
+import { trackFeature } from "@/lib/track";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
 type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon";
@@ -230,6 +231,7 @@ export function ShowControl({ showId }: { showId: string }) {
     if (standbyIdx < 0 || backup) return;
     const t = performance.now();
     if (!acceptGo(lastGoAt.current, t, goGuard)) return;
+    trackFeature("pult.go", true);
     lastGoAt.current = t;
     engine().go(flat, standbyIdx);
     setLastGo(performance.now());
@@ -332,6 +334,7 @@ export function ShowControl({ showId }: { showId: string }) {
     if (locked) return;
     if (type === "group" && !needPro("group")) return;
     const c = newCue(type, show.cueDefaults);
+    trackFeature(`cue.${type}`);
     setShow((s) => {
       const songs = [...s.songs];
       let si = songs.findIndex((sg) => sg.cues.some((x) => x.id === selectedId));
@@ -509,7 +512,7 @@ export function ShowControl({ showId }: { showId: string }) {
         { label: "Filer", items: [
           { label: "Åbn show…", keys: "Ctrl+O", onClick: () => fileRef.current?.click(), disabled: locked },
           { label: "Gem show", keys: "Ctrl+S", onClick: exportShow },
-          { label: "Gem som…", onClick: () => { void saveAs(); } },
+          { label: "Gem som…", onClick: () => { trackFeature("file.save_as"); void saveAs(); } },
           { label: "Eksportér backup m. lyd (.stagecue)…", keys: "Ctrl+Shift+S", onClick: exportBackup },
           "sep",
           { label: "Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
@@ -531,7 +534,7 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "⚙️ Avanceret visning", onClick: () => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; }), disabled: locked },
           { label: "Nulstil layout", onClick: () => setWins(defaultWins()), disabled: locked },
           "sep",
-          ...([["free", "Vinduer: Frit flydende"], ["grid", "Vinduer: Gitter-snap"], ["magnet", "Vinduer: Magnetisk kant-snap"], ["both", "Vinduer: Gitter + magnet"]] as const).map(([m, label]) => ({ label, checked: snap === m, onClick: () => { setSnapMode(m); localStorage.setItem("stagecue.snap", m); } })),
+          ...([["free", "Vinduer: Frit flydende"], ["grid", "Vinduer: Gitter-snap"], ["magnet", "Vinduer: Magnetisk kant-snap"], ["both", "Vinduer: Gitter + magnet"]] as const).map(([m, label]) => ({ label, checked: snap === m, onClick: () => { trackFeature(`window.${m}`); setSnapMode(m); localStorage.setItem("stagecue.snap", m); } })),
           "sep",
           ...(Object.keys(COLS) as ColKey[]).map((k) => ({ label: COLS[k], checked: view[k], onClick: () => toggleCol(k) })),
         ] },
@@ -541,11 +544,11 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           ...[0, 300, 500, 1000].map((ms) => ({ label: ms ? `Dobbelt-GO-spærre: ${ms / 1000} s` : "Dobbelt-GO-spærre: fra", checked: goGuard === ms, onClick: () => { setGoGuard(ms); localStorage.setItem("stagecue.goguard", String(ms)); } })),
           "sep",
-          ...([0, 1, 2, 5, 10, 15, 30].map((n) => ({ label: n ? `Gem automatisk hver ${n} min` : "Gem automatisk: Fra", checked: autoSaveMin === n, onClick: () => { setAutoSaveMin(n); localStorage.setItem("stagecue.autosave", String(n)); } }))),
+          ...([0, 1, 2, 5, 10, 15, 30].map((n) => ({ label: n ? `Gem automatisk hver ${n} min` : "Gem automatisk: Fra", checked: autoSaveMin === n, onClick: () => { trackFeature(n ? "autosave.on" : "autosave.off"); setAutoSaveMin(n); localStorage.setItem("stagecue.autosave", String(n)); } }))),
           "sep",
           ...([["elapsed", "Tidsboks: Aktiv spilletid"], ["lastgo", "Tidsboks: Siden sidste GO"], ["none", "Tidsboks: Kun nedtælling"]] as const).map(([m, label]) => ({ label, checked: timeMode === m, onClick: () => { setTimeMode(m); localStorage.setItem("stagecue.timebox", m); } })),
           "sep",
-          ...([["hms", "Tidsformat: Timer:minutter:sekunder"], ["sec", "Tidsformat: Kun sekunder"]] as const).map(([f, label]) => ({ label, checked: timeFmt === f, onClick: () => { setTimeFmt(f); localStorage.setItem("stagecue.timefmt", f); } })),
+          ...([["hms", "Tidsformat: Timer:minutter:sekunder"], ["sec", "Tidsformat: Kun sekunder"]] as const).map(([f, label]) => ({ label, checked: timeFmt === f, onClick: () => { trackFeature(`timefmt.${f}`); setTimeFmt(f); localStorage.setItem("stagecue.timefmt", f); } })),
           "sep",
           { label: backup ? "🛡️ Stop Hot-Standby (bliv master)" : "🛡️ Kør som Hot-Standby backup-PC (Pro)…", onClick: () => { if (backup) setBackup(false); else if (needPro("hotStandby")) setBackup(true); } },
         ] },
@@ -1097,7 +1100,7 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {CHILD_TYPES.map((t) => (
-          <button key={t} onClick={() => { const n = newCue(t, show.cueDefaults); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {TYPE_LABEL[t]}</button>
+          <button key={t} onClick={() => { const n = newCue(t, show.cueDefaults); trackFeature(`cue.${t}`); setKids([...cue.children, n]); setSel(n.id); }} className="rounded border-l-4 bg-secondary px-2 py-1 text-xs font-semibold hover:bg-accent" style={{ borderLeftColor: show.typeColors[t] || DEFAULT_TYPE_COLORS[t] }}>+ {TYPE_LABEL[t]}</button>
         ))}
       </div>
       {child && (

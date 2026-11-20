@@ -6,6 +6,7 @@ import { CheckoutDialog } from "@/components/payments/CheckoutDialog";
 import type { PriceId } from "@/lib/payments/plans";
 import { Billing } from "@/components/account/Billing";
 import { DeviceList } from "@/components/account/DeviceList";
+import { AdminPanel } from "@/components/account/AdminPanel";
 import { MAX_PULT_DEVICES } from "@/lib/show/device";
 import { deleteMyAccount } from "@/lib/account/delete.functions";
 
@@ -39,6 +40,7 @@ function Konto() {
           <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link>
         </header>
         <PaymentTestModeBanner />
+        <AdminPanel />
         <Billing />
         {buy && <CheckoutDialog priceId={buy} onClose={() => setBuy(null)} />}
         <section>

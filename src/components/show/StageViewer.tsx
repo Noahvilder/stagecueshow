@@ -9,6 +9,7 @@ const HIST_KEY = "stagecue.viewer.history";
 type Hist = { code: string; name: string; monitor: string; at: number };
 const readHist = (): Hist[] => { try { return JSON.parse(localStorage.getItem(HIST_KEY) ?? "[]") as Hist[]; } catch { return []; } };
 import { Button } from "@/components/ui/button";
+import { trackFeature } from "@/lib/track";
 
 type Mode = "lyrics" | "hud";
 const VIEW_KEY = "stagecue.viewer";
@@ -79,6 +80,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   useEffect(() => { if (target) localStorage.setItem(VIEW_KEY, JSON.stringify({ code: target, monitor: monitorId })); }, [target, monitorId]);
   useEffect(() => {
     if (!target || !state?.showName) return;
+    trackFeature("monitor.connect", true);
     const list = [{ code: target, name: state.showName, monitor: monitorId, at: Date.now() }, ...readHist().filter((h) => h.code !== target)].slice(0, 10);
     localStorage.setItem(HIST_KEY, JSON.stringify(list)); setHist(list);
   }, [target, state?.showName, monitorId]);

@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      feature_usage: {
+        Row: {
+          count: number
+          day: string
+          feature: string
+        }
+        Insert: {
+          count?: number
+          day?: string
+          feature: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          feature?: string
+        }
+        Relationships: []
+      }
       license_key_redemptions: {
         Row: {
           code: string
@@ -279,14 +297,65 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_set_ticket_status: {
+        Args: { _id: string; _status: string }
+        Returns: undefined
+      }
+      admin_stats: { Args: never; Returns: Json }
+      admin_tickets: {
+        Args: never
+        Returns: {
+          body: string
+          created_at: string
+          email: string | null
+          id: string
+          kind: string
+          status: string
+          subject: string
+          system_info: string | null
+          ticket_no: number
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "support_tickets"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_pult_device: {
         Args: { _device_id: string; _device_name: string }
         Returns: Json
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       redeem_license_key: { Args: { _code: string }; Returns: Json }
       shared_shows: {
@@ -307,9 +376,10 @@ export type Database = {
         }
         Returns: number
       }
+      track_feature: { Args: { _feature: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -436,6 +506,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
