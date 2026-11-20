@@ -110,6 +110,17 @@ export function fmt(sec: number | null | undefined): string {
   return `${String(m).padStart(2, "0")}:${r.toFixed(1).padStart(4, "0")}`;
 }
 
+/** Time display: "hms" = H:MM:SS (hours only when needed), "sec" = seconds only. */
+export function fmtTime(sec: number | null | undefined, mode: "hms" | "sec"): string {
+  if (sec == null || !isFinite(sec)) return mode === "sec" ? "--" : "--:--";
+  const s = Math.max(0, sec);
+  if (mode === "sec") return `${s.toFixed(1)}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = (s % 60).toFixed(1).padStart(4, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${r}` : `${String(m).padStart(2, "0")}:${r}`;
+}
+
 export function newCue(type: CueType): Cue {
   const base = { id: uid(), name: TYPE_LABEL[type], follow: "manual" as const, preWait: 0, postWait: 0 };
   switch (type) {

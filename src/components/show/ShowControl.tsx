@@ -5,7 +5,7 @@ import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
 import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
 import {
-  DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, moveCue, moveSong,
+  DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong,
   newCue, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
@@ -207,6 +207,8 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => { const g = localStorage.getItem("stagecue.goguard"); if (g !== null) setGoGuard(Number(g)); }, []);
   const [timeMode, setTimeMode] = useState<"none" | "elapsed" | "lastgo">("elapsed");
   useEffect(() => { const m = localStorage.getItem("stagecue.timebox"); if (m === "none" || m === "elapsed" || m === "lastgo") setTimeMode(m); }, []);
+  const [timeFmt, setTimeFmt] = useState<"hms" | "sec">("hms");
+  useEffect(() => { const f = localStorage.getItem("stagecue.timefmt"); if (f === "hms" || f === "sec") setTimeFmt(f); }, []);
   const [backup, setBackup] = useState(false);
   const [resume, setResume] = useState<Playhead | null>(null);
   const lastGoAt = useRef<number | null>(null);
@@ -494,6 +496,8 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           ...([["elapsed", "Tidsboks: Aktiv spilletid"], ["lastgo", "Tidsboks: Siden sidste GO"], ["none", "Tidsboks: Kun nedtælling"]] as const).map(([m, label]) => ({ label, checked: timeMode === m, onClick: () => { setTimeMode(m); localStorage.setItem("stagecue.timebox", m); } })),
           "sep",
+          ...([["hms", "Tidsformat: Timer:minutter:sekunder"], ["sec", "Tidsformat: Kun sekunder"]] as const).map(([f, label]) => ({ label, checked: timeFmt === f, onClick: () => { setTimeFmt(f); localStorage.setItem("stagecue.timefmt", f); } })),
+          "sep",
           { label: backup ? "🛡️ Stop Hot-Standby (bliv master)" : "🛡️ Kør som Hot-Standby backup-PC (Pro)…", onClick: () => { if (backup) setBackup(false); else if (needPro("hotStandby")) setBackup(true); } },
         ] },
         { label: "Hjælp", items: [
@@ -572,9 +576,9 @@ export function ShowControl({ showId }: { showId: string }) {
           </div>
 
           <div className={`grid gap-2 font-mono ${timeMode === "none" ? "grid-cols-1" : "grid-cols-2"}`}>
-            {timeMode === "lastgo" && <TimeBox label="Siden sidste GO" value={fmt(lastGoEl)} />}
-            {timeMode === "elapsed" && <TimeBox label="Spilletid" value={mainRun ? fmt(mainRun.elapsed) : "--:--"} />}
-            <TimeBox label="Nedtælling" value={mainRun ? "-" + fmt(mainRun.duration! - mainRun.elapsed) : "--:--"} accent />
+            {timeMode === "lastgo" && <TimeBox label="Siden sidste GO" value={fmtTime(lastGoEl, timeFmt)} />}
+            {timeMode === "elapsed" && <TimeBox label="Spilletid" value={mainRun ? fmtTime(mainRun.elapsed, timeFmt) : fmtTime(null, timeFmt)} />}
+            <TimeBox label="Nedtælling" value={mainRun ? "-" + fmtTime(mainRun.duration! - mainRun.elapsed, timeFmt) : fmtTime(null, timeFmt)} accent />
           </div>
 
           <div>

@@ -51,3 +51,12 @@ describe("midi watcher", () => {
     expect(isActive({ t: 1000 }, 1000 + ACTIVE_MS)).toBe(false);
   });
 });
+
+import { fmtTime } from "./logic";
+describe("fmtTime", () => {
+  it("hms shows hours only when needed", () => {
+    expect(fmtTime(75, "hms")).toBe("01:15.0");
+    expect(fmtTime(3725, "hms")).toBe("1:02:05.0");
+  });
+  it("sec shows only seconds", () => { expect(fmtTime(75, "sec")).toBe("75.0s"); });
+});
