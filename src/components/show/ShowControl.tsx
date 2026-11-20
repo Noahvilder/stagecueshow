@@ -642,7 +642,7 @@ export function ShowControl({ showId }: { showId: string }) {
                         e.stopPropagation();
                         onDropCue(song.id, c.id);
                       }}
-                      onClick={() => setSelectedId(c.id)}
+                      onClick={() => { setSelectedId(c.id); setStandbyId(c.id); }}
                       onDoubleClick={() => setStandbyId(c.id)}
                       style={{ borderLeftColor: cueColor(show, c), gridTemplateColumns: gridCols(view).replaceAll("_", " ") }}
                       className={`grid cursor-pointer items-center gap-2 border-b border-l-[6px] border-border px-2 py-2 ${
