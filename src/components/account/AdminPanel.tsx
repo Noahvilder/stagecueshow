@@ -6,6 +6,12 @@ type Stats = {
   pro_active: number; shows_total: number; devices_total: number; tickets_open: number;
   features_30: { feature: string; count: number }[]; features_all: { feature: string; count: number }[];
 };
+type LicOverview = {
+  by_plan: { plan: string; count: number }[];
+  trials: { days_left: number; count: number }[];
+  keys: { code: string; plan: string; note: string; used: number; max: number; expires_at: string | null; duration_days: number | null }[];
+};
+const PLAN_LABEL: Record<string, string> = { pro_lifetime: "Livstid", lifetime: "Livstid (kode)", pro_yearly: "Årlig", pro_monthly: "Månedlig", yearly: "Årlig (kode)", monthly: "Månedlig (kode)" };
 type Ticket = { id: string; ticket_no: number; kind: string; subject: string; body: string; email: string | null; system_info: string | null; status: string; created_at: string };
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -25,10 +31,12 @@ export function AdminPanel() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [range, setRange] = useState<"30" | "all">("30");
+  const [lic, setLic] = useState<LicOverview | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
   const load = async () => {
-    const [s, t] = await Promise.all([supabase.rpc("admin_stats"), supabase.rpc("admin_tickets")]);
+    const [s, t, l] = await Promise.all([supabase.rpc("admin_stats"), supabase.rpc("admin_tickets"), supabase.rpc("admin_license_overview")]);
+    if (l.data) setLic(l.data as unknown as LicOverview);
     if (s.data) setStats(s.data as unknown as Stats);
     if (t.data) setTickets(t.data as Ticket[]);
   };
@@ -86,6 +94,42 @@ export function AdminPanel() {
               <li key={f.feature} className="text-sm">
                 <div className="flex justify-between"><span>{FEATURE_LABEL[f.feature] ?? f.feature}</span><span className="font-mono">{f.count}</span></div>
                 <div className="h-1.5 rounded bg-secondary"><div className="h-1.5 rounded bg-go" style={{ width: `${(Number(f.count) / max) * 100}%` }} /></div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-sm font-bold">Aktive licenser</h3>
+          {!lic?.by_plan.length ? <p className="text-sm text-muted-foreground">Ingen aktive licenser.</p> : (
+            <ul className="flex flex-col gap-1 text-sm">
+              {lic.by_plan.map((p) => (
+                <li key={p.plan} className="flex justify-between"><span>{PLAN_LABEL[p.plan] ?? p.plan}</span><span className="font-mono">{p.count}</span></li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-bold">I prøveperiode ({lic?.trials.reduce((a, t) => a + Number(t.count), 0) ?? 0})</h3>
+          {!lic?.trials.length ? <p className="text-sm text-muted-foreground">Ingen i prøveperiode.</p> : (
+            <ul className="flex flex-col gap-1 text-sm">
+              {lic.trials.map((t) => (
+                <li key={t.days_left} className="flex justify-between"><span>{t.days_left} {t.days_left === 1 ? "dag" : "dage"} tilbage</span><span className="font-mono">{t.count}</span></li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <div>
+        <h3 className="mb-2 text-sm font-bold">Licenskoder</h3>
+        {!lic?.keys.length ? <p className="text-sm text-muted-foreground">Ingen koder oprettet.</p> : (
+          <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+            {lic.keys.map((k) => (
+              <li key={k.code} className="flex flex-wrap items-center gap-2 p-2">
+                <span className="font-mono text-xs">{k.code}</span>
+                <span className="flex-1 break-words text-muted-foreground">{k.note || "–"} · {PLAN_LABEL[k.plan] ?? k.plan}{k.duration_days ? ` · ${k.duration_days} dage` : ""}{k.expires_at ? ` · udløber ${new Date(k.expires_at).toLocaleDateString("da-DK")}` : ""}</span>
+                <span className={`font-mono ${k.used >= k.max ? "text-destructive" : ""}`}>{k.used} / {k.max}</span>
               </li>
             ))}
           </ul>

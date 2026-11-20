@@ -320,6 +320,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_license_overview: { Args: never; Returns: Json }
       admin_set_ticket_status: {
         Args: { _id: string; _status: string }
         Returns: undefined
