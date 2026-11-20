@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      license_key_redemptions: {
+        Row: {
+          code: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_key_redemptions_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "license_keys"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      license_keys: {
+        Row: {
+          activations_count: number
+          code: string
+          created_at: string
+          duration_days: number | null
+          expires_at: string | null
+          max_activations: number
+          note: string
+          plan: string
+        }
+        Insert: {
+          activations_count?: number
+          code: string
+          created_at?: string
+          duration_days?: number | null
+          expires_at?: string | null
+          max_activations?: number
+          note?: string
+          plan?: string
+        }
+        Update: {
+          activations_count?: number
+          code?: string
+          created_at?: string
+          duration_days?: number | null
+          expires_at?: string | null
+          max_activations?: number
+          note?: string
+          plan?: string
+        }
+        Relationships: []
+      }
       licenses: {
         Row: {
           cancel_at_period_end: boolean
@@ -229,6 +288,7 @@ export type Database = {
         Args: { _device_id: string; _device_name: string }
         Returns: Json
       }
+      redeem_license_key: { Args: { _code: string }; Returns: Json }
       shared_shows: {
         Args: never
         Returns: {

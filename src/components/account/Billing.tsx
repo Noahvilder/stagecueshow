@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { tryStripeEnvironment } from "@/lib/stripe";
 import { createPortalSession } from "@/utils/payments.functions";
+import { RedeemKey } from "./RedeemKey";
 
 type Lic = { plan: string; status: string; current_period_end: string | null };
 type Pay = { id: string; description: string; amount_cents: number; currency: string; status: string; receipt_url: string | null; created_at: string };
@@ -50,6 +51,7 @@ export function Billing() {
           <button onClick={portal} className="mt-2 text-xs underline">Administrér abonnement (betalingskort, opsigelse)</button>
         )}
       </section>
+      {lic && !(active && lic.plan === "lifetime") && <RedeemKey onDone={load} />}
       <section>
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Tidligere betalinger</h2>
         <div className="overflow-hidden rounded-xl border border-border bg-card text-sm">

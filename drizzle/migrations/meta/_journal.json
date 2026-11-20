@@ -50,6 +50,13 @@
       "when": 1795121587584,
       "tag": "0006_license_stripe_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795175701174,
+      "tag": "0007_migration",
+      "breakpoints": true
     }
   ]
 }
