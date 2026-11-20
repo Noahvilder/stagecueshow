@@ -3,6 +3,15 @@ import type Stripe from "stripe";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 
+const ALLOWED_HOSTS = new Set(["stagecueshow.com", "www.stagecueshow.com", "stagecueshow.lovable.app", "localhost"]);
+function safeReturnUrl(raw: unknown): string {
+  if (typeof raw !== "string" || raw.length > 2048) throw new Error("Invalid returnUrl");
+  const u = new URL(raw);
+  const ok = ALLOWED_HOSTS.has(u.hostname) || ((u.hostname.endsWith(".lovable.app") || u.hostname.endsWith(".lovableproject.com")) && u.hostname.includes("f2af6286-84ac-49fd-8b01-b2201732dea8"));
+  if (!ok || (u.protocol !== "https:" && u.hostname !== "localhost")) throw new Error("Invalid returnUrl");
+  return u.toString();
+}
+
 async function resolveOrCreateCustomer(stripe: Stripe, options: { email?: string | undefined; userId?: string | undefined }): Promise<string> {
   if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) throw new Error("Invalid userId");
   if (options.userId) {
@@ -31,7 +40,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator((data: { priceId: string; returnUrl: string; environment: StripeEnv }) => {
     if (!["pro_monthly", "pro_yearly", "pro_lifetime"].includes(data.priceId)) throw new Error("Invalid priceId");
     if (data.environment !== "sandbox" && data.environment !== "live") throw new Error("Invalid env");
-    return data;
+    return { ...data, returnUrl: safeReturnUrl(data.returnUrl) };
   })
   .handler(async ({ data, context }): Promise<{ clientSecret: string } | { error: string }> => {
     try {
@@ -67,7 +76,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl: string; environment: StripeEnv }) => data)
+  .inputValidator((data: { returnUrl: string; environment: StripeEnv }) => {
+    if (data.environment !== "sandbox" && data.environment !== "live") throw new Error("Invalid env");
+    return { ...data, returnUrl: safeReturnUrl(data.returnUrl) };
+  })
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
     const { data: lic } = await context.supabase.from("licenses").select("stripe_customer_id").eq("environment", data.environment).maybeSingle();
     if (!lic?.stripe_customer_id) return { error: "Intet abonnement fundet" };
