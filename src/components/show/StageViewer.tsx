@@ -223,7 +223,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
           ? (body(stickyCue) ? <ChordText src={body(stickyCue)} transpose={transpose} size={SIZES[size] ?? "text-4xl"} /> : <div className="text-3xl text-muted-foreground">Ingen tekst på dette cue</div>)
           : <div className="flex min-h-full flex-col justify-center gap-4"><div className="break-words text-6xl font-black leading-none" style={{ color: cur?.color }}>{cur?.name ?? "—"}</div><div className="text-4xl text-muted-foreground">{cur?.song}</div>{body(stickyCue) && <ChordText src={body(stickyCue)} transpose={transpose} size={SIZES[size] ?? "text-4xl"} />}</div>}
       </main>
-      {cur?.stikord && <div className="border-t-4 border-standby bg-standby/15 px-6 py-3 text-4xl font-black text-standby">⏱ GO: {cur.stikord}</div>}
+      {next?.stikord && <div className="border-t-4 border-standby bg-standby/15 px-6 py-3 text-4xl font-black text-standby">⏱ GO: {next.stikord}</div>}
       {next && <footer className="border-t border-border bg-card px-6 py-3 text-2xl"><span className="text-muted-foreground">Næste: </span><b>{next.song !== cur?.song ? `${next.song} · ` : ""}{next.name}</b></footer>}
       <div className={`absolute bottom-16 right-3 flex max-w-[calc(100%-1.5rem)] flex-wrap justify-end gap-2 rounded bg-background p-2 transition-opacity duration-500 ${ui ? "opacity-100" : "pointer-events-none opacity-0"}`}>
         {SIZES.map((_, i) => <Button variant="secondary" key={i} onClick={() => setSize(i)} className={size === i ? "bg-standby text-standby-foreground" : ""}>{"A" + "+".repeat(i)}</Button>)}
