@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { CLICK_SOUNDS, METERS, beatTimes, beatsPerBar, clickLength, renderClickWav, scheduleAll, type ClickSettings } from "@/lib/show/clicktrack";
+import { barsForSeconds, CLICK_SOUNDS, METERS, beatTimes, beatsPerBar, clickLength, renderClickWav, scheduleAll, type ClickSettings } from "@/lib/show/clicktrack";
 
 export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onCreate: (blob: Blob, name: string) => Promise<void> }) {
   const [s, setS] = useState<ClickSettings>({ meter: "4/4", bars: 2, startBpm: 120, endBpm: 120, sound: "wood", accent: true, accentGain: 0.5, volume: 0.9 });
   const [ramp, setRamp] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [hold, setHold] = useState(0);
+  const [holdUnit, setHoldUnit] = useState<"bars" | "sec">("bars");
   const ctxRef = useRef<AudioContext | null>(null);
-  const eff: ClickSettings = { ...s, endBpm: ramp ? s.endBpm : s.startBpm };
+  const eff: ClickSettings = { ...s, endBpm: ramp ? s.endBpm : s.startBpm, holdBars: ramp ? (holdUnit === "bars" ? hold : barsForSeconds(hold, s.endBpm, s.meter)) : 0 };
   const set = (p: Partial<ClickSettings>) => setS((x) => ({ ...x, ...p }));
   const [playing, setPlaying] = useState(false);
   const [beat, setBeat] = useState(-1);
@@ -41,7 +43,7 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
   };
   const tempoName = (b: number) => b < 60 ? "Largo" : b < 76 ? "Adagio" : b < 108 ? "Moderato" : b < 120 ? "Allegretto" : b < 168 ? "Allegro" : b < 200 ? "Presto" : "Prestissimo";
   const bump = (d: number) => set({ startBpm: Math.min(400, Math.max(20, s.startBpm + d)) });
-  const name = `Click ${eff.meter} ${eff.startBpm}${ramp ? `→${eff.endBpm}` : ""} BPM`;
+  const name = `Click ${eff.meter} ${eff.startBpm}${ramp ? `→${eff.endBpm}` : ""} BPM${eff.holdBars ? ` +${eff.holdBars} takter` : ""}`;
   const num = "w-full rounded border border-border bg-background px-2 py-1 font-mono";
   return (
     <div className="fixed inset-0 z-[100000] flex backdrop-blur-sm items-center justify-center bg-background/70 p-4" onClick={() => { stop(); onClose(); }}>
@@ -81,6 +83,13 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
           {ramp && <label>Slut BPM<input type="number" min={20} max={400} className={num} value={s.endBpm} onChange={(e) => set({ endBpm: +e.target.value })} /></label>}
         </div>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={ramp} onChange={(e) => setRamp(e.target.checked)} /> Tempo stiger/falder jævnt over alle takterne</label>
+        {ramp && (
+          <div className="grid grid-cols-3 items-end gap-3 text-sm">
+            <label className="col-span-2">Bliv i slut-tempo bagefter<input type="number" min={0} max={999} className={num} value={hold} onChange={(e) => setHold(Math.max(0, +e.target.value))} /></label>
+            <select className={num} value={holdUnit} onChange={(e) => setHoldUnit(e.target.value as "bars" | "sec")}><option value="bars">takter</option><option value="sec">sekunder</option></select>
+            {holdUnit === "sec" && hold > 0 && <div className="col-span-3 text-xs text-muted-foreground">= {eff.holdBars} hele takter ved {s.endBpm} BPM</div>}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <label>Lyd<select className={num} value={s.sound} onChange={(e) => set({ sound: e.target.value as ClickSettings["sound"] })}>{CLICK_SOUNDS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></label>
           <label>Lydstyrke<input type="range" min={0} max={1} step={0.05} className="w-full" value={s.volume} onChange={(e) => set({ volume: +e.target.value })} /></label>

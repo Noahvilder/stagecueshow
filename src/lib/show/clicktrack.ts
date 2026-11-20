@@ -10,6 +10,7 @@ export interface ClickSettings {
   bars: number;
   startBpm: number;
   endBpm: number; // = startBpm for fixed tempo
+  holdBars?: number; // extra bars kept at endBpm after the ramp
   sound: ClickSound;
   accent: boolean;
   accentGain: number; // 0..1 extra loudness on beat 1
@@ -25,17 +26,24 @@ export interface Beat { time: number; bar: number; beat: number; accent: boolean
 /** Click times with an even (linear) tempo change from startBpm to endBpm across all clicks. */
 export function beatTimes(s: ClickSettings): Beat[] {
   const per = beatsPerBar(s.meter);
-  const total = Math.max(1, Math.round(s.bars)) * per;
+  const rampTotal = Math.max(1, Math.round(s.bars)) * per;
+  const total = rampTotal + Math.max(0, Math.round(s.holdBars ?? 0)) * per;
   const unitScale = 4 / beatUnit(s.meter);
   const out: Beat[] = [];
   let t = 0;
   for (let i = 0; i < total; i++) {
     out.push({ time: t, bar: Math.floor(i / per) + 1, beat: (i % per) + 1, accent: s.accent && i % per === 0 });
-    const f = total > 1 ? i / (total - 1) : 0;
+    const f = i >= rampTotal - 1 ? 1 : rampTotal > 1 ? i / (rampTotal - 1) : 0;
     const bpm = s.startBpm + (s.endBpm - s.startBpm) * f;
     t += (60 / Math.max(1, bpm)) * unitScale;
   }
   return out;
+}
+
+/** Whole bars needed to cover `sec` seconds at `bpm` (rounded up). */
+export function barsForSeconds(sec: number, bpm: number, m: Meter): number {
+  const barSec = beatsPerBar(m) * (60 / Math.max(1, bpm)) * (4 / beatUnit(m));
+  return sec > 0 ? Math.ceil(sec / barSec - 1e-9) : 0;
 }
 
 export function clickLength(s: ClickSettings): number {
