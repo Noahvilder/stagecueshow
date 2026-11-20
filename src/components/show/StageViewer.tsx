@@ -136,8 +136,8 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       <h1 className="text-3xl font-black">Vælg din rolle på scenen</h1>
       <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>
       {state?.monitors?.map((m) => <Button key={m.id} variant="secondary" className="h-auto min-h-16 w-full max-w-sm whitespace-normal p-4 text-xl font-bold" onClick={() => { setMonitorId(m.id); setMode(null); }}>{m.name}</Button>)}
-      <Button onClick={() => { setMonitorId(""); setMode("lyrics"); }} className="h-auto w-full max-w-sm whitespace-normal bg-standby p-5 text-xl font-black text-standby-foreground">Fælles lyrics & akkorder</Button>
-      <Button variant="secondary" onClick={() => { setMonitorId(""); setMode("hud"); }} className="h-auto w-full max-w-sm p-5 text-xl font-black">Nu & Næste</Button>
+      {!state?.monitors?.length && <p className="text-muted-foreground">{online ? "Pulten har ingen roller endnu – teknikeren opretter dem under Indstillinger." : "Venter på pulten…"}</p>}
+      <button onClick={() => { setMonitorId(""); setMode("lyrics"); }} className="text-sm text-muted-foreground underline">Ingen rolle – vis fælles tekst</button>
 
       <a href={`/remote?code=${target ?? ""}`} className="mt-8 text-xs text-muted-foreground/60 hover:text-muted-foreground">Afvikler? Styr showet herfra →</a>
     </div>

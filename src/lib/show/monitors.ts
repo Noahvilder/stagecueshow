@@ -2,7 +2,9 @@ import type { Cue, MonitorProfile, Show } from "./types";
 
 export const defaultMonitors = (): MonitorProfile[] => [
   { id: "singer", name: "Forsanger", mode: "lyrics" },
+  { id: "guitar", name: "Guitar", mode: "lyrics" },
   { id: "bass", name: "Bas", mode: "lyrics" },
+  { id: "keys", name: "Keys", mode: "lyrics" },
   { id: "drums", name: "Trommer", mode: "hud" },
   { id: "tech", name: "Lys / Teknik", mode: "hud" },
 ];
