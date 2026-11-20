@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { barsForSeconds, CLICK_SOUNDS, METERS, beatTimes, beatsPerBar, clickLength, renderClickWav, scheduleAll, type ClickSettings } from "@/lib/show/clicktrack";
+import { downloadBlob, renderClickVideo, safeName } from "@/lib/show/clickExport";
 
 export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onCreate: (blob: Blob, name: string, click?: { meter: string; bars: number; startBpm: number; endBpm: number; holdBars?: number }) => Promise<void> }) {
   const [s, setS] = useState<ClickSettings>({ meter: "4/4", bars: 2, startBpm: 120, endBpm: 120, sound: "wood", accent: true, accentGain: 0.5, volume: 0.9 });
   const [ramp, setRamp] = useState(false);
   const [busy, setBusy] = useState(false);
   const [hold, setHold] = useState(0);
+  const [vidProg, setVidProg] = useState<number | null>(null);
   const [holdUnit, setHoldUnit] = useState<"bars" | "sec">("bars");
   const ctxRef = useRef<AudioContext | null>(null);
   const eff: ClickSettings = { ...s, endBpm: ramp ? s.endBpm : s.startBpm, holdBars: ramp ? (holdUnit === "bars" ? hold : barsForSeconds(hold, s.endBpm, s.meter)) : 0 };
@@ -97,8 +99,10 @@ export function ClickGenerator({ onClose, onCreate }: { onClose: () => void; onC
           <label>Accent-styrke<input type="range" min={0} max={1} step={0.05} disabled={!s.accent} className="w-full" value={s.accentGain} onChange={(e) => set({ accentGain: +e.target.value })} /></label>
         </div>
         <div className="text-xs text-muted-foreground">Længde: {clickLength(eff).toFixed(1)} sek.</div>
-        <div className="flex gap-2">
-          <button disabled={busy} onClick={async () => { setBusy(true); stop(); try { await onCreate(await renderClickWav(eff), name, { meter: eff.meter, bars: eff.bars, startBpm: eff.startBpm, endBpm: eff.endBpm, ...(eff.holdBars ? { holdBars: eff.holdBars } : {}) }); onClose(); } finally { setBusy(false); } }} className="ml-auto rounded bg-standby px-4 py-2 text-sm font-bold text-background disabled:opacity-50">{busy ? "Laver…" : "Opret som cue"}</button>
+        <div className="flex flex-wrap gap-2">
+          <button disabled={busy || vidProg !== null} onClick={async () => { setBusy(true); stop(); try { downloadBlob(await renderClickWav(eff), `${safeName(name)}.wav`); } finally { setBusy(false); } }} className="rounded border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50">⬇ Hent WAV</button>
+          <button disabled={busy || vidProg !== null} onClick={async () => { stop(); setVidProg(0); try { const w = await renderClickWav(eff); const v = await renderClickVideo(w, { meter: eff.meter, bars: eff.bars, startBpm: eff.startBpm, endBpm: eff.endBpm, ...(eff.holdBars ? { holdBars: eff.holdBars } : {}) }, setVidProg); downloadBlob(v.blob, `${safeName(name)}.${v.ext}`); } finally { setVidProg(null); } }} className="rounded border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50">{vidProg === null ? "⬇ Hent MP4" : `Laver video… ${Math.round(vidProg * 100)}%`}</button>
+          <button disabled={busy || vidProg !== null} onClick={async () => { setBusy(true); stop(); try { await onCreate(await renderClickWav(eff), name, { meter: eff.meter, bars: eff.bars, startBpm: eff.startBpm, endBpm: eff.endBpm, ...(eff.holdBars ? { holdBars: eff.holdBars } : {}) }); onClose(); } finally { setBusy(false); } }} className="ml-auto rounded bg-standby px-4 py-2 text-sm font-bold text-background disabled:opacity-50">{busy ? "Laver…" : "Opret som cue"}</button>
         </div>
       </div>
     </div>
