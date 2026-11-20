@@ -384,7 +384,38 @@ export function ShowControl({ showId }: { showId: string }) {
 
   // file io
   const fileRef = useRef<HTMLInputElement>(null);
-  const exportShow = () => {
+  const fileHandle = useRef<any>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileSavedAt, setFileSavedAt] = useState<string | null>(null);
+  const [autoSaveMin, setAutoSaveMin] = useState(0);
+  useEffect(() => { const n = Number(localStorage.getItem("stagecue.autosave")); if (n > 0) setAutoSaveMin(n); }, []);
+  const writeToHandle = async (auto = false) => {
+    const h = fileHandle.current; if (!h) return false;
+    try {
+      const w = await h.createWritable();
+      await w.write(JSON.stringify(show, null, 2));
+      await w.close();
+      setFileSavedAt(`${auto ? "Auto-gemt" : "Gemt"} kl. ${new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`);
+      return true;
+    } catch (e) { setError("Kunne ikke gemme filen: " + (e as Error).message); return false; }
+  };
+  const saveAs = async () => {
+    const picker = (window as any).showSaveFilePicker;
+    if (!picker) { downloadShow(); return; }
+    try {
+      const h = await picker({ suggestedName: `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue.json`, types: [{ description: "StageCue show", accept: { "application/json": [".json"] } }] });
+      fileHandle.current = h; setFileName(h.name);
+      await writeToHandle();
+    } catch { /* annulleret */ }
+  };
+  const exportShow = () => { if (fileHandle.current) void writeToHandle(); else void saveAs(); };
+  const autoRef = useRef(writeToHandle); autoRef.current = writeToHandle;
+  useEffect(() => {
+    if (!autoSaveMin) return;
+    const t = setInterval(() => { void autoRef.current(true); }, autoSaveMin * 60000);
+    return () => clearInterval(t);
+  }, [autoSaveMin]);
+  const downloadShow = () => {
     const blob = new Blob([JSON.stringify(show, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -478,6 +509,7 @@ export function ShowControl({ showId }: { showId: string }) {
         { label: "Filer", items: [
           { label: "Åbn show…", keys: "Ctrl+O", onClick: () => fileRef.current?.click(), disabled: locked },
           { label: "Gem show", keys: "Ctrl+S", onClick: exportShow },
+          { label: "Gem som…", onClick: () => { void saveAs(); } },
           { label: "Eksportér backup m. lyd (.stagecue)…", keys: "Ctrl+Shift+S", onClick: exportBackup },
           "sep",
           { label: "Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
@@ -509,6 +541,8 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           ...[0, 300, 500, 1000].map((ms) => ({ label: ms ? `Dobbelt-GO-spærre: ${ms / 1000} s` : "Dobbelt-GO-spærre: fra", checked: goGuard === ms, onClick: () => { setGoGuard(ms); localStorage.setItem("stagecue.goguard", String(ms)); } })),
           "sep",
+          ...([0, 1, 2, 5, 10, 15, 30].map((n) => ({ label: n ? `Gem automatisk hver ${n} min` : "Gem automatisk: Fra", checked: autoSaveMin === n, onClick: () => { setAutoSaveMin(n); localStorage.setItem("stagecue.autosave", String(n)); } }))),
+          "sep",
           ...([["elapsed", "Tidsboks: Aktiv spilletid"], ["lastgo", "Tidsboks: Siden sidste GO"], ["none", "Tidsboks: Kun nedtælling"]] as const).map(([m, label]) => ({ label, checked: timeMode === m, onClick: () => { setTimeMode(m); localStorage.setItem("stagecue.timebox", m); } })),
           "sep",
           ...([["hms", "Tidsformat: Timer:minutter:sekunder"], ["sec", "Tidsformat: Kun sekunder"]] as const).map(([f, label]) => ({ label, checked: timeFmt === f, onClick: () => { setTimeFmt(f); localStorage.setItem("stagecue.timefmt", f); } })),
@@ -535,7 +569,7 @@ export function ShowControl({ showId }: { showId: string }) {
           aria-label="Show navn"
         />
         <span className="font-mono text-2xl tabular-nums">{clock}</span>
-        <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}</span>
+        <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? "Gemmer…" : saved === "error" ? "Ikke gemt!" : "✓ Gemt i skyen"}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
         <button onClick={() => setLocked((l) => !l)} title="Ctrl+L" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? "🔒 LÅST TIL LIVE" : "🔓 Lås show"}</button>
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
