@@ -555,18 +555,18 @@ export function ShowControl({ showId }: { showId: string }) {
           <button
             onClick={go}
             disabled={!standby}
-            className="h-32 rounded-xl bg-go text-6xl font-black tracking-widest text-go-foreground shadow-[0_0_40px_-8px_var(--go)] transition active:scale-[0.98] disabled:opacity-30"
+            className="h-[clamp(5rem,30cqw,8rem)] rounded-xl bg-go text-[clamp(2rem,16cqw,3.75rem)] font-black tracking-widest text-go-foreground shadow-[0_0_40px_-8px_var(--go)] transition active:scale-[0.98] disabled:opacity-30"
           >
             GO
           </button>
           <div className="text-center text-xs text-muted-foreground">Mellemrum = GO · ↑↓ = flyt standby · Esc = nød-fade · Esc×2 = stop nu</div>
 
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={panic} className="h-16 rounded-lg bg-destructive text-lg font-black text-destructive-foreground">
+            <button onClick={panic} className="h-16 rounded-lg bg-destructive text-[clamp(0.8rem,5cqw,1.125rem)] font-black text-destructive-foreground">
               PANIC
               <div className="text-xs font-normal">fade {show.panicFade}s</div>
             </button>
-            <button onClick={hardStop} className="h-16 rounded-lg border-2 border-destructive text-lg font-black text-destructive">
+            <button onClick={hardStop} className="h-16 rounded-lg border-2 border-destructive text-[clamp(0.8rem,5cqw,1.125rem)] font-black text-destructive">
               STOP ALT
             </button>
           </div>
@@ -658,9 +658,9 @@ export function ShowControl({ showId }: { showId: string }) {
                       <span className="text-center font-black text-standby">{isStandby ? "▶" : isRunning ? <span className="text-go">●</span> : ""}</span>
                       {view.number && <span className="font-mono text-sm text-muted-foreground" title={c.ref ? `Manuskript: ${c.ref}` : undefined}>{c.number || idx + 1}</span>}
                       <div className="min-w-0">
-                        <div className="truncate font-semibold">{c.name}</div>
-                        {view.details && <div className="truncate text-xs text-muted-foreground">{summary(c, midiPorts)}</div>}
-                        {view.stikord && c.stikord && <div className="truncate text-xs font-bold text-standby">⏱ {c.stikord}</div>}
+                        <div className="break-words font-semibold">{c.name}</div>
+                        {view.details && <div className="break-words text-xs text-muted-foreground">{summary(c, midiPorts)}</div>}
+                        {view.stikord && c.stikord && <div className="break-words text-xs font-bold text-standby">⏱ {c.stikord}</div>}
                       </div>
                       {view.type && <TypeTag show={show} cue={c} />}
                       {view.follow && <span className="w-24 text-right font-mono text-xs text-muted-foreground">{followLabel(c)}</span>}
@@ -784,9 +784,9 @@ function TypeTag({ show, cue }: { show: Show; cue: Cue }) {
 
 function TimeBox({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-2 text-center">
-      <div className="font-sans text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className={`text-2xl tabular-nums ${accent ? "text-standby" : ""}`}>{value}</div>
+    <div className="min-w-0 rounded-lg border border-border bg-card p-2 text-center">
+      <div className="break-words font-sans text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`text-[clamp(1rem,7cqw,1.5rem)] tabular-nums ${accent ? "text-standby" : ""}`}>{value}</div>
     </div>
   );
 }
@@ -798,7 +798,7 @@ function ActiveBar({ row, color, onStop }: { row: ActiveRow; color: string; onSt
       <div className="absolute inset-y-0 left-0 opacity-40" style={{ width: `${pct}%`, backgroundColor: color }} />
       <div className="relative flex items-center gap-2 px-2 py-1.5 text-sm">
         <span className="font-bold">{row.state === "pre" ? "⏱" : row.state === "paused" ? "❚❚" : "▶"}</span>
-        <span className="min-w-0 flex-1 truncate font-semibold">{row.name}</span>
+        <span className="min-w-0 flex-1 break-words font-semibold">{row.name}</span>
         <span className="font-mono tabular-nums">{fmt(row.elapsed)}</span>
         <span className="font-mono tabular-nums text-standby">-{fmt((row.duration ?? 0) - row.elapsed)}</span>
         {row.type === "audio" && (
@@ -1142,23 +1142,23 @@ function StageView(props: {
   const afterSong = after ? show.songs.find((s) => s.cues.some((c) => c.id === after.id)) : null;
   return (
     <div className="flex h-full flex-col gap-2 p-3">
-      <div className="flex items-baseline gap-3">
-        <span className="font-mono text-lg font-bold text-muted-foreground">SANG {songIdx >= 0 ? songIdx + 1 : "–"}/{show.songs.length}</span>
-        <span className="min-w-0 flex-1 truncate text-4xl font-black uppercase">{song?.name ?? "Slut på show"}</span>
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <span className="shrink-0 font-mono text-[clamp(0.75rem,3.5cqw,1.125rem)] font-bold text-muted-foreground">SANG {songIdx >= 0 ? songIdx + 1 : "–"}/{show.songs.length}</span>
+        <span className="min-w-0 flex-1 break-words text-[clamp(1.1rem,7cqw,2.25rem)] font-black uppercase leading-tight">{song?.name ?? "Slut på show"}</span>
       </div>
       {standby ? (
         <div className="rounded-lg border-l-[12px] bg-muted px-4 py-3" style={{ borderLeftColor: cueColor(show, standby) }}>
-          <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-standby">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[clamp(0.65rem,2.8cqw,0.875rem)] font-bold uppercase tracking-widest text-standby">
             <span>Næste GO · cue {cueInSong}/{song?.cues.length}</span>
             <TypeTag show={show} cue={standby} />
             {standby.preWait > 0 && <span className="text-muted-foreground">pre-wait {standby.preWait}s</span>}
           </div>
-          <div className="truncate text-5xl font-black leading-tight">{standby.name}</div>
-          {standby.stikord && <div className={"mt-2 rounded px-3 py-2 text-3xl font-black text-standby " + (props.warn ? "animate-pulse bg-standby/40 ring-4 ring-standby" : "bg-standby/15")}>⏱ {standby.stikord}</div>}
-          {standby.type === "memo" && standby.text && <div className="mt-1 whitespace-pre-wrap text-2xl text-memo">{standby.text}</div>}
+          <div className="break-words text-[clamp(1.25rem,9cqw,3rem)] font-black leading-tight">{standby.name}</div>
+          {standby.stikord && <div className={"mt-2 break-words rounded px-3 py-2 text-[clamp(1rem,6cqw,1.875rem)] font-black text-standby " + (props.warn ? "animate-pulse bg-standby/40 ring-4 ring-standby" : "bg-standby/15")}>⏱ {standby.stikord}</div>}
+          {standby.type === "memo" && standby.text && <div className="mt-1 whitespace-pre-wrap text-[clamp(0.9rem,5cqw,1.5rem)] text-memo">{standby.text}</div>}
         </div>
       ) : (
-        <div className="rounded-lg bg-muted px-4 py-6 text-3xl font-bold text-muted-foreground">Ingen flere cues</div>
+        <div className="rounded-lg bg-muted px-4 py-6 text-[clamp(1rem,6cqw,1.875rem)] font-bold text-muted-foreground">Ingen flere cues</div>
       )}
       <div className="flex items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Noter til næste cue</span>
@@ -1175,7 +1175,7 @@ function StageView(props: {
         placeholder="Skriv noter til dette cue…"
         className={`min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 font-semibold leading-snug text-memo outline-none focus:border-standby ${NOTE_SIZES[props.size]}`}
       />
-      <div className="truncate border-t border-border pt-2 text-lg text-muted-foreground">
+      <div className="break-words border-t border-border pt-2 text-[clamp(0.8rem,3.5cqw,1.125rem)] text-muted-foreground">
         Derefter: {after ? <><span className="font-bold text-foreground">{after.name}</span>{afterSong && afterSong !== song && <span className="ml-2 text-standby">→ ny sang: {afterSong.name}</span>}</> : "—"}
       </div>
     </div>

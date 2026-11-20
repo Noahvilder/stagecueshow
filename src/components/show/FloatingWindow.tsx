@@ -56,7 +56,7 @@ export function FloatingWindow(props: {
       </div>
       {!s.min && (
         <>
-          <div className="min-h-0 flex-1 overflow-auto">{props.children}</div>
+          <div className="@container min-h-0 flex-1 overflow-auto break-words">{props.children}</div>
           {!props.locked && <div onPointerDown={(e) => begin(e, "resize")} className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize" style={{ background: "linear-gradient(135deg, transparent 50%, var(--muted-foreground) 50%)" }} aria-label="Ændr størrelse" />}
         </>
       )}
