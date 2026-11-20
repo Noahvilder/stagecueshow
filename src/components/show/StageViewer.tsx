@@ -132,9 +132,12 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   }, [viewMode]);
 
   const flat = useMemo(() => (state?.songs ?? []).flatMap((s) => s.cues.map((c) => ({ ...c, song: s.name }))), [state]);
-  const idx = flat.findIndex((c) => c.id === state?.standbyId);
+  const sIdx = flat.findIndex((c) => c.id === state?.standbyId);
+  const liveIdx = state?.currentId ? flat.findIndex((c) => c.id === state.currentId) : -1;
+  // Top = what is playing now (last GO); before any GO, the cue before standby (or standby itself at show start).
+  const idx = liveIdx >= 0 ? liveIdx : sIdx > 0 ? sIdx - 1 : sIdx;
   const cur = idx >= 0 ? flat[idx] : undefined;
-  const next = idx >= 0 ? flat[idx + 1] : undefined;
+  const next = sIdx >= 0 && sIdx !== idx ? flat[sIdx] : undefined;
   const body = (c?: typeof cur) => monitorBody(c, profile?.id);
   const stickyCue = idx >= 0 ? flat[stickyIndex(flat, idx, profile?.id)] : undefined;
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [cur?.id]);

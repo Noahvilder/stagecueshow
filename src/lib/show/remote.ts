@@ -6,6 +6,8 @@ export interface RemoteState {
   monitors?: MonitorProfile[];
   midiPorts?: string[];
   standbyId: string | null;
+  /** Cue that was last GO'd (what is playing now). */
+  currentId?: string | null;
   running: string[];
   muted?: boolean;
   locked?: boolean;

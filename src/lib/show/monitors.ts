@@ -22,14 +22,25 @@ export function removeMonitor(show: Show, id: string): Show {
   };
   return { ...show, monitors: (show.monitors ?? []).filter((m) => m.id !== id), songs: show.songs.map((song) => ({ ...song, cues: song.cues.map(clean) })) };
 }
-/** Monitor-visible fields for a cue; groups carry their children's memo text and role notes. */
-export function monitorFields(c: Cue): { text: string; notes: string; monitorNotes: Record<string, string> } {
+/** Monitor-visible fields for a cue. Groups show only children that have started by `elapsed`
+ * seconds after group-GO (default 0 = not started yet); the latest started memo/note wins. */
+export function monitorFields(c: Cue, elapsed = 0): { text: string; notes: string; monitorNotes: Record<string, string> } {
   if (c.type !== "group") return { text: c.type === "memo" ? c.text : "", notes: c.notes ?? "", monitorNotes: c.monitorNotes ?? {} };
-  const kids = c.children.map(monitorFields);
-  const join = (a: string[]) => a.filter((x) => x.trim()).join("\n\n");
+  const kids = c.children.filter((k) => (k.preWait ?? 0) <= elapsed).map((k) => monitorFields(k, elapsed - (k.preWait ?? 0)));
+  let text = ""; let notes = "";
   const monitorNotes: Record<string, string> = { ...(c.monitorNotes ?? {}) };
-  for (const k of kids) for (const [id, t] of Object.entries(k.monitorNotes)) if (t.trim()) monitorNotes[id] = join([monitorNotes[id] ?? "", t]);
-  return { text: join(kids.map((k) => k.text)), notes: join([c.notes ?? "", ...kids.map((k) => k.notes)]), monitorNotes };
+  for (const k of kids) {
+    if (k.text.trim()) text = k.text;
+    if (k.notes.trim()) notes = k.notes;
+    for (const [id, t] of Object.entries(k.monitorNotes)) if (t.trim()) monitorNotes[id] = t;
+  }
+  return { text, notes: [c.notes ?? "", notes].filter((x) => x.trim()).join("\n\n"), monitorNotes };
+}
+
+/** How many seconds of a live group have "revealed" children – snapped to the last child start so state only changes at child starts. */
+export function revealedAt(c: Cue | undefined, elapsed: number): number {
+  if (!c || c.type !== "group") return 0;
+  return c.children.reduce((m, k) => ((k.preWait ?? 0) <= elapsed ? Math.max(m, k.preWait ?? 0) : m), 0);
 }
 
 /** Sticky memo: the cue whose text stays on screen – the standby cue if it has text, else the latest earlier one. */

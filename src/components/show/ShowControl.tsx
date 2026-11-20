@@ -18,7 +18,7 @@ import { FloatingWindow, type WinState } from "./FloatingWindow";
 import { Waveform } from "./Waveform";
 import { MenuBar, type Menu } from "./MenuBar";
 import { CommandPalette } from "./CommandPalette";
-import { monitorFields } from "@/lib/show/monitors";
+import { monitorFields, revealedAt } from "@/lib/show/monitors";
 import { snapRect, type SnapMode } from "@/lib/show/snap";
 import { TAB_TUNINGS, tabTemplate } from "@/lib/show/tabs";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
@@ -78,6 +78,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const [settings, setSettings] = useState(false);
   const [clock, setClock] = useState("");
   const [lastGo, setLastGo] = useState<number | null>(null);
+  const [liveId, setLiveId] = useState<string | null>(null);
   const [now, setNow] = useState(0);
   const [wins, setWins] = useState(defaultWins);
   const [snap, setSnapMode] = useState<SnapMode>("free");
@@ -239,6 +240,7 @@ export function ShowControl({ showId }: { showId: string }) {
     trackFeature("pult.go", true);
     lastGoAt.current = t;
     engine().go(flat, standbyIdx);
+    setLiveId(flat[standbyIdx]!.id);
     setLastGo(performance.now());
     const n = nextStandbyIndex(flat, standbyIdx);
     setStandbyId(n >= 0 ? flat[n]!.id : null);
@@ -471,16 +473,19 @@ export function ShowControl({ showId }: { showId: string }) {
   };
 
   const lastGoEl = lastGo ? (now - lastGo) / 1000 : null;
+  const liveCue = liveId ? flat.find((c) => c.id === liveId) : undefined;
+  const liveReveal = revealedAt(liveCue, lastGoEl ?? 0);
   const remoteState = useMemo<RemoteState>(() => ({
     showName: show.name,
+    currentId: liveId,
     monitors: show.monitors ?? [],
     midiPorts,
     standbyId,
     running: [...new Set(active.map((a) => a.cueId))],
     muted,
     locked,
-    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), ...monitorFields(c), stikord: c.stikord ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
-  }), [show, standbyId, active, midiPorts, muted, locked]);
+    songs: show.songs.map((s) => ({ id: s.id, name: s.name, cues: s.cues.map((c) => ({ id: c.id, name: c.name, type: c.type, color: cueColor(show, c), ...monitorFields(c, c.id === liveId ? liveReveal : 0), stikord: c.stikord ?? "", hasAudio: c.type === "audio" && !!c.fileId })) })),
+  }), [show, standbyId, active, midiPorts, muted, locked, liveId, liveReveal]);
   const onRemote = (c: RemoteCmd) => {
     if (c.t === "go") go();
     else if (c.t === "panic") panic();

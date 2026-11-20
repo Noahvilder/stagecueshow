@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cueAsDefault, newCue } from "./logic";
-import { monitorFields, stickyIndex } from "./monitors";
+import { monitorFields, revealedAt, stickyIndex } from "./monitors";
 import type { Cue } from "./types";
 
 describe("cue defaults saved in the show", () => {
@@ -20,6 +20,12 @@ describe("memo inside group reaches monitor", () => {
     const f = monitorFields(g);
     expect(f.text).toBe("Vers 1");
     expect(f.monitorNotes["bass"]).toBe("E A");
+  });
+  it("delayed memo in group only shows after its start time", () => {
+    const g = { ...newCue("group"), children: [{ ...newCue("memo"), text: "Intro" }, { ...newCue("memo"), text: "Solo", preWait: 130 }] } as Cue;
+    expect(monitorFields(g).text).toBe("Intro");
+    expect(monitorFields(g, revealedAt(g, 129)).text).toBe("Intro");
+    expect(monitorFields(g, revealedAt(g, 130)).text).toBe("Solo");
   });
   it("memo stays until the next memo", () => {
     const flat = [{ text: "Vers" }, { text: "" }, { text: "" }, { text: "Omkvæd" }];
