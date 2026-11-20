@@ -5,9 +5,7 @@ import { parseChordPro } from "@/lib/show/chordpro";
 import { monitorBody, stickyIndex } from "@/lib/show/monitors";
 import { isTabLine, transposeSource } from "@/lib/show/tabs";
 
-const HIST_KEY = "stagecue.viewer.history";
-type Hist = { code: string; name: string; monitor: string; at: number };
-const readHist = (): Hist[] => { try { return JSON.parse(localStorage.getItem(HIST_KEY) ?? "[]") as Hist[]; } catch { return []; } };
+import { readHist, rememberShow, forgetShow, type Hist } from "@/lib/show/showHistory";
 import { Button } from "@/components/ui/button";
 import { trackFeature } from "@/lib/track";
 
@@ -81,10 +79,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
   useEffect(() => {
     if (!target) return;
     if (state?.showName) trackFeature("monitor.connect", true);
-    const prev = readHist();
-    const name = state?.showName || prev.find((h) => h.code === target)?.name || `Show ${target}`;
-    const list = [{ code: target, name, monitor: monitorId, at: Date.now() }, ...prev.filter((h) => h.code !== target)].slice(0, 10);
-    localStorage.setItem(HIST_KEY, JSON.stringify(list)); setHist(list);
+    setHist(rememberShow(target, state?.showName, monitorId));
   }, [target, state?.showName, monitorId]);
   const profile = state?.monitors?.find((m) => m.id === monitorId);
   const viewMode = profile?.mode ?? mode;
@@ -165,7 +160,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
         <div className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Seneste shows</div>
         {hist.map((h) => <div key={h.code} className="mb-2 flex items-stretch gap-1">
           <button onClick={() => { setCode(h.code); setMonitorId(h.monitor); setTarget(h.code); }} className="min-w-0 flex-1 rounded bg-secondary p-3 text-left"><div className="truncate text-lg font-bold">{h.name}</div><div className="font-mono text-xs text-muted-foreground">{h.code} · {new Date(h.at).toLocaleDateString()}</div></button>
-          <button aria-label={`Fjern ${h.name}`} onClick={() => { const l = hist.filter((x) => x.code !== h.code); localStorage.setItem(HIST_KEY, JSON.stringify(l)); setHist(l); }} className="rounded bg-secondary px-3 text-muted-foreground hover:text-destructive">✕</button>
+          <button aria-label={`Fjern ${h.name}`} onClick={() => setHist(forgetShow(h.code))} className="rounded bg-secondary px-3 text-muted-foreground hover:text-destructive">✕</button>
         </div>)}
       </div>}
     </div>
@@ -176,7 +171,7 @@ export function StageViewer({ initialCode, initialMonitor }: { initialCode?: str
       <a href="/show" className="web-only absolute left-4 top-4 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</a>
       <div className={`text-sm font-bold ${online ? "text-go" : "text-destructive"}`}>{stale ? "◐ Venter på signal…" : online ? `● Forbundet · ${state?.showName ?? ""}` : "○ Forbinder…"}</div>
       <h1 className="text-3xl font-black">Vælg din rolle på scenen</h1>
-      <button onClick={() => { localStorage.removeItem(VIEW_KEY); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">Skift pult</button>
+      <button onClick={() => { localStorage.removeItem(VIEW_KEY); setHist(readHist()); setTarget(""); setState(null); }} className="text-sm text-muted-foreground underline">⇄ Skift show (seneste shows)</button>
       {state?.monitors?.map((m) => <Button key={m.id} variant="secondary" className="h-auto min-h-16 w-full max-w-sm whitespace-normal p-4 text-xl font-bold" onClick={() => { setMonitorId(m.id); setMode(null); }}>{m.name}</Button>)}
       {!state?.monitors?.length && <p className="text-muted-foreground">{online ? "Pulten har ingen roller endnu – teknikeren opretter dem under Indstillinger." : "Venter på pulten…"}</p>}
       <button onClick={() => { setMonitorId(""); setMode("lyrics"); }} className="text-sm text-muted-foreground underline">Ingen rolle – vis fælles tekst</button>

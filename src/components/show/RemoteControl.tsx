@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileBuilder } from "./MobileBuilder";
 import { PEER_PREFIX, isValidCode, normCode, type HostMsg, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
+import { rememberShow } from "@/lib/show/showHistory";
+
 const SAVED_KEY = "stagecue.paired";
 
 export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?: string | undefined; backToHub?: boolean; showId?: string }) {
@@ -60,7 +62,7 @@ export function RemoteControl({ initialCode, backToHub, showId }: { initialCode?
       c.on("data", (d) => {
         const m = d as HostMsg;
         if (m.t === "denied") { dead = true; clearTimeout(retry); setStatus("denied"); return; }
-        if (m.t === "state") setState(m.s);
+        if (m.t === "state") { setState(m.s); rememberShow(target, m.s.showName); }
         else if (m.t === "audio") {
           if (!m.buf) { setPreview(null); alert("Lydfilen findes ikke på pulten."); return; }
           const url = URL.createObjectURL(new Blob([m.buf], { type: m.mime }));

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { emptyShow, parseShow } from "@/lib/show/logic";
 import { isValidCode, normCode } from "@/lib/show/remote";
+import { readHist, forgetShow, type Hist } from "@/lib/show/showHistory";
 
 export const Route = createFileRoute("/_authenticated/hub")({
   head: () => ({
@@ -32,6 +33,8 @@ function Hub() {
   const joinOk = isValidCode(joinCode);
 
   const [shared, setShared] = useState<{ id: string; name: string; remote_code: string | null }[]>([]);
+  const [hist, setHist] = useState<Hist[]>([]);
+  useEffect(() => setHist(readHist()), []);
   const [inviteFor, setInviteFor] = useState<string | null>(null);
   const load = async () => {
     const { data } = await supabase.from("shows").select("id,name,updated_at").order("updated_at", { ascending: false });
@@ -110,6 +113,17 @@ function Hub() {
             <button disabled={!joinOk} onClick={() => nav({ to: "/view", search: { code: joinCode } })} className="rounded-lg bg-go px-3 py-3 font-bold text-go-foreground disabled:opacity-40">🎤 Som musiker</button>
             <button disabled={!joinOk} onClick={() => nav({ to: "/remote", search: { code: joinCode } })} className="rounded-lg bg-secondary px-3 py-3 font-bold disabled:opacity-40">📱 Fjernbetjening</button>
           </div>
+          {hist.length > 0 && <div className="mt-4">
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Seneste tilsluttede shows</h3>
+            <div className="flex flex-col gap-2">
+              {hist.map((h) => <div key={h.code} className="flex flex-wrap items-center gap-2 rounded-lg bg-background p-2">
+                <div className="min-w-0 flex-1"><div className="truncate font-bold">{h.name}</div><div className="font-mono text-xs text-muted-foreground">{h.code} · {new Date(h.at).toLocaleString("da-DK")}</div></div>
+                <button onClick={() => nav({ to: "/view", search: { code: h.code, ...(h.monitor ? { monitor: h.monitor } : {}) } })} className="rounded-lg bg-go px-3 py-2 text-sm font-bold text-go-foreground">🎤 Monitor</button>
+                <button onClick={() => nav({ to: "/remote", search: { code: h.code } })} className="rounded-lg bg-secondary px-3 py-2 text-sm font-bold">📱 Fjern</button>
+                <button aria-label={`Fjern ${h.name}`} onClick={() => setHist(forgetShow(h.code))} className="rounded px-2 py-2 text-muted-foreground hover:text-destructive">✕</button>
+              </div>)}
+            </div>
+          </div>}
           <p className="mt-2 text-xs text-muted-foreground">Fjernbetjening virker kun hvis du er logget ind som showets ejer.</p>
         </section>
 
