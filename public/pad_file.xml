@@ -29,7 +29,7 @@
   </Company_Info>
   <Program_Info>
     <Program_Name>StageCue</Program_Name>
-    <Program_Version>1.0.1</Program_Version>
+    <Program_Version>1.0.3</Program_Version>
     <Program_Release_Month>11</Program_Release_Month>
     <Program_Release_Day>20</Program_Release_Day>
     <Program_Release_Year>2026</Program_Release_Year>
@@ -73,7 +73,7 @@
       <Application_XML_File_URL>https://stagecueshow.com/pad_file.xml</Application_XML_File_URL>
     </Application_URLs>
     <Download_URLs>
-      <Primary_Download_URL>https://stagecueshow.com/__l5e/assets-v1/2f862720-3af4-434b-95c9-2f4b502a4066/StageCue_1.0.1_x64-setup.exe</Primary_Download_URL>
+      <Primary_Download_URL>https://stagecueshow.com/__l5e/assets-v1/c620f083-417e-42a3-a14e-949c2c66562d/StageCue_1.0.3_x64-setup.exe</Primary_Download_URL>
       <Secondary_Download_URL>https://stagecueshow.com/download</Secondary_Download_URL>
     </Download_URLs>
   </Web_Info>
