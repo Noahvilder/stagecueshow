@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="da"><head><meta charset="utf-8"><title>StageCue</title>
+<style>
+html,body{margin:0;height:100%;background:#0b0d13;color:#e6e8ee;font-family:Segoe UI,system-ui,sans-serif}
+.w{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
+img{width:96px;height:96px}.s{opacity:.7}
+.sp{width:28px;height:28px;border:3px solid #2a2f3d;border-top-color:#3ddc84;border-radius:50%;animation:r 1s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+button{background:#3ddc84;color:#0b0d13;border:0;padding:10px 22px;border-radius:8px;font-weight:600;cursor:pointer;display:none}
+</style></head><body><div class="w">
+<img src="logo.png" alt="StageCue"><div class="sp" id="sp"></div>
+<div class="s" id="msg">Indlæser pulten…</div>
+<button id="b" onclick="go()">Prøv igen</button></div>
+<script>
+var URL_="https://stagecueshow.com/hub";
+function fail(){document.getElementById('sp').style.display='none';document.getElementById('msg').textContent='Kunne ikke forbinde til StageCue. Tjek din internetforbindelse.';document.getElementById('b').style.display='inline-block';}
+function go(){document.getElementById('sp').style.display='block';document.getElementById('b').style.display='none';document.getElementById('msg').textContent='Indlæser pulten…';
+ if(!navigator.onLine){fail();return;}
+ fetch("https://stagecueshow.com/favicon.ico",{mode:"no-cors",cache:"no-store"}).then(function(){location.replace(URL_);}).catch(fail);}
+go();
+</script></body></html>
