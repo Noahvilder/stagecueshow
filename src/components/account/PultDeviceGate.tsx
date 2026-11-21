@@ -3,10 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { getDeviceId, guessDeviceName, MAX_PULT_DEVICES } from "@/lib/show/device";
 import { DeviceList } from "./DeviceList";
+import { isOffline } from "@/lib/desktop";
 
 export function PultDeviceGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "ok" | "limit" | "error">("checking");
   const check = async () => {
+    if (isOffline()) return setState("ok");
     setState("checking");
     const { data, error } = await supabase.rpc("claim_pult_device", { _device_id: getDeviceId(), _device_name: guessDeviceName() });
     if (error) return setState("error");

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as IndexDothtmlRouteImport } from './routes/index[.]html'
 import { Route as MidiPedalGuideRouteImport } from './routes/midi-pedal-guide'
 import { Route as PriserRouteImport } from './routes/priser'
 import { Route as PrivatlivRouteImport } from './routes/privatliv'
@@ -48,6 +49,11 @@ const AuthRoute = AuthRouteImport.update({
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexDothtmlRoute = IndexDothtmlRouteImport.update({
+  id: '/index.html',
+  path: '/index.html',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MidiPedalGuideRoute = MidiPedalGuideRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
+  '/index.html': typeof IndexDothtmlRoute
   '/midi-pedal-guide': typeof MidiPedalGuideRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
+  '/index.html': typeof IndexDothtmlRoute
   '/midi-pedal-guide': typeof MidiPedalGuideRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/download': typeof DownloadRoute
+  '/index.html': typeof IndexDothtmlRoute
   '/midi-pedal-guide': typeof MidiPedalGuideRoute
   '/priser': typeof PriserRoute
   '/privatliv': typeof PrivatlivRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/download'
+    | '/index.html'
     | '/midi-pedal-guide'
     | '/priser'
     | '/privatliv'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/download'
+    | '/index.html'
     | '/midi-pedal-guide'
     | '/priser'
     | '/privatliv'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/download'
+    | '/index.html'
     | '/midi-pedal-guide'
     | '/priser'
     | '/privatliv'
@@ -282,6 +294,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   DownloadRoute: typeof DownloadRoute
+  IndexDothtmlRoute: typeof IndexDothtmlRoute
   MidiPedalGuideRoute: typeof MidiPedalGuideRoute
   PriserRoute: typeof PriserRoute
   PrivatlivRoute: typeof PrivatlivRoute
@@ -323,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/download'
       fullPath: '/download'
       preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/index.html': {
+      id: '/index.html'
+      path: '/index.html'
+      fullPath: '/index.html'
+      preLoaderRoute: typeof IndexDothtmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/midi-pedal-guide': {
@@ -473,6 +493,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DownloadRoute: DownloadRoute,
+  IndexDothtmlRoute: IndexDothtmlRoute,
   MidiPedalGuideRoute: MidiPedalGuideRoute,
   PriserRoute: PriserRoute,
   PrivatlivRoute: PrivatlivRoute,

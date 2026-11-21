@@ -12,6 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - name: Build offline app files
+        run: bun run build
+        env:
+          STAGECUE_DESKTOP: "1"
       - run: bunx @tauri-apps/cli@2 icon src-tauri/app-icon.png
       - run: bunx @tauri-apps/cli@2 build
       - uses: actions/upload-artifact@v4

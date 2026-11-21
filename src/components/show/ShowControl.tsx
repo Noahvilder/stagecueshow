@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { loadShow, saveShow } from "@/lib/show/localShows";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
@@ -158,8 +159,8 @@ export function ShowControl({ showId }: { showId: string }) {
 
   // load + autosave
   useEffect(() => {
-    supabase.from("shows").select("name,data").eq("id", showId).single().then(({ data, error: e }) => {
-      if (e || !data) { setError("Kunne ikke hente show: " + (e?.message ?? "ikke fundet")); return; }
+    loadShow(showId).then((data) => {
+      if (!data) { setError("Kunne ikke hente show: ikke fundet"); return; }
       try { setShow(parseShow(JSON.stringify({ ...emptyShow(), ...(data.data as object), name: data.name }))); } catch { setShow({ ...emptyShow(), name: data.name }); }
       setLoaded(true);
     });
@@ -205,8 +206,8 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!loaded) return;
     setSaved("saving");
     const t = setTimeout(async () => {
-      const { error: e } = await supabase.from("shows").update({ name: show.name, data: show as never, updated_at: new Date().toISOString() }).eq("id", showId);
-      setSaved(e ? "error" : "ok");
+      const ok = await saveShow(showId, show.name, show);
+      setSaved(ok ? "ok" : "error");
     }, 700);
     return () => clearTimeout(t);
   }, [show, loaded]);

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { emptyShow, parseShow } from "@/lib/show/logic";
 import { isValidCode, normCode } from "@/lib/show/remote";
+import { isOffline } from "@/lib/desktop";
+import { listShows, createShow, deleteShow } from "@/lib/show/localShows";
 import { readHist, forgetShow, type Hist } from "@/lib/show/showHistory";
 
 export const Route = createFileRoute("/_authenticated/hub")({
@@ -37,8 +39,8 @@ function Hub() {
   useEffect(() => setHist(readHist()), []);
   const [inviteFor, setInviteFor] = useState<string | null>(null);
   const load = async () => {
-    const { data } = await supabase.from("shows").select("id,name,updated_at").order("updated_at", { ascending: false });
-    setRows(data ?? []);
+    setRows(await listShows());
+    if (isOffline()) return;
     const sh = await supabase.rpc("shared_shows");
     setShared(sh.data ?? []);
   };
@@ -46,7 +48,7 @@ function Hub() {
     const m = localStorage.getItem(MODE_KEY);
     if (m === "pc" || m === "mobile") setMode(m);
     else setMode(window.matchMedia("(max-width: 700px)").matches ? "mobile" : "pc");
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+    if (!isOffline()) supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
     load();
   }, []);
 
@@ -54,13 +56,11 @@ function Hub() {
   const open = (id: string) => nav({ to: mode === "mobile" ? "/mobile/$showId" : "/pc/$showId", params: { showId: id } });
 
   const create = async (show = emptyShow()) => {
-    const { data, error } = await supabase.from("shows").insert({ name: show.name, data: show as never }).select("id").single();
-    if (error) return alert(error.message);
-    open(data.id);
+    try { open(await createShow(show.name, show)); } catch (e) { alert((e as Error).message); }
   };
   const del = async (r: Row) => {
     if (!confirm(`Slet "${r.name}"?`)) return;
-    await supabase.from("shows").delete().eq("id", r.id);
+    await deleteShow(r.id);
     load();
   };
   const signOut = async () => { await supabase.auth.signOut(); nav({ to: "/auth", replace: true }); };
@@ -72,8 +72,8 @@ function Hub() {
           <div className="flex items-center gap-3"><button onClick={() => nav({ to: "/show" })} className="web-only rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</button><span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span></div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="hidden truncate sm:inline">{email}</span>
-            <button onClick={() => nav({ to: "/konto" })} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Konto</button>
-            <button onClick={signOut} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Log ud</button>
+            {!isOffline() && <><button onClick={() => nav({ to: "/konto" })} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Konto</button>
+            <button onClick={signOut} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Log ud</button></>}
           </div>
         </header>
 
@@ -149,7 +149,7 @@ function Hub() {
                   <div className="truncate text-lg font-bold">{r.name}</div>
                   <div className="text-xs text-muted-foreground">Ændret {new Date(r.updated_at).toLocaleString("da-DK")}</div>
                 </button>
-                <button onClick={() => setInviteFor(inviteFor === r.id ? null : r.id)} className="rounded px-3 py-2 text-sm font-semibold">👥 Invitér</button>
+                {!isOffline() && <button onClick={() => setInviteFor(inviteFor === r.id ? null : r.id)} className="rounded px-3 py-2 text-sm font-semibold">👥 Invitér</button>}
                 <button onClick={() => del(r)} className="rounded px-3 py-2 text-sm text-destructive">Slet</button>
                 <button onClick={() => open(r.id)} className="rounded-lg bg-go px-4 py-2 font-bold text-go-foreground">Åbn</button>
               </div>

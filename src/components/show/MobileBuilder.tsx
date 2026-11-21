@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { loadShow, saveShow } from "@/lib/show/localShows";
 import { DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, newCue, newMidiMsg, parseShow, uid, MIDI_KINDS, midiKindInfo, noteName } from "@/lib/show/logic";
 import type { Cue, CueType, Follow, MidiMsg, Show } from "@/lib/show/types";
 import { MonitorNotes } from "./MonitorNotes";
@@ -19,7 +19,7 @@ export function MobileBuilder({ showId, connected, push, ports, testMidi }: { sh
   pushRef.current = push;
 
   useEffect(() => {
-    supabase.from("shows").select("name,data").eq("id", showId).single().then(({ data }) => {
+    loadShow(showId).then((data) => {
       if (!data) return;
       let s: Show;
       try { s = parseShow(JSON.stringify({ ...emptyShow(), ...(data.data as object), name: data.name })); } catch { s = { ...emptyShow(), name: data.name }; }
@@ -33,8 +33,8 @@ export function MobileBuilder({ showId, connected, push, ports, testMidi }: { sh
     setSaved("saving");
     const t = setTimeout(async () => {
       if (connected) pushRef.current(show);
-      const { error } = await supabase.from("shows").update({ name: show.name, data: show as never, updated_at: new Date().toISOString() }).eq("id", showId);
-      setSaved(error ? "error" : "ok");
+      const ok = await saveShow(showId, show.name, show);
+      setSaved(ok ? "ok" : "error");
     }, 600);
     return () => clearTimeout(t);
   }, [show, showId, connected]);

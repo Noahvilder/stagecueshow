@@ -28,3 +28,6 @@ export function installDesktopGuards(navigate: (to: string) => void): () => void
   window.addEventListener("popstate", pop);
   return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("mouseup", mouse, true); window.removeEventListener("mousedown", mouse, true); document.removeEventListener("click", click, true); window.removeEventListener("popstate", pop); };
 }
+
+/** True when running from the bundled offline files inside the Windows app (never touches the internet for login/shows). */
+export const isOffline = () => isDesktop() && (location.protocol === "tauri:" || location.hostname === "tauri.localhost");
