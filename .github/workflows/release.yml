@@ -17,6 +17,18 @@ jobs:
         run: bun run build
         env:
           STAGECUE_DESKTOP: "1"
+      - name: Copy offline files into app folder
+        shell: bash
+        run: |
+          SRC=dist/client
+          if [ ! -f "$SRC/index.html" ]; then
+            SRC=$(dirname "$(find dist .output -name index.html -not -path '*/node_modules/*' 2>/dev/null | head -n1)")
+          fi
+          echo "Using $SRC"; ls -la "$SRC"
+          test -f "$SRC/index.html"
+          rm -rf src-tauri/dist && mkdir -p src-tauri/dist
+          cp -r "$SRC"/. src-tauri/dist/
+          ls -la src-tauri/dist
       - run: bunx @tauri-apps/cli@2 icon src-tauri/app-icon.png
       - run: bunx @tauri-apps/cli@2 build
       - uses: actions/upload-artifact@v4
