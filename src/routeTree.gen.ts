@@ -26,6 +26,7 @@ import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hu
 import { Route as AuthenticatedKontoRouteImport } from './routes/_authenticated/konto'
 import { Route as AuthenticatedRemoteRouteImport } from './routes/_authenticated/remote'
 import { Route as AuthenticatedViewRouteImport } from './routes/_authenticated/view'
+import { Route as HubIndexDothtmlRouteImport } from './routes/hub/index[.]html'
 import { Route as AuthenticatedMobileShowIdRouteImport } from './routes/_authenticated/mobile.$showId'
 import { Route as AuthenticatedPcShowIdRouteImport } from './routes/_authenticated/pc.$showId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -115,6 +116,11 @@ const AuthenticatedViewRoute = AuthenticatedViewRouteImport.update({
   path: '/view',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const HubIndexDothtmlRoute = HubIndexDothtmlRouteImport.update({
+  id: '/hub/index.html',
+  path: '/hub/index.html',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedMobileShowIdRoute =
   AuthenticatedMobileShowIdRouteImport.update({
     id: '/mobile/$showId',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/konto': typeof AuthenticatedKontoRoute
   '/remote': typeof AuthenticatedRemoteRoute
   '/view': typeof AuthenticatedViewRoute
+  '/hub/index.html': typeof HubIndexDothtmlRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/konto': typeof AuthenticatedKontoRoute
   '/remote': typeof AuthenticatedRemoteRoute
   '/view': typeof AuthenticatedViewRoute
+  '/hub/index.html': typeof HubIndexDothtmlRoute
   '/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/pc/$showId': typeof AuthenticatedPcShowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/_authenticated/konto': typeof AuthenticatedKontoRoute
   '/_authenticated/remote': typeof AuthenticatedRemoteRoute
   '/_authenticated/view': typeof AuthenticatedViewRoute
+  '/hub/index.html': typeof HubIndexDothtmlRoute
   '/_authenticated/mobile/$showId': typeof AuthenticatedMobileShowIdRoute
   '/_authenticated/pc/$showId': typeof AuthenticatedPcShowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/konto'
     | '/remote'
     | '/view'
+    | '/hub/index.html'
     | '/mobile/$showId'
     | '/pc/$showId'
     | '/api/public/payments/webhook'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/konto'
     | '/remote'
     | '/view'
+    | '/hub/index.html'
     | '/mobile/$showId'
     | '/pc/$showId'
     | '/api/public/payments/webhook'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/_authenticated/konto'
     | '/_authenticated/remote'
     | '/_authenticated/view'
+    | '/hub/index.html'
     | '/_authenticated/mobile/$showId'
     | '/_authenticated/pc/$showId'
     | '/api/public/payments/webhook'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   ShowRoute: typeof ShowRoute
   SupportRoute: typeof SupportRoute
   VilkaarRoute: typeof VilkaarRoute
+  HubIndexDothtmlRoute: typeof HubIndexDothtmlRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -403,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedViewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/hub/index.html': {
+      id: '/hub/index.html'
+      path: '/hub/index.html'
+      fullPath: '/hub/index.html'
+      preLoaderRoute: typeof HubIndexDothtmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/mobile/$showId': {
       id: '/_authenticated/mobile/$showId'
       path: '/mobile/$showId'
@@ -462,6 +482,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShowRoute: ShowRoute,
   SupportRoute: SupportRoute,
   VilkaarRoute: VilkaarRoute,
+  HubIndexDothtmlRoute: HubIndexDothtmlRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
