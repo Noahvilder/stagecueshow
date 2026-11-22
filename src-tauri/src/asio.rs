@@ -16,7 +16,7 @@ pub struct Info { pub channels: u16, pub rate: u32 }
 mod imp {
     use super::*;
     use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-    use cpal::{FromSample, SizedSample};
+    use cpal::{FromSample, Sample, SizedSample};
 
     fn host() -> Result<cpal::Host, String> { cpal::host_from_id(cpal::HostId::Asio).map_err(|e| e.to_string()) }
 
@@ -76,11 +76,11 @@ mod imp {
 pub fn asio_list() -> Vec<String> { imp::list() }
 
 #[tauri::command]
-pub fn asio_open(name: String, st: tauri::State<Asio>) -> Result<Info, String> { imp::open(&st, &name) }
+pub fn asio_open(name: String, st: tauri::State<'_, Asio>) -> Result<Info, String> { imp::open(&st, &name) }
 
 /// Raw body = interleaved little-endian f32 frames for all device channels.
 #[tauri::command]
-pub fn asio_push(req: tauri::ipc::Request, st: tauri::State<Asio>) -> Result<(), String> {
+pub fn asio_push(req: tauri::ipc::Request<'_>, st: tauri::State<'_, Asio>) -> Result<(), String> {
     let tauri::ipc::InvokeBody::Raw(bytes) = req.body() else { return Err("forventede rå lyddata".into()) };
     let cap = st.open.lock().unwrap().as_ref().map(|(_, ch, rate, _)| *ch as usize * *rate as usize / 4).unwrap_or(0);
     let mut b = st.buf.lock().unwrap();

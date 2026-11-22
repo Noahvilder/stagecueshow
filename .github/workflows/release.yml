@@ -31,13 +31,14 @@ jobs:
           ls -la src-tauri/dist
       - run: bunx @tauri-apps/cli@2 icon src-tauri/app-icon.png
       - name: Get Steinberg ASIO SDK
-        shell: bash
+        shell: pwsh
         run: |
-          curl -L -o asiosdk.zip https://www.steinberg.net/asiosdk
-          unzip -q asiosdk.zip -d asiosdk
-          DIR=$(dirname "$(find "$PWD/asiosdk" -type d -name common | head -n1)")
-          echo "CPAL_ASIO_DIR=$DIR" >> "$GITHUB_ENV"
-          echo "Using $DIR"
+          Invoke-WebRequest -Uri https://www.steinberg.net/asiosdk -OutFile asiosdk.zip
+          Expand-Archive asiosdk.zip -DestinationPath asiosdk
+          $common = Get-ChildItem -Recurse -Directory asiosdk | Where-Object { $_.Name -eq 'common' } | Select-Object -First 1
+          $dir = $common.Parent.FullName
+          "CPAL_ASIO_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "Using $dir"
       - run: bunx @tauri-apps/cli@2 build
       - uses: actions/upload-artifact@v4
         with:
