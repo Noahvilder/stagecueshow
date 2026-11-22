@@ -74,6 +74,8 @@ const D: Record<string, Row> = {
   "Nulstil": ["Reset", "Zurücksetzen", "Réinitialiser", "Restablecer", "Återställ", "Tilbakestill"],
   "Gå til": ["Go to", "Gehe zu", "Aller à", "Ir a", "Gå till", "Gå til"],
   "Skjul fejlbeskeden – den kommer igen, hvis fejlen opstår igen": ["Hide the warning – it returns if the problem happens again", "Warnung ausblenden – sie kommt wieder, wenn der Fehler erneut auftritt", "Masquer – revient si le problème se reproduit", "Ocultar – vuelve si el problema se repite", "Dölj varningen – den kommer tillbaka om felet uppstår igen", "Skjul advarselen – den kommer igjen hvis feilen oppstår igjen"],
+  "MIDI-beskeder": ["MIDI messages", "MIDI-Nachrichten", "Messages MIDI", "Mensajes MIDI", "MIDI-meddelanden", "MIDI-meldinger"],
+  "Tilføj besked": ["Add message", "Nachricht hinzufügen", "Ajouter un message", "Añadir mensaje", "Lägg till meddelande", "Legg til melding"],
   "Gemmer…": ["Saving…", "Speichert…", "Enregistrement…", "Guardando…", "Sparar…", "Lagrer…"],
   "Ikke gemt!": ["Not saved!", "Nicht gespeichert!", "Non enregistré !", "¡No guardado!", "Inte sparat!", "Ikke lagret!"],
   "✓ Gemt i skyen": ["✓ Saved to cloud", "✓ In der Cloud gespeichert", "✓ Enregistré dans le cloud", "✓ Guardado en la nube", "✓ Sparat i molnet", "✓ Lagret i skyen"],

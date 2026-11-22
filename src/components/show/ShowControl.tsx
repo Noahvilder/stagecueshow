@@ -12,7 +12,7 @@ import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong, insertCue, shiftCue,
   newCue, cueAsDefault, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
 } from "@/lib/show/logic";
-import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
+import type { Cue, CueType, MidiKind, MidiMsg, Show } from "@/lib/show/types";
 import { ioName } from "@/lib/show/types";
 import { isSlot, numberExisting, resolveOut, slotLabel, slotNum, slotRef, slots, type PatchKind, type PatchSlot } from "@/lib/show/patch";
 import { RemoteHost } from "./RemoteHost";
@@ -1471,6 +1471,23 @@ type SetTab = "audio" | "midi" | "patch" | "prefs" | "monitors" | "look" | "gene
 const SET_TABS: [SetTab, string][] = [["audio", "🔊 Lyd"], ["midi", "🎹 MIDI"], ["patch", "🔀 Patch-matrix"], ["prefs", "⚙️ Preferences"], ["monitors", "📱 Scenemonitors"], ["look", "🎨 Udseende"], ["general", "💾 Generelt & Panic"]];
 const PREF_SKIP = new Set(["id", "type", "messages", "children", "fileId", "fileName", "monitorNotes", "number", "ref", "startTime", "endTime", "outputId", "target", "targetId"]);
 const PREF_LABEL: Record<string, string> = { name: "Navn", follow: "Efter cue", preWait: "Pre-wait (s)", postWait: "Post-wait (s)", volume: "Volumen (dB)", pan: "Pan", fadeIn: "Fade ind (s)", fadeOut: "Fade ud (s)", loop: "Loop", duration: "Varighed (s)", channel: "Kanal", host: "IP", port: "Port", address: "Adresse" };
+/** Default MIDI messages for new MIDI cues: type, channel and data values. */
+function MidiPref({ msgs, onChange }: { msgs: MidiMsg[]; onChange: (m: MidiMsg[]) => void }) {
+  const tr = useTrApp();
+  const set = (i: number, p: Partial<MidiMsg>) => onChange(msgs.map((m, j) => (j === i ? { ...m, ...p } : m)));
+  return <div className="mt-3 flex flex-col gap-2">
+    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{tr("MIDI-beskeder")}</div>
+    {msgs.map((m, i) => { const info = midiKindInfo(m.kind); return (
+      <div key={i} className="flex flex-wrap items-end gap-2 rounded border border-border p-2">
+        <Field label={tr("Type")}><select className={inputCls} value={m.kind} onChange={(e) => { const k = midiKindInfo(e.target.value as MidiKind); set(i, { kind: k.kind, data1: k.def1 ?? m.data1, data2: k.def2 ?? m.data2 }); }}>{MIDI_KINDS.map((k) => <option key={k.kind} value={k.kind}>{k.label}</option>)}</select></Field>
+        {info.channel && <Field label={tr("Kanal")}><Num value={m.channel} onChange={(n) => set(i, { channel: Math.max(1, Math.min(16, n)) })} /></Field>}
+        {info.d1 && <Field label={`${tr(info.d1.label)}${info.d1.note ? ` (${noteName(m.data1)})` : ""}`}><Num value={m.data1} onChange={(n) => set(i, { data1: Math.max(0, Math.min(info.d1!.max, n)) })} /></Field>}
+        {info.d2 && <Field label={tr(info.d2.label)}><Num value={m.data2} onChange={(n) => set(i, { data2: Math.max(0, Math.min(info.d2!.max, n)) })} /></Field>}
+        {msgs.length > 1 && <Btn onClick={() => onChange(msgs.filter((_, j) => j !== i))}>✕</Btn>}
+      </div>); })}
+    <Btn onClick={() => onChange([...msgs, newMidiMsg()])}>+ {tr("Tilføj besked")}</Btn>
+  </div>;
+}
 /** Preferences: starting values for every new cue, per cue type. Saved in the show. */
 function PrefsSection({ show, setShow }: { show: Show; setShow: (s: Show) => void }) {
   const tr = useTrApp();
@@ -1484,6 +1501,7 @@ function PrefsSection({ show, setShow }: { show: Show; setShow: (s: Show) => voi
           if (k === "follow") return <Field key={k} label={label}><select className={inputCls} value={String(v)} onChange={(e) => setVal(t, k, e.target.value)}><option value="manual">{tr("Manuel")}</option><option value="withStart">{tr("Start sammen med")}</option><option value="afterEnd">{tr("Efter slut")}</option></select></Field>;
           if (typeof v === "number") return <Field key={k} label={label}><Num value={v} onChange={(n) => setVal(t, k, n)} /></Field>;
           return <Field key={k} label={label}><input className={inputCls} value={String(v)} onChange={(e) => setVal(t, k, e.target.value)} /></Field>; })}</div>
+        {t === "midi" && <MidiPref msgs={(c["messages"] as MidiMsg[]) ?? []} onChange={(m) => setVal(t, "messages", m)} />}
       </Section>; })}
   </>;
 }
