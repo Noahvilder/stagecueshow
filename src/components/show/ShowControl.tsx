@@ -170,7 +170,7 @@ export function ShowControl({ showId }: { showId: string }) {
         setMidiLog((l) => [row, ...l].slice(0, 300));
       };
       engineRef.current.onMidiPorts = (outs, ins) => { setMidiPorts(outs); setMidiIns(ins); };
-      engineRef.current.resolveAudio = (id) => resolveOut(patchRef.current.show, "audio", id, patchRef.current.outputs);
+      engineRef.current.resolveAudio = (id) => resolveOut(patchRef.current.show, "audio", id || patchRef.current.show.paOut || "", patchRef.current.outputs);
       engineRef.current.resolveMidi = (p) => resolveOut(patchRef.current.show, "midi", p);
     }
     return engineRef.current;
@@ -951,6 +951,8 @@ export function ShowControl({ showId }: { showId: string }) {
               needPro={needPro}
               channelCount={(o) => engine().channelCount(o)}
               testTone={(o, ch, m) => { void engine().testTone(o, ch, m); }}
+              pfl={(fid, end) => { void engine().pfl(fid, show.pflOut || "", show.pflCh ?? 1, end).catch(() => { setError("Forlyt kunne ikke afspilles"); end(); }); }}
+              stopPfl={() => engine().stopPfl()}
               onSaveDefault={(c) => setShow((s) => ({ ...s, cueDefaults: { ...s.cueDefaults, [c.type]: cueAsDefault(c) } }))}
               onResetDefault={(t) => setShow((s) => { const d = { ...s.cueDefaults }; delete d[t]; return { ...s, cueDefaults: d }; })}
             />
@@ -1138,6 +1140,8 @@ function Inspector(props: {
   needPro: (f: ProFeature) => boolean;
   channelCount: (outputId: string) => Promise<number>;
   testTone?: (outputId: string, ch: number, mono: boolean) => void;
+  pfl: (fileId: string, onEnd: () => void) => void;
+  stopPfl: () => void;
   inGroup?: boolean;
   onSaveDefault?: (c: Cue) => void;
   onResetDefault?: (t: CueType) => void;
@@ -1208,7 +1212,7 @@ function Inspector(props: {
             </Field>
           )}
           {cue.fileId && cue.click && <ClickExport fileId={cue.fileId} name={cue.name} click={cue.click} />}
-          {cue.fileId && <Field label="Forlyt (PFL) · Pro"><PflButton fileId={cue.fileId} allow={() => props.needPro("pfl")} /></Field>}
+          {cue.fileId && <Field label="Forlyt (PFL) · Pro"><PflButton fileId={cue.fileId} allow={() => props.needPro("pfl")} play={props.pfl} stop={props.stopPfl} /></Field>}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
               {slots(show, "audio").length > 0 && <optgroup label={tr("Nummererede udgange")}>{slots(show, "audio").map((sl, i) => <option key={i} value={slotRef(i + 1)}>{slotLabel(i + 1, sl, "audio")}</option>)}</optgroup>}
@@ -1375,6 +1379,29 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
   );
 }
 
+function BusSection({ show, setShow, outputs }: { show: Show; setShow: (s: Show) => void; outputs: Output[] }) {
+  const tr = useTrApp();
+  const sel = "min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm";
+  const row = (label: string, tip: string, out: "paOut" | "pflOut", chKey: "paCh" | "pflCh", withCh: boolean) => (
+    <div className="flex flex-wrap items-center gap-2 border-b border-border py-1.5" title={tip}>
+      <span className="w-32 shrink-0 text-sm font-semibold">{tr(label)}</span>
+      <select className={sel} value={show[out] ?? ""} onChange={(e) => setShow({ ...show, [out]: e.target.value })}>
+        <option value="">{tr("Windows standard")}</option>
+        {slots(show, "audio").length > 0 && <optgroup label={tr("Nummererede udgange")}>{slots(show, "audio").map((sl, i) => <option key={i} value={slotRef(i + 1)}>{slotLabel(i + 1, sl, "audio")}</option>)}</optgroup>}
+        {outputs.map((o) => <option key={o.id} value={o.id}>{ioName(o.label, show.ioAliases?.audio?.[o.id])}</option>)}
+      </select>
+      {withCh && <label className="flex items-center gap-1 text-sm">Ch <input type="number" min={1} max={32} className="w-16 rounded border border-border bg-background px-2 py-1 text-sm" value={show[chKey] ?? 1} onChange={(e) => setShow({ ...show, [chKey]: Math.max(1, Math.min(32, Number(e.target.value) || 1)) })} /></label>}
+    </div>
+  );
+  return (
+    <div className="mb-4">
+      <div className="mb-1 text-sm font-semibold">{tr("PA og PAFL")}</div>
+      {row("PA (standard)", "Cues uden valgt lydudgang spiller her", "paOut", "paCh", false)}
+      {row("PAFL / forlyt", "Forlyt-knappen i cue-editoren spiller her, fx dine høretelefoner", "pflOut", "pflCh", true)}
+    </div>
+  );
+}
+
 function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setShow: (s: Show) => void; midiPorts: string[]; outputs: Output[] }) {
   const setList = (kind: PatchKind, list: PatchSlot[]) => setShow({ ...show, patch: { ...show.patch, [kind]: list } });
   const sel = "min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm";
@@ -1454,6 +1481,7 @@ function Settings(props: {
         </Section>
         <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
         <div className="mb-5 flex items-center gap-3 rounded border border-border bg-muted/30 p-3 text-xs text-muted-foreground"><img src="/asio-compatible.svg" alt="ASIO compatible" className="h-8 w-auto" /><span>ASIO Technology by Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
+        <BusSection show={show} setShow={setShow} outputs={props.outputs} />
         <PatchSection show={show} setShow={setShow} midiPorts={props.midiPorts} outputs={props.outputs} />
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
           {props.midiPorts.length ? props.midiPorts.map((p) => (
@@ -1609,22 +1637,16 @@ function SetlistImport({ onClose, onImport }: { onClose: () => void; onImport: (
   );
 }
 
-function PflButton({ fileId, allow }: { fileId: string; allow: () => boolean }) {
-  const ref = useRef<HTMLAudioElement | null>(null);
+function PflButton({ fileId, allow, play, stop }: { fileId: string; allow: () => boolean; play: (f: string, end: () => void) => void; stop: () => void }) {
   const [on, setOn] = useState(false);
-  useEffect(() => () => { ref.current?.pause(); }, []);
-  const toggle = async () => {
-    if (on) { ref.current?.pause(); setOn(false); return; }
+  useEffect(() => () => stop(), [stop]);
+  const toggle = () => {
+    if (on) { stop(); setOn(false); return; }
     if (!allow()) return;
-    const blob = await getAudio(fileId);
-    if (!blob) return;
-    const a = new Audio(URL.createObjectURL(blob));
-    ref.current = a;
-    a.onended = () => setOn(false);
-    await a.play();
     setOn(true);
+    play(fileId, () => setOn(false));
   };
-  return <button title="Lyt til filen i standard-udgangen (fx høretelefoner) uden at starte cuet" onClick={toggle} className={`rounded px-3 py-1.5 text-sm font-bold ${on ? "bg-standby text-background" : "bg-secondary"}`}>{on ? "⏹ Stop forlyt" : "🎧 Forlyt"}</button>;
+  return <button title="Lyt til filen på PAFL-udgangen (vælges i Indstillinger) uden at starte cuet" onClick={toggle} className={`rounded px-3 py-1.5 text-sm font-bold ${on ? "bg-standby text-background" : "bg-secondary"}`}>{on ? "⏹ Stop forlyt" : "🎧 Forlyt"}</button>;
 }
 
 function ChannelPicker({ outputId, channel, mono, count, aliases, test, onChange }: { outputId: string; channel: number; mono: boolean; count: (o: string) => Promise<number>; aliases?: Record<string, string> | undefined; test?: (o: string, ch: number, mono: boolean) => void; onChange: (ch: number, mono: boolean) => void }) {

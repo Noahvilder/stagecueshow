@@ -89,6 +89,12 @@ export interface Show {
   cueDefaults?: Partial<Record<CueType, Record<string, unknown>>>;
   /** Numbered outputs ("Lyd 1", "MIDI 2"): cues point at the number, each PC picks the hardware. */
   /** Window layout of the pult, so it follows the show to another PC. */
+  /** Default PA output for cues with no output chosen (slot "#1" or hardware id). */
+  paOut?: string;
+  paCh?: number;
+  /** Pre-listen (PFL) output and first channel. */
+  pflOut?: string;
+  pflCh?: number;
   layout?: { wins?: Record<string, unknown>; snap?: string };
   /** fileId → file name inside the project folder's audio sub-folder. */
   audioFiles?: Record<string, string>;

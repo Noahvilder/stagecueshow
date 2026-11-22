@@ -95,6 +95,22 @@ export class Engine {
     o.connect(g); g.channelCount = 2; g.channelCountMode = "explicit";
     this.route(c, g, ch, mono); o.start(t); o.stop(t + 1.05);
   }
+  private pflSrc: AudioBufferSourceNode | null = null;
+  /** Pre-listen a file on the PFL output without firing the cue. Resolves when playback ends. */
+  async pfl(fileId: string, outputId: string, ch: number, onEnd: () => void) {
+    this.stopPfl();
+    const c = await this.ctx(outputId);
+    const buf = await this.buffer(fileId, c);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const g = c.createGain(); g.channelCount = 2; g.channelCountMode = "explicit";
+    src.connect(g);
+    // PFL bypasses the PA mute: route straight to the destination channels.
+    const n = c.destination.channelCount;
+    if (this.asioOut.has(c) || n > 2 || ch > 1) this.route(c, g, ch, false); else g.connect(c.destination);
+    src.onended = () => { if (this.pflSrc === src) this.pflSrc = null; onEnd(); };
+    src.start(); this.pflSrc = src;
+  }
+  stopPfl() { try { this.pflSrc?.stop(); } catch { /* already stopped */ } this.pflSrc = null; }
   /** Send a stereo node to channels ch/ch+1 (or ch only if mono) of the output. */
   private route(c: AudioContext, node: AudioNode, ch: number, mono: boolean) {
     const master = this.master(c);
@@ -142,12 +158,17 @@ export class Engine {
       this.ctxs.set(outputId, c);
     }
     if (!c) {
-      c = new AudioContext({ latencyHint: "interactive" });
       if (outputId) {
-        const any = c as AnyCtx;
-        if (any.setSinkId) await any.setSinkId(outputId).catch(() => this.onError("Kunne ikke vælge lydudgang – bruger standard"));
-        else this.onError("Browseren understøtter ikke valg af lydudgang");
-      }
+        // WebView2 honours the device most reliably when it is given at construction time.
+        try { c = new AudioContext({ latencyHint: "interactive", sinkId: outputId } as AudioContextOptions); } catch { c = undefined; }
+        const any = (c ?? new AudioContext({ latencyHint: "interactive" })) as AnyCtx;
+        c = any;
+        const cur = (any as unknown as { sinkId?: unknown }).sinkId;
+        if (cur !== outputId) {
+          if (any.setSinkId) await any.setSinkId(outputId).catch(() => this.onError("Kunne ikke vælge lydudgang – bruger standard"));
+          else this.onError("Browseren understøtter ikke valg af lydudgang");
+        }
+      } else c = new AudioContext({ latencyHint: "interactive" });
       this.ctxs.set(outputId, c);
     }
     if (c.state === "suspended") await c.resume();

@@ -4,6 +4,14 @@ import { LANGS, detectLang, type Lang } from "@/lib/site/i18n";
 /** The console is written in Danish; this maps Danish UI strings to the other languages. */
 type Row = [en: string, de: string, fr: string, es: string, sv: string, no: string];
 const D: Record<string, Row> = {
+  "PA og PAFL": ["PA and PAFL", "PA und PAFL", "PA et PAFL", "PA y PAFL", "PA och PAFL", "PA og PAFL"],
+  "PA (standard)": ["PA (default)", "PA (Standard)", "PA (par défaut)", "PA (predeterminado)", "PA (standard)", "PA (standard)"],
+  "PAFL / forlyt": ["PAFL / pre-listen", "PAFL / Vorhören", "PAFL / pré-écoute", "PAFL / preescucha", "PAFL / förlyssning", "PAFL / forlytt"],
+  "Windows standard": ["Windows default", "Windows-Standard", "Windows par défaut", "Predeterminado de Windows", "Windows standard", "Windows standard"],
+  "Cues uden valgt lydudgang spiller her": ["Cues without a chosen output play here", "Cues ohne gewählten Ausgang spielen hier", "Les cues sans sortie choisie jouent ici", "Los cues sin salida elegida suenan aquí", "Cues utan vald utgång spelar här", "Cues uten valgt utgang spiller her"],
+  "Forlyt-knappen i cue-editoren spiller her, fx dine høretelefoner": ["The pre-listen button in the cue editor plays here, e.g. your headphones", "Die Vorhör-Taste im Cue-Editor spielt hier, z. B. Kopfhörer", "Le bouton de pré-écoute joue ici, p. ex. votre casque", "El botón de preescucha suena aquí, p. ej. auriculares", "Förlyssningsknappen spelar här, t.ex. hörlurar", "Forlytt-knappen spiller her, f.eks. hodetelefoner"],
+  "Lyt til filen på PAFL-udgangen (vælges i Indstillinger) uden at starte cuet": ["Listen on the PAFL output (set in Settings) without firing the cue", "Auf dem PAFL-Ausgang vorhören, ohne den Cue zu starten", "Écouter sur la sortie PAFL sans lancer le cue", "Escuchar en la salida PAFL sin lanzar el cue", "Lyssna på PAFL-utgången utan att starta cuen", "Lytt på PAFL-utgangen uten å starte cuen"],
+  "Forlyt kunne ikke afspilles": ["Pre-listen could not play", "Vorhören fehlgeschlagen", "Pré-écoute impossible", "No se pudo preescuchar", "Förlyssning misslyckades", "Forlytt kunne ikke spilles"],
   "Filer": ["File", "Datei", "Fichier", "Archivo", "Arkiv", "Fil"],
   "Rediger": ["Edit", "Bearbeiten", "Édition", "Editar", "Redigera", "Rediger"],
   "Værktøjer": ["Tools", "Werkzeuge", "Outils", "Herramientas", "Verktyg", "Verktøy"],
