@@ -7,6 +7,7 @@ import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
 import { downloadBlob, renderClickVideo, safeName } from "@/lib/show/clickExport";
 import { collectFileIds, packArchive, unpackArchive } from "@/lib/show/archive";
+import { AUDIO_DIR, SHOW_FILE, audioRefs, diskNames, matchFiles, type AudioRef } from "@/lib/show/projectFolder";
 import {
   DEFAULT_TYPE_COLORS, TYPE_LABEL, cueColor, emptyShow, flatten, fmt, fmtTime, moveCue, moveSong, insertCue, shiftCue,
   newCue, cueAsDefault, newMidiMsg, MIDI_KINDS, midiKindInfo, noteName, nextStandbyIndex, parseShow, uid,
@@ -416,9 +417,100 @@ export function ShowControl({ showId }: { showId: string }) {
   const [fileSavedAt, setFileSavedAt] = useState<string | null>(null);
   const [autoSaveMin, setAutoSaveMin] = useState(0);
   useEffect(() => { const n = Number(localStorage.getItem("stagecue.autosave")); if (n > 0) setAutoSaveMin(n); }, []);
+  const projectDir = useRef<any>(null);
+  const [missing, setMissing] = useState<AudioRef[]>([]);
+  const [relinkMsg, setRelinkMsg] = useState<string | null>(null);
+  const refsKey = useMemo(() => audioRefs(show).map((r) => r.fileId).join(","), [show]);
+  const checkMissing = useCallback(async () => {
+    const out: AudioRef[] = [];
+    for (const r of audioRefs(show)) if (!(await getAudio(r.fileId))) out.push(r);
+    setMissing(out);
+  }, [refsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (loaded) void checkMissing(); }, [loaded, checkMissing]);
+  /** List audio files in a folder and its sub-folders (any language's folder name). */
+  const scanDir = async (dir: any, depth = 0): Promise<{ name: string; get: () => Promise<Blob> }[]> => {
+    const out: { name: string; get: () => Promise<Blob> }[] = [];
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind === "file" && /\.(wav|mp3|aiff?|flac|ogg|m4a|aac)$/i.test(name)) out.push({ name, get: () => h.getFile() });
+      else if (h.kind === "directory" && depth < 3) out.push(...(await scanDir(h, depth + 1)));
+    }
+    return out;
+  };
+  const loadMissingFrom = async (files: { name: string; get: () => Promise<Blob> }[], s: Show, need: AudioRef[]) => {
+    const hits = matchFiles(need, files, s.audioFiles);
+    for (const [id, f] of Object.entries(hits)) await putAudio(id, await f.get());
+    return Object.keys(hits).length;
+  };
+  /** Write any audio files the project folder doesn't have yet; returns updated name map. */
+  const syncFolder = async (dir: any, s: Show) => {
+    const refs = audioRefs(s);
+    const names = { ...diskNames(refs), ...(s.audioFiles ?? {}) };
+    const existing = Object.values(s.audioFiles ?? {}).map((n) => n.toLowerCase());
+    let audioDir: any = null;
+    for (const n of [...new Set([...Object.values(AUDIO_DIR)])]) { try { audioDir = await dir.getDirectoryHandle(n); break; } catch { /* næste */ } }
+    if (!audioDir) audioDir = await dir.getDirectoryHandle(AUDIO_DIR[lang], { create: true });
+    const fresh = diskNames(refs.filter((r) => !s.audioFiles?.[r.fileId]).map((r) => ({ ...r, fileName: existing.includes(r.fileName.toLowerCase()) ? `${r.fileId}_${r.fileName}` : r.fileName })));
+    Object.assign(names, fresh);
+    for (const r of refs) {
+      const b = await getAudio(r.fileId); if (!b) continue;
+      const name = names[r.fileId]!;
+      try { await audioDir.getFileHandle(name); continue; } catch { /* mangler – skriv */ }
+      const fh = await audioDir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(b); await w.close();
+    }
+    const map: Record<string, string> = {}; for (const r of refs) map[r.fileId] = names[r.fileId]!;
+    return map;
+  };
+  const saveAsFolder = async () => {
+    const picker = (window as any).showDirectoryPicker;
+    if (!picker) { setError("Din browser kan ikke gemme mapper – brug Windows-appen, Chrome eller Edge."); return; }
+    try {
+      const parent = await picker({ mode: "readwrite" });
+      const dir = await parent.getDirectoryHandle(show.name.replace(/[\\/:*?"<>|]/g, "").trim() || "Show", { create: true });
+      const audioFiles = await syncFolder(dir, show);
+      const next = { ...show, audioFiles }; setShow(next);
+      const h = await dir.getFileHandle(SHOW_FILE, { create: true });
+      const w = await h.createWritable(); await w.write(JSON.stringify({ ...withLayout(), audioFiles }, null, 2)); await w.close();
+      projectDir.current = dir; fileHandle.current = h; setFileName(`${dir.name}/${SHOW_FILE}`);
+      setFileSavedAt(`Gemt kl. ${new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`);
+    } catch (e) { if ((e as Error).name !== "AbortError") setError("Kunne ikke gemme mappen: " + (e as Error).message); }
+  };
+  const openFolder = async () => {
+    const picker = (window as any).showDirectoryPicker;
+    if (!picker) { setError("Din browser kan ikke åbne mapper – brug Windows-appen, Chrome eller Edge."); return; }
+    try {
+      const dir = await picker({ mode: "readwrite" });
+      let h: any = null;
+      try { h = await dir.getFileHandle(SHOW_FILE); } catch { for await (const [n, x] of dir.entries()) if (x.kind === "file" && n.endsWith(".stagecue.json")) { h = x; break; } }
+      if (!h) { setError(`Fandt ingen showfil (${SHOW_FILE}) i mappen.`); return; }
+      const s = parseShow(await (await h.getFile()).text());
+      const need: AudioRef[] = []; for (const r of audioRefs(s)) if (!(await getAudio(r.fileId))) need.push(r);
+      const n = need.length ? await loadMissingFrom(await scanDir(dir), s, need) : 0;
+      engine().panic(0); setShow(s); applyLayout(s); setStandbyId(null); setSelectedId(null);
+      projectDir.current = dir; fileHandle.current = h; setFileName(`${dir.name}/${h.name}`);
+      if (need.length) setRelinkMsg(n === need.length ? `✓ ${n} lydfiler indlæst fra mappen` : `${n} af ${need.length} lydfiler fundet i mappen`);
+    } catch (e) { if ((e as Error).name !== "AbortError") setError("Kunne ikke åbne mappen: " + (e as Error).message); }
+  };
+  const relinkInput = useRef<HTMLInputElement>(null);
+  const relinkFiles = async (files: { name: string; get: () => Promise<Blob> }[]) => {
+    const need = missing; const n = await loadMissingFrom(files, show, need);
+    await checkMissing();
+    setRelinkMsg(n === need.length ? `✓ ${n} lydfiler genfundet og klar til afspilning` : `${n} af ${need.length} lydfiler fundet – vælg en anden mappe for resten`);
+  };
+  const relink = async () => {
+    const picker = (window as any).showDirectoryPicker;
+    if (!picker) { relinkInput.current?.click(); return; }
+    try { await relinkFiles(await scanDir(await picker())); } catch (e) { if ((e as Error).name !== "AbortError") setError((e as Error).message); }
+  };
   const writeToHandle = async (auto = false) => {
     const h = fileHandle.current; if (!h) return false;
     try {
+      if (projectDir.current) {
+        const audioFiles = await syncFolder(projectDir.current, show);
+        setShow((s) => ({ ...s, audioFiles }));
+        const w = await h.createWritable(); await w.write(JSON.stringify({ ...withLayout(), audioFiles }, null, 2)); await w.close();
+        setFileSavedAt(`${auto ? "Auto-gemt" : "Gemt"} kl. ${new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`);
+        return true;
+      }
       const w = await h.createWritable();
       await w.write(JSON.stringify(withLayout(), null, 2));
       await w.close();
@@ -431,7 +523,7 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!picker) { downloadShow(); return; }
     try {
       const h = await picker({ suggestedName: `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue.json`, types: [{ description: "StageCue show", accept: { "application/json": [".json"] } }] });
-      fileHandle.current = h; setFileName(h.name);
+      fileHandle.current = h; projectDir.current = null; setFileName(h.name);
       await writeToHandle();
     } catch { /* annulleret */ }
   };
@@ -543,6 +635,9 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "Åbn show…", keys: "Ctrl+O", onClick: () => fileRef.current?.click(), disabled: locked },
           { label: "Gem show", keys: "Ctrl+S", onClick: exportShow },
           { label: "Gem som…", onClick: () => { trackFeature("file.save_as"); void saveAs(); } },
+          { label: "📁 Åbn projektmappe…", onClick: () => { trackFeature("file.open_folder"); void openFolder(); }, disabled: locked },
+          { label: "📁 Gem som projektmappe (show + lydfiler)…", onClick: () => { trackFeature("file.save_folder"); void saveAsFolder(); } },
+          { label: missing.length ? `🔎 Find ${missing.length} manglende lydfiler…` : "🔎 Find manglende lydfiler…", onClick: () => void relink(), disabled: !missing.length },
           { label: "Eksportér backup m. lyd (.stagecue)…", keys: "Ctrl+Shift+S", onClick: exportBackup },
           "sep",
           { label: "Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
@@ -625,6 +720,15 @@ export function ShowControl({ showId }: { showId: string }) {
           <button onClick={() => setResume(null)} className="rounded px-3 py-1 underline">{tr("Start forfra")}</button>
         </div>
       )}
+      {missing.length > 0 && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 bg-standby px-4 py-2 text-sm font-bold text-background">
+          <span>⚠️ {missing.length} {tr("lydfiler mangler på denne computer")}</span>
+          <button onClick={() => void relink()} className="rounded bg-background px-3 py-1 text-foreground">{tr("Find filer i mappe…")}</button>
+          <span className="truncate font-normal opacity-80">{missing.slice(0, 3).map((m) => m.fileName).join(", ")}{missing.length > 3 ? " …" : ""}</span>
+        </div>
+      )}
+      {relinkMsg && <button onClick={() => setRelinkMsg(null)} className="bg-go px-4 py-1 text-left text-sm font-bold text-go-foreground">{relinkMsg}</button>}
+      <input ref={relinkInput} type="file" hidden multiple {...({ webkitdirectory: "" } as any)} onChange={(e) => { const fs = [...(e.target.files ?? [])]; e.target.value = ""; void relinkFiles(fs.map((f) => ({ name: f.name, get: async () => f }))); }} />
       {recovered && <div className="bg-go px-4 py-1 text-sm font-bold text-go-foreground">{recovered}</div>}
       {error && (
         <div className="flex items-center justify-between bg-destructive px-4 py-1 text-sm font-semibold text-destructive-foreground">

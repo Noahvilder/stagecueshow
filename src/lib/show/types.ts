@@ -90,6 +90,8 @@ export interface Show {
   /** Numbered outputs ("Lyd 1", "MIDI 2"): cues point at the number, each PC picks the hardware. */
   /** Window layout of the pult, so it follows the show to another PC. */
   layout?: { wins?: Record<string, unknown>; snap?: string };
+  /** fileId → file name inside the project folder's audio sub-folder. */
+  audioFiles?: Record<string, string>;
   patch?: { audio?: { alias: string; hw: string; hwLabel?: string }[]; midi?: { alias: string; hw: string; hwLabel?: string }[] };
 }
 
