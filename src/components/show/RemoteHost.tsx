@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import type { DataConnection, Peer as PeerT } from "peerjs";
+import { isDesktop } from "@/lib/desktop";
 import { PEER_PREFIX, makeCode, isValidCode, type RemoteCmd, type RemoteState } from "@/lib/show/remote";
 
 const CODE_KEY = "stagecue.remotecode";
@@ -100,6 +101,28 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
   // Heartbeat: phones show "waiting for signal" if this stops.
   useEffect(() => { const t = setInterval(() => conns.current.forEach((c) => c.open && c.send({ t: "state", s: stateRef.current })), 2000); return () => clearInterval(t); }, []);
 
+  // Lokal Wi-Fi-monitor (kun Windows-appen): virker uden internet.
+  const [local, setLocal] = useState<{ url: string; qr: string; n: number } | null>(null);
+  useEffect(() => {
+    const t = (window as unknown as { __TAURI_INTERNALS__?: { invoke: (c: string, a?: unknown) => Promise<unknown> } }).__TAURI_INTERNALS__;
+    if (!isDesktop() || !t) return;
+    let dead = false;
+    let base = "";
+    t.invoke("local_info").then(async (r) => {
+      const i = r as { ip: string; port: number };
+      if (dead || !i.ip) return;
+      base = `http://${i.ip}:${i.port}/`;
+      setLocal({ url: base, qr: await QRCode.toDataURL(base, { margin: 1, width: 220 }), n: 0 });
+    }).catch(() => {});
+    const push = () => t.invoke("local_state", { json: JSON.stringify(stateRef.current) }).then((n) => { if (!dead && base) setLocal((l) => (l && l.n !== n ? { ...l, n: n as number } : l)); }).catch(() => {});
+    push();
+    const iv = setInterval(push, 1000);
+    return () => { dead = true; clearInterval(iv); };
+  }, []);
+  const localUrl = local ? local.url + (monitor ? `?monitor=${encodeURIComponent(monitor)}` : "") : "";
+  const [localQr, setLocalQr] = useState("");
+  useEffect(() => { if (localUrl) QRCode.toDataURL(localUrl, { margin: 1, width: 220 }).then(setLocalQr).catch(() => {}); }, [localUrl]);
+
   const newCode = () => { if (confirm("Ny kode afbryder alle parrede telefoner og monitors. Fortsæt?")) setCode(makeCode()); };
 
   useEffect(() => {
@@ -128,7 +151,13 @@ export function RemoteHost({ showId, state, onCmd, getAudio, renderPanel }: { sh
       <a href={`/view?code=${code}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-standby underline">🎤 Scenemonitor (lyrics): /view?code={code}</a>
       <select aria-label="Personlig monitor" value={monitor} onChange={(e) => setMonitor(e.target.value)} className="w-full rounded border border-input bg-input p-2"><option value="">Vælg scenemonitor…</option>{state.monitors?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
       {enabled && monitor && <><a className="text-sm font-bold text-standby underline" href={`/view?code=${code}&monitor=${encodeURIComponent(monitor)}`} target="_blank" rel="noreferrer">Åbn {state.monitors?.find((m) => m.id === monitor)?.name}</a>{monitorQr && <img src={monitorQr} width={200} height={200} alt="QR-kode til personlig monitor" />}<Button variant="secondary" onClick={() => navigator.clipboard.writeText(`${location.origin}/view?code=${code}&monitor=${encodeURIComponent(monitor)}`).catch(() => {})}>Kopiér monitorlink</Button></>}
-      <div className="text-xs text-muted-foreground">Kræver internet på både computer og telefon.</div>
+      <div className="text-xs text-muted-foreground">Koden ovenfor kræver internet på både computer og telefon.</div>
+      {local && <div className="w-full rounded border border-border p-2 text-sm">
+        <div className="mb-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Uden internet – samme Wi-Fi</div>
+        {localQr && <img src={localQr} alt="QR-kode til lokal scenemonitor" className="mx-auto rounded bg-foreground p-1" width={180} height={180} />}
+        <div className="font-mono font-bold text-standby">{localUrl}</div>
+        <div className={local.n ? "font-bold text-go" : "text-xs text-muted-foreground"}>{local.n ? `● ${local.n} lokal${local.n > 1 ? "e" : ""} monitor${local.n > 1 ? "s" : ""}` : "Scan med en telefon på samme Wi-Fi som computeren."}</div>
+      </div>}
     </div>
   );
   return renderPanel ? renderPanel(panel) : panel;

@@ -10,5 +10,7 @@
 - [x] Tabs 4–8 strenge + transponering.
 - [x] Dialoger øverst; vindues-snap (frit/gitter/magnet).
 - [ ] Sprogskifter inde i pulten (venter: pultens tekster er ikke oversat endnu).
-- [ ] OSC-cues og indbygget virtuel MIDI-port (kræver ny .exe-build).
+- [x] OSC-cues og virtuel MIDI-port-genkendelse.
+- [x] Lokal Wi-Fi-scenemonitor uden internet (v0.1.4).
+- [ ] ASIO-lyd (venter: stor ombygning af lydmotoren, egen version).
 - [ ] Eksterne links i systembrowser (kræver opener-plugin i ny .exe-build).
