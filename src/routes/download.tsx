@@ -1,23 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteShell, meta } from "@/components/site/SiteShell";
 import { useT } from "@/lib/site/i18n";
+import { getLatestRelease } from "@/lib/site/release.functions";
 import setupAsset from "@/assets/StageCue_0.1.5_x64-setup.exe.asset.json";
 
 export const Route = createFileRoute("/download")({
   head: () => meta("Download StageCue for Windows", "Get StageCue for Windows 10/11. System requirements, quick start guide and release notes."),
+  loader: () => getLatestRelease(),
+  errorComponent: () => <SiteShell><p className="p-20">Download unavailable – try again.</p></SiteShell>,
   component: () => <SiteShell><Download /></SiteShell>,
 });
 
 function Download() {
   const t = useT();
+  const latest = Route.useLoaderData() ?? null;
+  const file = latest ?? { version: "0.1.5", name: "StageCue_0.1.5_x64-setup.exe", url: setupAsset.url };
   return (
     <section className="mx-auto max-w-4xl px-4 py-20">
       <h1 className="text-4xl font-black sm:text-5xl">{t({ en: "Download StageCue", da: "Download StageCue", de: "StageCue herunterladen", fr: "Télécharger StageCue", es: "Descargar StageCue", sv: "Ladda ner StageCue", no: "Last ned StageCue" })}</h1>
       <div className="mt-10 rounded-2xl border-2 border-go bg-card p-8">
         <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Windows 10/11 · 64-bit</div>
         <div className="mt-1 text-xs text-muted-foreground">🇩🇰 Crafted in Denmark for live performers worldwide</div>
-        <div className="mt-1 text-2xl font-black">StageCue_0.1.5_x64-setup.exe · v0.1.5</div>
-        <a href={setupAsset.url} download="StageCue_0.1.5_x64-setup.exe" className="mt-6 hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:inline-block">⬇ {t({ en: "Download for Windows", da: "Download til Windows", de: "Für Windows herunterladen", fr: "Télécharger pour Windows", es: "Descargar para Windows", sv: "Ladda ner för Windows", no: "Last ned for Windows" })}</a>
+        <div className="mt-1 text-2xl font-black">{file.name} · v{file.version}</div>
+        <a href={file.url} download={file.name} className="mt-6 hidden rounded-lg bg-go px-6 py-3 text-lg font-black text-go-foreground md:inline-block">⬇ {t({ en: "Download for Windows", da: "Download til Windows", de: "Für Windows herunterladen", fr: "Télécharger pour Windows", es: "Descargar para Windows", sv: "Ladda ner för Windows", no: "Last ned for Windows" })}</a>
         <div className="mt-6 md:hidden">
           <p className="text-sm text-muted-foreground">{t({ en: "The console app runs on a Windows PC. On your phone you can join a stage monitor:", da: "Pult-appen kører på en Windows-pc. På telefonen kan du åbne en scenemonitor:", de: "Die Pult-App läuft auf einem Windows-PC. Am Handy kannst du einen Bühnenmonitor öffnen:", fr: "L'application console fonctionne sur un PC Windows. Sur votre téléphone, vous pouvez rejoindre un moniteur de scène :", es: "La aplicación de consola se ejecuta en un PC con Windows. En tu teléfono puedes unirte a un monitor de escenario:", sv: "Konsolappen körs på en Windows-dator. På din telefon kan du ansluta till en scenmonitor:", no: "Konsollappen kjører på en Windows-PC. På telefonen din kan du koble deg til en scenemonitor:" })}</p>
           <Link to="/show" className="mt-3 inline-block rounded-lg bg-go px-6 py-3 font-black text-go-foreground">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen", fr: "Ouvrir le spectacle", es: "Abrir show", sv: "Öppna show", no: "Åpne show" })}</Link>

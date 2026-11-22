@@ -73,7 +73,7 @@
       <Application_XML_File_URL>https://stagecueshow.com/pad_file.xml</Application_XML_File_URL>
     </Application_URLs>
     <Download_URLs>
-      <Primary_Download_URL>https://stagecueshow.com/__l5e/assets-v1/facfc750-74d0-4aa2-bff0-fd6ee4389308/StageCue_0.1.5_x64-setup.exe</Primary_Download_URL>
+      <Primary_Download_URL>https://github.com/Noahvilder/stagecueshow/releases/latest</Primary_Download_URL>
       <Secondary_Download_URL>https://stagecueshow.com/download</Secondary_Download_URL>
     </Download_URLs>
   </Web_Info>
