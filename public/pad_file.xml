@@ -29,7 +29,7 @@
   </Company_Info>
   <Program_Info>
     <Program_Name>StageCue</Program_Name>
-    <Program_Version>0.1.2</Program_Version>
+    <Program_Version>0.1.3</Program_Version>
     <Program_Release_Month>11</Program_Release_Month>
     <Program_Release_Day>20</Program_Release_Day>
     <Program_Release_Year>2026</Program_Release_Year>
@@ -46,8 +46,8 @@
     <Program_Category_Class>Audio &amp; Multimedia::Other</Program_Category_Class>
     <Program_System_Requirements>Windows 10/11 64-bit, WebView2, internet connection</Program_System_Requirements>
     <File_Info>
-      <File_Size_Bytes>2029155</File_Size_Bytes>
-      <File_Size_K>1982</File_Size_K>
+      <File_Size_Bytes>2031097</File_Size_Bytes>
+      <File_Size_K>1983</File_Size_K>
       <File_Size_MB>1.94</File_Size_MB>
     </File_Info>
     <Expire_Info>
@@ -73,7 +73,7 @@
       <Application_XML_File_URL>https://stagecueshow.com/pad_file.xml</Application_XML_File_URL>
     </Application_URLs>
     <Download_URLs>
-      <Primary_Download_URL>https://stagecueshow.com/__l5e/assets-v1/39a689e9-bb24-4d97-a8f7-f2d514eb0cff/StageCue_0.1.2_x64-setup.exe</Primary_Download_URL>
+      <Primary_Download_URL>https://stagecueshow.com/__l5e/assets-v1/6c2c1c48-1e26-4457-a7a1-15cc04c0ba4b/StageCue_0.1.3_x64-setup.exe</Primary_Download_URL>
       <Secondary_Download_URL>https://stagecueshow.com/download</Secondary_Download_URL>
     </Download_URLs>
   </Web_Info>
