@@ -137,6 +137,11 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!l) return;
     if (l.wins) { const j = JSON.parse(JSON.stringify(l.wins)) as Record<string, WinState>; for (const k in j) if (j[k]) j[k].popped = false; setWins({ ...defaultWins(), ...(j as Partial<Record<WinKey, WinState>>) }); }
     if (l.snap) setSnapMode(l.snap as SnapMode);
+    if (typeof l.goGuard === "number") setGoGuard(l.goGuard);
+    if (l.timeMode === "none" || l.timeMode === "elapsed" || l.timeMode === "lastgo") setTimeMode(l.timeMode);
+    if (l.timeFmt === "hms" || l.timeFmt === "sec") setTimeFmt(l.timeFmt);
+    if (l.noteSize === 0 || l.noteSize === 1 || l.noteSize === 2) setNoteSize(l.noteSize);
+    if (l.pedals) setPedals(l.pedals as typeof pedals);
   };
   const changeSnap = (m: SnapMode) => {
     setSnapMode(m);
@@ -179,7 +184,7 @@ export function ShowControl({ showId }: { showId: string }) {
     return engineRef.current;
   };
 
-  const withLayout = (): Show => ({ ...show, layout: { wins: Object.fromEntries(Object.entries(wins).map(([k, v]) => [k, { ...v, popped: false }])), snap } });
+  const withLayout = (): Show => ({ ...show, layout: { wins: Object.fromEntries(Object.entries(wins).map(([k, v]) => [k, { ...v, popped: false }])), snap, goGuard, timeMode, timeFmt, noteSize, pedals } });
   const flat = useMemo(() => flatten(show), [show]);
   const standbyIdx = flat.findIndex((c) => c.id === standbyId);
   const standby = standbyIdx >= 0 ? flat[standbyIdx] : null;

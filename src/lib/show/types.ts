@@ -95,7 +95,7 @@ export interface Show {
   /** Pre-listen (PFL) output and first channel. */
   pflOut?: string;
   pflCh?: number;
-  layout?: { wins?: Record<string, unknown>; snap?: string };
+  layout?: { wins?: Record<string, unknown>; snap?: string; goGuard?: number; timeMode?: string; timeFmt?: string; noteSize?: number; pedals?: unknown };
   /** fileId → file name inside the project folder's audio sub-folder. */
   audioFiles?: Record<string, string>;
   patch?: { audio?: { alias: string; hw: string; hwLabel?: string }[]; midi?: { alias: string; hw: string; hwLabel?: string }[] };
