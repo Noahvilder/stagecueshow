@@ -412,7 +412,8 @@ export class Engine {
 
 export async function listAudioOutputs(requestLabels: boolean) {
   if (requestLabels) {
-    try {
+    const known = (await navigator.mediaDevices.enumerateDevices()).some((d) => d.kind === "audiooutput" && d.label);
+    if (!known) try {
       const s = await navigator.mediaDevices.getUserMedia({ audio: true });
       s.getTracks().forEach((t) => t.stop());
     } catch {}

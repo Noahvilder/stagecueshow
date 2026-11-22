@@ -28,6 +28,8 @@ fn main() {
     let shared: local::State = Default::default();
     local::start(shared.clone());
     tauri::Builder::default()
+        // Desktop app: grant MIDI/audio permissions permanently, no prompt on every start.
+        .on_permission_request(|_, _| tauri::webview::PermissionResponse::Allow)
         .manage(shared)
         .manage(asio::Asio::default())
         .invoke_handler(tauri::generate_handler![send_osc, local_state, local_info, asio::asio_list, asio::asio_open, asio::asio_push])

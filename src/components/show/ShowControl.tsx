@@ -709,8 +709,8 @@ export function ShowControl({ showId }: { showId: string }) {
           onChange={(e) => setShow({ ...show, name: e.target.value })}
           aria-label="Show navn"
         />
-        <span className="font-mono text-2xl tabular-nums">{clock}</span>
-        <span className={`text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? tr("Gemmer…") : saved === "error" ? tr("Ikke gemt!") : tr("✓ Gemt i skyen")}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
+        <span className={`max-w-[40%] truncate text-right text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? tr("Gemmer…") : saved === "error" ? tr("Ikke gemt!") : tr("✓ Gemt i skyen")}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
+        <span className="min-w-[8.5rem] shrink-0 text-right font-mono text-2xl tabular-nums">{clock}</span>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
         <button onClick={() => setLocked((l) => !l)} title="Lås mod utilsigtede ændringer under live-afvikling (Ctrl+L)" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
