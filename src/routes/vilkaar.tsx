@@ -50,7 +50,10 @@ export const Route = createFileRoute("/vilkaar")({
         <H>11. Ophavsret</H>
         <p>StageCue, navn, logo og kildekode tilhører StageCue. Nævnte produktnavne fra andre producenter tilhører deres respektive ejere, og StageCue er ikke tilknyttet dem.</p>
 
-        <H>12. Lovvalg</H>
+        <H>12. Tredjeparts-teknologi</H>
+        <p>StageCue til Windows bruger ASIO Technology by Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries. Desuden bruges open source-komponenter (Tauri, cpal, PeerJS) under deres egne licenser.</p>
+
+        <H>13. Lovvalg</H>
         <p>Vilkårene er underlagt dansk ret. Kontakt os via supportsiden ved spørgsmål eller klager.</p>
       </article>
     </SiteShell>

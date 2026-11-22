@@ -65,6 +65,7 @@ function Shell({ children }: { children: ReactNode }) {
           <span>© 2026 StageCue · {t({ en: "Show control for Windows", da: "Show control til Windows", de: "Show-Control für Windows", fr: "Show control pour Windows", es: "Control de espectáculos para Windows", sv: "Show control för Windows", no: "Show control for Windows" })} · 🇩🇰 Crafted in Denmark for live performers worldwide</span>
           <span className="flex gap-4">{NAV.slice(1).map((n) => <Link key={n.to} to={n.to}>{t(n.l)}</Link>)}<Link to="/privatliv">{t({ en: "Privacy", da: "Privatliv", de: "Datenschutz", fr: "Confidentialité", es: "Privacidad", sv: "Integritet", no: "Personvern" })}</Link><Link to="/support" hash="ticket">{t({ en: "💡 Suggest a change", da: "💡 Foreslå ændring", de: "💡 Vorschlag", fr: "💡 Suggérer une modification", es: "💡 Sugerir un cambio", sv: "💡 Föreslå en ändring", no: "💡 Foreslå en endring" })}</Link><Link to="/qlab-alternative-windows">QLab alternative</Link><Link to="/midi-pedal-guide">MIDI pedal guide</Link><Link to="/vilkaar">{t({ en: "Terms", da: "Vilkår", de: "AGB", fr: "Conditions", es: "Términos", sv: "Villkor", no: "Vilkår" })}</Link></span>
         </div>
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pb-6 text-xs text-muted-foreground"><img src="/asio-compatible.svg" alt="ASIO compatible" className="h-6 w-auto" /><span>ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
       </footer>
     </div>
   );

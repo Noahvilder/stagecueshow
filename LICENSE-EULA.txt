@@ -11,3 +11,9 @@ and the Privacy Policy at https://stagecueshow.lovable.app/privatliv.
 - StageCue may request access to the local network (firewall), audio devices including ASIO,
   and MIDI devices/controllers. Nothing is connected without your confirmation.
 - Audio files stay on your computer. This version requires an internet connection.
+
+
+THIRD-PARTY TECHNOLOGY
+- ASIO Technology by Steinberg Media Technologies GmbH.
+- ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
+- Also uses Tauri, cpal, PeerJS and other open-source components under their own licences.

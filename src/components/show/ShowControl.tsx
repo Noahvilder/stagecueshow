@@ -589,7 +589,7 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "Support", onClick: () => window.open("/support", "_blank") },
           { label: "Vilkår", onClick: () => window.open("/vilkaar", "_blank") },
           "sep",
-          { label: "Om StageCue", onClick: () => alert("StageCue — Show control til Windows\n\n🇩🇰 Crafted in Denmark for live performers worldwide\n\n© 2026 StageCue") },
+          { label: "Om StageCue", onClick: () => alert("StageCue — Show control til Windows\n\n🇩🇰 Crafted in Denmark for live performers worldwide\n\nTredjeparts-teknologi:\n• ASIO Technology by Steinberg Media Technologies GmbH.\n  ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.\n• Tauri, cpal, PeerJS, Web Audio API (open source)\n\n© 2026 StageCue") },
         ] },
       ]; return <div className="flex border-b border-border bg-card"><div className="flex-1 [&>div]:border-b-0"><MenuBar menus={menus} /></div><CommandPalette menus={menus} /></div>; })()}
       {/* top bar */}
@@ -1290,6 +1290,7 @@ function Settings(props: {
           <p className="mt-1 text-xs text-muted-foreground">Gemmer til den fil, du har valgt med "Gem som…".</p>
         </Section>
         <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
+        <div className="mb-5 flex items-center gap-3 rounded border border-border bg-muted/30 p-3 text-xs text-muted-foreground"><img src="/asio-compatible.svg" alt="ASIO compatible" className="h-8 w-auto" /><span>ASIO Technology by Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
         <PatchSection show={show} setShow={setShow} midiPorts={props.midiPorts} outputs={props.outputs} />
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
           {props.midiPorts.length ? props.midiPorts.map((p) => (
