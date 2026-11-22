@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { loadShow, saveShow } from "@/lib/show/localShows";
+import { loadShow, saveShow, cloudSyncOn, setCloudSync } from "@/lib/show/localShows";
+import { rememberHandle, recallHandle, canWrite } from "@/lib/show/fileHandles";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { OSC_TEMPLATES, sendOsc, isVirtualMidi } from "@/lib/show/osc";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
@@ -99,6 +100,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const [locked, setLocked] = useState(false);
   const plan = usePlan();
   const pro = hasPro(plan.tier);
+  useEffect(() => { if (!plan.loading && !pro) setCloudSync(false); }, [plan.loading, pro]);
   const [proAsk, setProAsk] = useState<ProFeature | null>(null);
   const needPro = useCallback((f: ProFeature) => { if (pro) return true; setProAsk(f); return false; }, [pro]);
   const [shortcuts, setShortcuts] = useState<ShortcutMap>(DEFAULT_SHORTCUTS);
@@ -498,7 +500,7 @@ export function ShowControl({ showId }: { showId: string }) {
       const next = { ...show, audioFiles }; setShow(next);
       const h = await dir.getFileHandle(SHOW_FILE, { create: true });
       const w = await h.createWritable(); await w.write(JSON.stringify({ ...withLayout(), audioFiles }, null, 2)); await w.close();
-      projectDir.current = dir; fileHandle.current = h; setFileName(`${dir.name}/${SHOW_FILE}`);
+      projectDir.current = dir; fileHandle.current = h; setFileName(`${dir.name}/${SHOW_FILE}`); void rememberHandle(showId, { file: h, dir });
       setFileSavedAt(`Gemt kl. ${new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`);
     } catch (e) { if ((e as Error).name !== "AbortError") setError("Kunne ikke gemme mappen: " + (e as Error).message); }
   };
@@ -514,7 +516,7 @@ export function ShowControl({ showId }: { showId: string }) {
       const need: AudioRef[] = []; for (const r of audioRefs(s)) if (!(await getAudio(r.fileId))) need.push(r);
       const n = need.length ? await loadMissingFrom(await scanDir(dir), s, need) : 0;
       engine().panic(0); setShow(s); applyLayout(s); setStandbyId(null); setSelectedId(null);
-      projectDir.current = dir; fileHandle.current = h; setFileName(`${dir.name}/${h.name}`);
+      projectDir.current = dir; fileHandle.current = h; setFileName(`${dir.name}/${h.name}`); void rememberHandle(showId, { file: h, dir });
       if (need.length) setRelinkMsg(n === need.length ? `✓ ${n} lydfiler indlæst fra mappen` : `${n} af ${need.length} lydfiler fundet i mappen`);
     } catch (e) { if ((e as Error).name !== "AbortError") setError("Kunne ikke åbne mappen: " + (e as Error).message); }
   };
@@ -532,6 +534,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const writeToHandle = async (auto = false) => {
     const h = fileHandle.current; if (!h) return false;
     try {
+      if (!(await canWrite(projectDir.current ?? h))) { if (!auto) setError("StageCue fik ikke lov til at skrive i filen – prøv Gem som…"); return false; }
       if (projectDir.current) {
         const audioFiles = await syncFolder(projectDir.current, show);
         setShow((s) => ({ ...s, audioFiles }));
@@ -551,10 +554,17 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!picker) { downloadShow(); return; }
     try {
       const h = await picker({ suggestedName: `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue.json`, types: [{ description: "StageCue show", accept: { "application/json": [".json"] } }] });
-      fileHandle.current = h; projectDir.current = null; setFileName(h.name);
+      fileHandle.current = h; projectDir.current = null; setFileName(h.name); void rememberHandle(showId, { file: h, dir: null });
       await writeToHandle();
     } catch { /* annulleret */ }
   };
+  useEffect(() => {
+    void recallHandle(showId).then((v) => {
+      if (!v?.file) return;
+      fileHandle.current = v.file; projectDir.current = v.dir ?? null;
+      setFileName(v.dir ? `${v.dir.name}/${v.file.name}` : v.file.name);
+    });
+  }, [showId]);
   const exportShow = () => { if (fileHandle.current) void writeToHandle(); else void saveAs(); };
   const autoRef = useRef(writeToHandle); autoRef.current = writeToHandle;
   useEffect(() => {
@@ -585,7 +595,17 @@ export function ShowControl({ showId }: { showId: string }) {
   };  scRef.current.save = exportShow;
   scRef.current.backup = () => { void exportBackup(); };
   scRef.current.findReplace = () => { if (!locked) setFrOpen(true); };
-  scRef.current.open = () => { if (!locked) fileRef.current?.click(); };
+  const openShow = async () => {
+    const picker = (window as any).showOpenFilePicker;
+    if (!picker) { fileRef.current?.click(); return; }
+    try {
+      const [h] = await picker({ types: [{ description: "StageCue show", accept: { "application/json": [".json", ".stagecue"] } }] });
+      const f: File = await h.getFile();
+      await importShow(f);
+      if (f.name.endsWith(".json")) { fileHandle.current = h; projectDir.current = null; setFileName(h.name); void rememberHandle(showId, { file: h, dir: null }); }
+    } catch { /* annulleret */ }
+  };
+  scRef.current.open = () => { if (!locked) void openShow(); };
 
   const importShow = async (f: File) => {
     try {
@@ -661,7 +681,7 @@ export function ShowControl({ showId }: { showId: string }) {
     <div className="flex h-screen flex-col overflow-hidden bg-background font-sans text-foreground">
       {(() => { const menus: Menu[] = [
         { label: "Filer", items: [
-          { label: "Åbn show…", keys: "Ctrl+O", onClick: () => fileRef.current?.click(), disabled: locked },
+          { label: "Åbn show…", keys: "Ctrl+O", onClick: () => void openShow(), disabled: locked },
           { label: "Gem show", keys: "Ctrl+S", onClick: exportShow },
           { label: "Gem som…", onClick: () => { trackFeature("file.save_as"); void saveAs(); } },
           { label: "📁 Åbn projektmappe…", onClick: () => { trackFeature("file.open_folder"); void openFolder(); }, disabled: locked },
@@ -729,7 +749,7 @@ export function ShowControl({ showId }: { showId: string }) {
           onChange={(e) => setShow({ ...show, name: e.target.value })}
           aria-label="Show navn"
         />
-        <span className={`max-w-[40%] truncate text-right text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? tr("Gemmer…") : saved === "error" ? tr("Ikke gemt!") : tr("✓ Gemt i skyen")}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
+        <span className={`max-w-[40%] truncate text-right text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? tr("Gemmer…") : saved === "error" ? tr("Ikke gemt!") : (cloudSyncOn() ? tr("✓ Gemt lokalt + sky") : tr("✓ Gemt lokalt"))}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
         <span className="min-w-[8.5rem] shrink-0 text-right font-mono text-2xl tabular-nums">{clock}</span>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
         <button onClick={() => setLocked((l) => !l)} title="Lås mod utilsigtede ændringer under live-afvikling (Ctrl+L)" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
@@ -995,6 +1015,7 @@ export function ShowControl({ showId }: { showId: string }) {
 
       {settings && (
         <Settings
+          pro={pro}
           autoSaveMin={autoSaveMin}
           setAutoSaveMin={(n) => { trackFeature(n ? "autosave.on" : "autosave.off"); setAutoSaveMin(n); localStorage.setItem("stagecue.autosave", String(n)); }}
           show={show}
@@ -1521,9 +1542,10 @@ function PrefsSection({ show, setShow }: { show: Show; setShow: (s: Show) => voi
 function Settings(props: {
   show: Show; setShow: (s: Show) => void; midiPorts: string[]; midiIns: string[]; outputs: Output[]; onClose: () => void;
   onScanMidi: () => void; onScanAudio: () => void; onTestMidi: (port: string) => void;
-  autoSaveMin: number; setAutoSaveMin: (n: number) => void;
+  autoSaveMin: number; setAutoSaveMin: (n: number) => void; pro: boolean;
 }) {
   const { show, setShow } = props;
+  const [sync, setSync] = useState(cloudSyncOn);
   const [tab, setTab] = useState<SetTab>("audio");
   const tr = useTrApp();
   const setAlias = (kind: "audio" | "midi", key: string, v: string) => {
@@ -1552,6 +1574,10 @@ function Settings(props: {
             <input type="number" min={0} max={999} className="w-20 rounded border border-border bg-background px-2 py-1 text-sm" value={props.autoSaveMin} onChange={(e) => props.setAutoSaveMin(Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0))))} />
             minut (0 = fra)</label>
           <p className="mt-1 text-xs text-muted-foreground">Gemmer til den fil, du har valgt med "Gem som…".</p>
+        </Section>
+        <Section title="☁️ Sky-backup (Pro)">
+          {props.pro ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sync} onChange={(e) => { setCloudSync(e.target.checked); setSync(e.target.checked); }} />{tr("Gem også en kopi i skyen, så showet kan åbnes på andre computere")}</label>
+            : <p className="text-sm text-muted-foreground">{tr("Sky-backup kræver Pro. Shows gemmes altid lokalt på denne computer.")} <a href="/priser" target="_blank" rel="noreferrer" className="font-semibold text-standby underline">{tr("Opgrader")}</a></p>}
         </Section>
         <Section title="Panic">
           <Field label="Nød-fade tid (s, 0 = øjeblikkelig)"><Num value={show.panicFade} onChange={(n) => setShow({ ...show, panicFade: Math.max(0, n) })} /></Field>
