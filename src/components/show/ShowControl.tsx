@@ -917,7 +917,7 @@ export function ShowControl({ showId }: { showId: string }) {
                       {view.number && <span className="font-mono text-sm text-muted-foreground" title={c.ref ? `Manuskript: ${c.ref}` : undefined}>{c.number || idx + 1}</span>}
                       <div className="min-w-0">
                         <div className="break-words font-semibold">{c.name}</div>
-                        {view.details && <div className="break-words text-xs text-muted-foreground">{summary(c, midiPorts)}</div>}
+                        {view.details && <div className="break-words text-xs text-muted-foreground">{summary(c, midiPorts, show)}</div>}
                         {view.stikord && c.stikord && <div className="break-words text-xs font-bold text-standby">⏱ {c.stikord}</div>}
                       </div>
                       {view.type && <TypeTag show={show} cue={c} />}
@@ -1032,14 +1032,18 @@ function followLabel(c: Cue) {
   return pre + (c.follow === "withStart" ? "⏩ Auto (start)" : "⏩ Auto (slut)") + (c.postWait ? `+${c.postWait}s` : "");
 }
 
-function summary(c: Cue, ports: string[]): string {
+function summary(c: Cue, ports: string[], show?: Show): string {
   switch (c.type) {
     case "group":
       return `${c.children.length} cues samtidig: ${c.children.map((x) => x.name).join(", ")}`;
     case "audio":
       return `${c.fileName || "ingen fil"} · ${c.volume}dB${c.loop ? " · loop" : ""}`;
     case "midi":
-      return c.messages.map((m) => `${m.port || "?"}${ports.includes(m.port) ? "" : "⚠"} ${midiKindInfo(m.kind).label} ch${m.channel} ${m.data1}${midiKindInfo(m.kind).d2 ? "/" + m.data2 : ""}`).join(" · ");
+      return c.messages.map((m) => {
+        const hw = show ? resolveOut(show, "midi", m.port) : m.port;
+        const missing = hw ? !ports.includes(hw) : false;
+        return `${m.port || "?"}${missing ? "⚠" : ""} ${midiKindInfo(m.kind).label} ch${m.channel} ${m.data1}${midiKindInfo(m.kind).d2 ? "/" + m.data2 : ""}`;
+      }).join(" · ");
     case "osc":
       return `${c.host}:${c.port} ${c.address} ${c.args}`;
     case "fade":
