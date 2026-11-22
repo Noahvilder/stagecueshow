@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "asset_id": "802b1bb1-562a-4d66-a242-53a24009c9e4",
+  "asset_id": "facfc750-74d0-4aa2-bff0-fd6ee4389308",
   "project_id": "f2af6286-84ac-49fd-8b01-b2201732dea8",
-  "url": "/__l5e/assets-v1/802b1bb1-562a-4d66-a242-53a24009c9e4/StageCue_0.1.5_x64-setup.exe",
-  "r2_key": "a/v1/f2af6286-84ac-49fd-8b01-b2201732dea8/802b1bb1-562a-4d66-a242-53a24009c9e4/StageCue_0.1.5_x64-setup.exe",
+  "url": "/__l5e/assets-v1/facfc750-74d0-4aa2-bff0-fd6ee4389308/StageCue_0.1.5_x64-setup.exe",
+  "r2_key": "a/v1/f2af6286-84ac-49fd-8b01-b2201732dea8/facfc750-74d0-4aa2-bff0-fd6ee4389308/StageCue_0.1.5_x64-setup.exe",
   "original_filename": "StageCue_0.1.5_x64-setup.exe",
-  "size": 2136152,
+  "size": 2137686,
   "content_type": "application/octet-stream",
-  "created_at": "2026-11-22T17:19:00Z"
+  "created_at": "2026-11-22T18:19:39Z"
 }
