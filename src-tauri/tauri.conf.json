@@ -47,7 +47,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5NjAzNjBGQzI5MzQ4QzQKUldURVNKUENEelpnS1dZMzdoZXUxbGRJRFlQUU5aQkM1MVpybWNYckkwZ1k0bmNPWW1oazBtMXIK",
       "endpoints": [
-        "https://github.com/GITHUB_REPO/releases/latest/download/latest.json"
+        "https://github.com/Noahvilder/stagecueshow/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
