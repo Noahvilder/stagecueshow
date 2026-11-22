@@ -68,6 +68,7 @@ function Hub() {
   return (
     <div className="min-h-screen bg-background p-4 text-foreground sm:p-8">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
+        <h1 className="sr-only">StageCue – vælg mode og show</h1>
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3"><button onClick={() => nav({ to: "/show" })} className="web-only rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</button><span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span></div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">

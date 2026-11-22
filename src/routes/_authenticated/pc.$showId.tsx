@@ -18,5 +18,10 @@ export const Route = createFileRoute("/_authenticated/pc/$showId")({
 
 function PcPage() {
   const { showId } = Route.useParams();
-  return <PultDeviceGate><ShowControl key={showId} showId={showId} /></PultDeviceGate>;
+  return (
+    <>
+      <h1 className="sr-only">StageCue pult – show control</h1>
+      <PultDeviceGate><ShowControl key={showId} showId={showId} /></PultDeviceGate>
+    </>
+  );
 }

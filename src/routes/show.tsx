@@ -17,7 +17,7 @@ function ShowPicker() {
         <Link to="/konto" className="self-end -mt-6 rounded bg-secondary px-3 py-1.5 text-sm font-semibold">{t({ en: "Account", da: "Konto", de: "Konto", fr: "Compte", es: "Cuenta", sv: "Konto", no: "Konto" })}</Link>
         <div>
           <div className="font-mono text-xs font-bold uppercase tracking-[0.4em] text-go">StageCue</div>
-          <h1 className="mt-2 text-4xl font-black">{t({ en: "Open show", da: "Åbn show", de: "Show öffnen", fr: "Ouvrir le show", es: "Abrir show", sv: "Öppna show", no: "Åpne show" })}</h1>
+          <h1 className="mt-2 text-4xl font-black">{t({ en: "Open a show – choose your role", da: "Åbn show – vælg din rolle", de: "Show öffnen – Rolle wählen", fr: "Ouvrir un show – choisissez votre rôle", es: "Abrir un show – elige tu papel", sv: "Öppna ett show – välj din roll", no: "Åpne et show – velg din rolle" })}</h1>
           <p className="mt-2 text-muted-foreground">{t({ en: "What is your role today?", da: "Hvad er din rolle i dag?", de: "Was ist heute deine Rolle?", fr: "Quel est votre rôle aujourd'hui ?", es: "¿Cuál es tu papel hoy?", sv: "Vilken roll har du idag?", no: "Hva er rollen din i dag?" })}</p>
         </div>
         <Link to="/hub" className={card}>

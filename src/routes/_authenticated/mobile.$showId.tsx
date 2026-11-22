@@ -26,6 +26,11 @@ function MobilePage() {
     const t = setInterval(() => { if (!document.hidden) load(); }, 5000);
     return () => clearInterval(t);
   }, [showId]);
-  if (code === undefined) return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Henter show…</div>;
-  return <RemoteControl key={code ?? "none"} initialCode={code ?? undefined} backToHub showId={showId} />;
+  if (code === undefined) return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground"><h1 className="sr-only">Mobil fjernbetjening – StageCue</h1>Henter show…</div>;
+  return (
+    <>
+      <h1 className="sr-only">Mobil fjernbetjening – StageCue</h1>
+      <RemoteControl key={code ?? "none"} initialCode={code ?? undefined} backToHub showId={showId} />
+    </>
+  );
 }

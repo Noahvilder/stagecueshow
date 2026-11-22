@@ -18,5 +18,10 @@ export const Route = createFileRoute("/_authenticated/remote")({
 
 function RemotePage() {
   const { code } = Route.useSearch();
-  return <RemoteControl initialCode={code} />;
+  return (
+    <>
+      <h1 className="sr-only">StageCue fjernbetjening</h1>
+      <RemoteControl initialCode={code} />
+    </>
+  );
 }
