@@ -20,7 +20,7 @@ function Support() {
   return (
     <SiteShell>
       <section className="mx-auto max-w-3xl px-4 py-20">
-        <h1 className="text-4xl font-black sm:text-5xl">Support</h1>
+        <h1 className="text-4xl font-black sm:text-5xl">StageCue support og hjælp</h1>
         <h2 className="mt-12 text-xl font-bold">Ofte stillede spørgsmål</h2>
         <div className="mt-4 divide-y divide-border rounded-xl border border-border">
           {FAQ.map(([q, a]) => (
