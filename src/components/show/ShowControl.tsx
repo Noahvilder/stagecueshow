@@ -22,7 +22,7 @@ import { Waveform } from "./Waveform";
 import { MenuBar, type Menu } from "./MenuBar";
 import { CommandPalette } from "./CommandPalette";
 import { monitorFields, revealedAt } from "@/lib/show/monitors";
-import { snapRect, type SnapMode } from "@/lib/show/snap";
+import { GRID, snapRect, type SnapMode } from "@/lib/show/snap";
 import { TAB_TUNINGS, tabTemplate } from "@/lib/show/tabs";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
@@ -125,6 +125,21 @@ export function ShowControl({ showId }: { showId: string }) {
       const top = Math.max(...Object.values(w).map((x) => x.z));
       return w[k].z === top ? w : { ...w, [k]: { ...w[k], z: top + 1 } };
     });
+  const applyLayout = (sh: Show) => {
+    const l = sh.layout;
+    if (!l) return;
+    if (l.wins) { const j = JSON.parse(JSON.stringify(l.wins)) as Record<string, WinState>; for (const k in j) if (j[k]) j[k].popped = false; setWins({ ...defaultWins(), ...(j as Partial<Record<WinKey, WinState>>) }); }
+    if (l.snap) setSnapMode(l.snap as SnapMode);
+  };
+  const changeSnap = (m: SnapMode) => {
+    setSnapMode(m);
+    localStorage.setItem("stagecue.snap", m);
+    if (m === "grid" || m === "both") setWins((w) => {
+      const n = { ...w };
+      for (const k of Object.keys(n) as WinKey[]) { const g = (v: number) => Math.round(v / GRID) * GRID; n[k] = { ...n[k], x: g(n[k].x), y: g(n[k].y), w: Math.max(GRID * 11, g(n[k].w)), h: Math.max(GRID * 6, g(n[k].h)) }; }
+      return n;
+    });
+  };
   useEffect(() => {
     try {
       const w = localStorage.getItem(WIN_KEY);
@@ -157,6 +172,7 @@ export function ShowControl({ showId }: { showId: string }) {
     return engineRef.current;
   };
 
+  const withLayout = (): Show => ({ ...show, layout: { wins: Object.fromEntries(Object.entries(wins).map(([k, v]) => [k, { ...v, popped: false }])), snap } });
   const flat = useMemo(() => flatten(show), [show]);
   const standbyIdx = flat.findIndex((c) => c.id === standbyId);
   const standby = standbyIdx >= 0 ? flat[standbyIdx] : null;
@@ -166,7 +182,7 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => {
     loadShow(showId).then((data) => {
       if (!data) { setError("Kunne ikke hente show: ikke fundet"); return; }
-      try { setShow(parseShow(JSON.stringify({ ...emptyShow(), ...(data.data as object), name: data.name }))); } catch { setShow({ ...emptyShow(), name: data.name }); }
+      try { const sh = parseShow(JSON.stringify({ ...emptyShow(), ...(data.data as object), name: data.name })); setShow(sh); applyLayout(sh); } catch { setShow({ ...emptyShow(), name: data.name }); }
       setLoaded(true);
     });
     engine()
@@ -211,11 +227,11 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!loaded) return;
     setSaved("saving");
     const t = setTimeout(async () => {
-      const ok = await saveShow(showId, show.name, show);
+      const ok = await saveShow(showId, show.name, withLayout());
       setSaved(ok ? "ok" : "error");
     }, 700);
     return () => clearTimeout(t);
-  }, [show, loaded]);
+  }, [show, loaded, wins, snap]);
   useEffect(() => {
     if (!standby && flat.length) setStandbyId(flat[0]!.id);
   }, [flat, standby]);
@@ -403,7 +419,7 @@ export function ShowControl({ showId }: { showId: string }) {
     const h = fileHandle.current; if (!h) return false;
     try {
       const w = await h.createWritable();
-      await w.write(JSON.stringify(show, null, 2));
+      await w.write(JSON.stringify(withLayout(), null, 2));
       await w.close();
       setFileSavedAt(`${auto ? "Auto-gemt" : "Gemt"} kl. ${new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`);
       return true;
@@ -426,7 +442,7 @@ export function ShowControl({ showId }: { showId: string }) {
     return () => clearInterval(t);
   }, [autoSaveMin]);
   const downloadShow = () => {
-    const blob = new Blob([JSON.stringify(show, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(withLayout(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue.json`;
@@ -439,7 +455,7 @@ export function ShowControl({ showId }: { showId: string }) {
       const b = await getAudio(id);
       if (b) audio[id] = new Uint8Array(await b.arrayBuffer());
     }
-    const blob = new Blob([packArchive(show, audio) as BlobPart], { type: "application/zip" });
+    const blob = new Blob([packArchive(withLayout(), audio) as BlobPart], { type: "application/zip" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `${show.name.replace(/[^\wæøåÆØÅ -]/g, "") || "show"}.stagecue`;
@@ -460,6 +476,7 @@ export function ShowControl({ showId }: { showId: string }) {
       const s = parseShow(text);
       engine().panic(0);
       setShow(s);
+      applyLayout(s);
       setStandbyId(null);
       setSelectedId(null);
     } catch (e) {
@@ -546,7 +563,7 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "⚙️ Avanceret visning", onClick: () => setWins(() => { const d = defaultWins(); d.midimon.open = true; d.pedal.open = true; return d; }), disabled: locked },
           { label: "Nulstil layout", onClick: () => setWins(defaultWins()), disabled: locked },
           "sep",
-          ...([["free", "Vinduer: Frit flydende"], ["grid", "Vinduer: Gitter-snap"], ["magnet", "Vinduer: Magnetisk kant-snap"], ["both", "Vinduer: Gitter + magnet"]] as const).map(([m, label]) => ({ label, checked: snap === m, onClick: () => { trackFeature(`window.${m}`); setSnapMode(m); localStorage.setItem("stagecue.snap", m); } })),
+          ...([["free", "Vinduer: Frit flydende"], ["grid", "Vinduer: Gitter-snap"], ["magnet", "Vinduer: Magnetisk kant-snap"], ["both", "Vinduer: Gitter + magnet"]] as const).map(([m, label]) => ({ label, checked: snap === m, onClick: () => { trackFeature(`window.${m}`); changeSnap(m); } })),
           "sep",
           ...(Object.keys(COLS) as ColKey[]).map((k) => ({ label: COLS[k], checked: view[k], onClick: () => toggleCol(k) })),
         ] },
@@ -556,7 +573,7 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           ...[0, 300, 500, 1000].map((ms) => ({ label: ms ? `Dobbelt-GO-spærre: ${ms / 1000} s` : "Dobbelt-GO-spærre: fra", checked: goGuard === ms, onClick: () => { setGoGuard(ms); localStorage.setItem("stagecue.goguard", String(ms)); } })),
           "sep",
-          ...([0, 1, 2, 5, 10, 15, 30].map((n) => ({ label: n ? `Gem automatisk hver ${n} min` : "Gem automatisk: Fra", checked: autoSaveMin === n, onClick: () => { trackFeature(n ? "autosave.on" : "autosave.off"); setAutoSaveMin(n); localStorage.setItem("stagecue.autosave", String(n)); } }))),
+          { label: autoSaveMin ? `Gem automatisk: hver ${autoSaveMin} min…` : "Gem automatisk: Fra…", onClick: () => setSettings(true), disabled: locked },
           "sep",
           ...([["elapsed", "Tidsboks: Aktiv spilletid"], ["lastgo", "Tidsboks: Siden sidste GO"], ["none", "Tidsboks: Kun nedtælling"]] as const).map(([m, label]) => ({ label, checked: timeMode === m, onClick: () => { setTimeMode(m); localStorage.setItem("stagecue.timebox", m); } })),
           "sep",
@@ -799,6 +816,8 @@ export function ShowControl({ showId }: { showId: string }) {
 
       {settings && (
         <Settings
+          autoSaveMin={autoSaveMin}
+          setAutoSaveMin={(n) => { trackFeature(n ? "autosave.on" : "autosave.off"); setAutoSaveMin(n); localStorage.setItem("stagecue.autosave", String(n)); }}
           show={show}
           setShow={setShow}
           midiPorts={midiPorts}
@@ -1215,6 +1234,7 @@ function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setSh
 function Settings(props: {
   show: Show; setShow: (s: Show) => void; midiPorts: string[]; midiIns: string[]; outputs: Output[]; onClose: () => void;
   onScanMidi: () => void; onScanAudio: () => void; onTestMidi: (port: string) => void;
+  autoSaveMin: number; setAutoSaveMin: (n: number) => void;
 }) {
   const { show, setShow } = props;
   const setAlias = (kind: "audio" | "midi", key: string, v: string) => {
@@ -1233,6 +1253,12 @@ function Settings(props: {
           <Btn onClick={props.onClose}>Luk</Btn>
         </div>
 
+        <Section title="Gem automatisk til fil">
+          <label className="flex items-center gap-2 text-sm">Gem hvert
+            <input type="number" min={0} max={999} className="w-20 rounded border border-border bg-background px-2 py-1 text-sm" value={props.autoSaveMin} onChange={(e) => props.setAutoSaveMin(Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0))))} />
+            minut (0 = fra)</label>
+          <p className="mt-1 text-xs text-muted-foreground">Gemmer til den fil, du har valgt med "Gem som…".</p>
+        </Section>
         <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
         <PatchSection show={show} setShow={setShow} midiPorts={props.midiPorts} outputs={props.outputs} />
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
