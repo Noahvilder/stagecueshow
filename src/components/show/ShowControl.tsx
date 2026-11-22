@@ -14,7 +14,7 @@ import {
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
 import { ioName } from "@/lib/show/types";
-import { numberExisting, resolveOut, slotLabel, slotRef, slots, type PatchKind, type PatchSlot } from "@/lib/show/patch";
+import { isSlot, numberExisting, resolveOut, slotLabel, slotNum, slotRef, slots, type PatchKind, type PatchSlot } from "@/lib/show/patch";
 import { RemoteHost } from "./RemoteHost";
 import { MonitorNotes } from "./MonitorNotes";
 import { MonitorProfiles } from "./MonitorProfiles";
@@ -208,10 +208,18 @@ export function ShowControl({ showId }: { showId: string }) {
       if (c.type === "midi") c.messages.forEach((m) => m.port && outsUsed.add(m.port));
       if (c.type === "audio" && c.outputId) audioUsed.add(c.outputId);
     });
-    if (midiPorts.length || midiIns.length || seenIns.current.size) for (const p of outsUsed) if (!midiPorts.includes(p)) w.push(`MIDI-udgang mangler: ${p}`);
-    if (outputs.length > 1) for (const a of audioUsed) if (!outputs.some((o) => o.id === a)) w.push("Lydudgang mangler (brugt af lyd-cue)");
+    const midiName = (p: string) => (isSlot(p) ? `MIDI ${slotNum(p)}` : p);
+    if (midiPorts.length || midiIns.length || seenIns.current.size) for (const p of outsUsed) {
+      const hw = resolveOut(show, "midi", p);
+      if (!hw || isSlot(hw)) w.push(`MIDI-udgang mangler: ${midiName(p)} (ingen hardware valgt i Indstillinger)`);
+      else if (!midiPorts.includes(hw)) w.push(`MIDI-udgang mangler: ${midiName(p)} – ${hw}`);
+    }
+    if (outputs.length > 1) for (const a of audioUsed) {
+      const hw = resolveOut(show, "audio", a, outputs);
+      if (hw && !outputs.some((o) => o.id === hw)) w.push(isSlot(a) ? `Lydudgang mangler: Lyd ${slotNum(a)}` : "Lydudgang mangler (brugt af lyd-cue)");
+    }
     return [...new Set(w)];
-  }, [midiIns, midiPorts, outputs, flat]);
+  }, [midiIns, midiPorts, outputs, flat, show.patch]);
   const prevWarn = useRef<string[]>([]);
   useEffect(() => {
     const fixed = prevWarn.current.filter((x) => !warnings.includes(x));
