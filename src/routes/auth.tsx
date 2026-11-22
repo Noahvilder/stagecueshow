@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { isDesktopBundle, setForceOffline } from "@/lib/desktop";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -80,6 +81,7 @@ function AuthPage() {
           Continue with Google
         </button>
         {msg && <p className="text-sm text-standby">{msg}</p>}
+        {isDesktopBundle() && <button type="button" onClick={() => { setForceOffline(true); nav({ to: "/hub", replace: true }); }} className="h-10 rounded-lg bg-secondary text-sm font-semibold">Fortsæt offline (uden konto)</button>}
         <button type="button" onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(null); }} className="text-sm text-muted-foreground underline">
           {mode === "in" ? "Ingen konto? Opret en" : "Har du en konto? Log ind"}
         </button>

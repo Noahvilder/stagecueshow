@@ -29,5 +29,12 @@ export function installDesktopGuards(navigate: (to: string) => void): () => void
   return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("mouseup", mouse, true); window.removeEventListener("mousedown", mouse, true); document.removeEventListener("click", click, true); window.removeEventListener("popstate", pop); };
 }
 
-/** True when running from the bundled offline files inside the Windows app (never touches the internet for login/shows). */
-export const isOffline = () => isDesktop() && (location.protocol === "tauri:" || location.hostname === "tauri.localhost");
+/** True when running from the bundled offline files inside the Windows app (shows stored locally, always Pro). */
+export const isDesktopBundle = () => isDesktop() && (location.protocol === "tauri:" || location.hostname === "tauri.localhost");
+
+const FORCE = "stagecue.forceOffline";
+/** User chose "Fortsæt offline" on the login screen (lasts until the app is closed). */
+export const setForceOffline = (on: boolean) => { if (on) sessionStorage.setItem(FORCE, "1"); else sessionStorage.removeItem(FORCE); };
+
+/** Windows app without internet (no Wi-Fi) or user chose to continue offline. Online = full account + admin in-app. */
+export const isOffline = () => isDesktopBundle() && (!navigator.onLine || sessionStorage.getItem(FORCE) === "1");

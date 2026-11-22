@@ -72,7 +72,7 @@ function Hub() {
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3"><button onClick={() => nav({ to: "/show" })} className="web-only rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Tilbage</button><span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span></div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="hidden truncate sm:inline">{email}</span>
+            {isOffline() ? <span className="rounded bg-standby/20 px-2 py-0.5 text-xs font-bold text-standby">Offline</span> : <span className="hidden truncate sm:inline">{email}</span>}
             <button onClick={() => nav({ to: "/konto" })} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Konto</button>{!isOffline() && <>
             <button onClick={signOut} className="rounded bg-secondary px-3 py-1.5 font-semibold text-foreground">Log ud</button></>}
           </div>
