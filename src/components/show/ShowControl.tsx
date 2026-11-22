@@ -799,6 +799,7 @@ export function ShowControl({ showId }: { showId: string }) {
               onTestMidi={(m) => engine().sendMidi(m)}
               needPro={needPro}
               channelCount={(o) => engine().channelCount(o)}
+              testTone={(o, ch, m) => { void engine().testTone(o, ch, m); }}
               onSaveDefault={(c) => setShow((s) => ({ ...s, cueDefaults: { ...s.cueDefaults, [c.type]: cueAsDefault(c) } }))}
               onResetDefault={(t) => setShow((s) => { const d = { ...s.cueDefaults }; delete d[t]; return { ...s, cueDefaults: d }; })}
             />
@@ -973,6 +974,7 @@ function Inspector(props: {
   loadAudio: (fileId: string, outputId: string) => Promise<AudioBuffer>;
   needPro: (f: ProFeature) => boolean;
   channelCount: (outputId: string) => Promise<number>;
+  testTone?: (outputId: string, ch: number, mono: boolean) => void;
   inGroup?: boolean;
   onSaveDefault?: (c: Cue) => void;
   onResetDefault?: (t: CueType) => void;
@@ -1051,7 +1053,7 @@ function Inspector(props: {
               {!outputs.some((o) => o.id === cue.outputId) && !cue.outputId.startsWith("#") && <option value={cue.outputId}>{tr("(ukendt udgang – scan igen)")}</option>}
             </select>
           </Field>
-          <ChannelPicker outputId={cue.outputId} channel={cue.channel ?? 1} mono={!!cue.mono} count={props.channelCount} aliases={show.ioAliases?.audio} onChange={(ch, mono) => { if ((ch > 1 || mono) && !props.needPro("channels")) return; set({ channel: ch, mono }); }} />
+          <ChannelPicker outputId={cue.outputId} channel={cue.channel ?? 1} mono={!!cue.mono} count={props.channelCount} aliases={show.ioAliases?.audio} {...(props.testTone ? { test: props.testTone } : {})} onChange={(ch, mono) => { if ((ch > 1 || mono) && !props.needPro("channels")) return; set({ channel: ch, mono }); }} />
           <div className="grid grid-cols-2 gap-2">
             <Field label="Volumen (dB)"><Num value={cue.volume} step={0.5} min={-60} max={12} onChange={(n) => set({ volume: n })} /></Field>
             <Field label={`Pan (${cue.pan.toFixed(2)})`}>
@@ -1461,7 +1463,7 @@ function PflButton({ fileId, allow }: { fileId: string; allow: () => boolean }) 
   return <button title="Lyt til filen i standard-udgangen (fx høretelefoner) uden at starte cuet" onClick={toggle} className={`rounded px-3 py-1.5 text-sm font-bold ${on ? "bg-standby text-background" : "bg-secondary"}`}>{on ? "⏹ Stop forlyt" : "🎧 Forlyt"}</button>;
 }
 
-function ChannelPicker({ outputId, channel, mono, count, aliases, onChange }: { outputId: string; channel: number; mono: boolean; count: (o: string) => Promise<number>; aliases?: Record<string, string> | undefined; onChange: (ch: number, mono: boolean) => void }) {
+function ChannelPicker({ outputId, channel, mono, count, aliases, test, onChange }: { outputId: string; channel: number; mono: boolean; count: (o: string) => Promise<number>; aliases?: Record<string, string> | undefined; test?: (o: string, ch: number, mono: boolean) => void; onChange: (ch: number, mono: boolean) => void }) {
   const [n, setN] = useState(2);
   useEffect(() => { count(outputId).then(setN).catch(() => setN(2)); }, [outputId, count]);
   const max = Math.max(n, channel + (mono ? 0 : 1));
@@ -1474,6 +1476,7 @@ function ChannelPicker({ outputId, channel, mono, count, aliases, onChange }: { 
           {opts.map((c) => <option key={c} value={c}>{mono ? name(c) : `${name(c)} / ${name(c + 1)}`}</option>)}
         </select>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={mono} onChange={(e) => onChange(e.target.checked ? channel : channel % 2 ? channel : channel - 1, e.target.checked)} />Mono</label>
+        {test && <button type="button" title="Afspil 1 sekunds testtone på de valgte kanaler" onClick={() => test(outputId, channel, mono)} className="rounded bg-secondary px-2 py-1 text-sm font-bold">🔊 Test</button>}
       </div>
     </Field>
   );

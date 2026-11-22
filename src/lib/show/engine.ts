@@ -81,6 +81,16 @@ export class Engine {
     const c = await this.ctx(outputId);
     return Math.max(2, Math.min(32, c.destination.maxChannelCount || 2));
   }
+  /** Play a 1 s 1 kHz test tone on the chosen channel(s), to check which outputs reach the mixer. */
+  async testTone(outputId: string, ch: number, mono: boolean) {
+    const c = await this.ctx(outputId);
+    const o = c.createOscillator(); o.frequency.value = 1000;
+    const g = c.createGain(); const t = c.currentTime;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.25, t + 0.02);
+    g.gain.setValueAtTime(0.25, t + 0.95); g.gain.linearRampToValueAtTime(0, t + 1);
+    o.connect(g); g.channelCount = 2; g.channelCountMode = "explicit";
+    this.route(c, g, ch, mono); o.start(t); o.stop(t + 1.05);
+  }
   /** Send a stereo node to channels ch/ch+1 (or ch only if mono) of the output. */
   private route(c: AudioContext, node: AudioNode, ch: number, mono: boolean) {
     const master = this.master(c);
