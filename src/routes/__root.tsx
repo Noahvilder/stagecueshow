@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { installDesktopGuards, isDesktop } from "../lib/desktop";
 
 function NotFoundComponent() {
@@ -147,6 +148,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <UpdateBanner />
     </QueryClientProvider>
   );
 }
