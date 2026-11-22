@@ -4,6 +4,21 @@ import { LANGS, detectLang, type Lang } from "@/lib/site/i18n";
 /** The console is written in Danish; this maps Danish UI strings to the other languages. */
 type Row = [en: string, de: string, fr: string, es: string, sv: string, no: string];
 const D: Record<string, Row> = {
+  "🔍 Find & erstat…": ["🔍 Find & replace…", "🔍 Suchen & ersetzen…", "🔍 Rechercher & remplacer…", "🔍 Buscar y reemplazar…", "🔍 Sök & ersätt…", "🔍 Finn & erstatt…"],
+  "Find & erstat": ["Find & replace", "Suchen & ersetzen", "Rechercher & remplacer", "Buscar y reemplazar", "Sök & ersätt", "Finn & erstatt"],
+  "🎹 MIDI-udgang": ["🎹 MIDI output", "🎹 MIDI-Ausgang", "🎹 Sortie MIDI", "🎹 Salida MIDI", "🎹 MIDI-utgång", "🎹 MIDI-utgang"],
+  "🔊 Lydudgang": ["🔊 Audio output", "🔊 Audioausgang", "🔊 Sortie audio", "🔊 Salida de audio", "🔊 Ljudutgång", "🔊 Lydutgang"],
+  "🎛️ MIDI-kanal": ["🎛️ MIDI channel", "🎛️ MIDI-Kanal", "🎛️ Canal MIDI", "🎛️ Canal MIDI", "🎛️ MIDI-kanal", "🎛️ MIDI-kanal"],
+  "📝 Tekst": ["📝 Text", "📝 Text", "📝 Texte", "📝 Texto", "📝 Text", "📝 Tekst"],
+  "Find": ["Find", "Suchen", "Rechercher", "Buscar", "Sök", "Finn"],
+  "Erstat med": ["Replace with", "Ersetzen durch", "Remplacer par", "Reemplazar con", "Ersätt med", "Erstatt med"],
+  "Erstat alle": ["Replace all", "Alle ersetzen", "Tout remplacer", "Reemplazar todo", "Ersätt alla", "Erstatt alle"],
+  "Fundet": ["Found", "Gefunden", "Trouvé", "Encontrado", "Hittade", "Fant"],
+  "ændringer i": ["changes in", "Änderungen in", "modifications dans", "cambios en", "ändringar i", "endringer i"],
+  "sange": ["songs", "Songs", "chansons", "canciones", "låtar", "sanger"],
+  "ændringer gemt": ["changes saved", "Änderungen gespeichert", "modifications enregistrées", "cambios guardados", "ändringar sparade", "endringer lagret"],
+  "Skeln mellem store og små bogstaver": ["Match case", "Groß-/Kleinschreibung beachten", "Respecter la casse", "Distinguir mayúsculas", "Matcha versaler", "Skill mellom store og små bokstaver"],
+  "Gå til cue": ["Go to cue", "Zum Cue", "Aller au cue", "Ir al cue", "Gå till cue", "Gå til cue"],
   "PA og PAFL": ["PA and PAFL", "PA und PAFL", "PA et PAFL", "PA y PAFL", "PA och PAFL", "PA og PAFL"],
   "PA (standard)": ["PA (default)", "PA (Standard)", "PA (par défaut)", "PA (predeterminado)", "PA (standard)", "PA (standard)"],
   "PAFL / forlyt": ["PAFL / pre-listen", "PAFL / Vorhören", "PAFL / pré-écoute", "PAFL / preescucha", "PAFL / förlyssning", "PAFL / forlytt"],

@@ -16,6 +16,7 @@ import type { Cue, CueType, MidiKind, MidiMsg, Show } from "@/lib/show/types";
 import { ioName } from "@/lib/show/types";
 import { isSlot, numberExisting, resolveOut, slotLabel, slotNum, slotRef, slots, type PatchKind, type PatchSlot } from "@/lib/show/patch";
 import { RemoteHost } from "./RemoteHost";
+import { FindReplace } from "./FindReplace";
 import { MonitorNotes } from "./MonitorNotes";
 import { MonitorProfiles } from "./MonitorProfiles";
 import type { RemoteCmd, RemoteState } from "@/lib/show/remote";
@@ -102,7 +103,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const needPro = useCallback((f: ProFeature) => { if (pro) return true; setProAsk(f); return false; }, [pro]);
   const [shortcuts, setShortcuts] = useState<ShortcutMap>(DEFAULT_SHORTCUTS);
   useEffect(() => setShortcuts(loadShortcuts()), []);
-  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void; shift?: (d: -1 | 1) => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
+  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void; shift?: (d: -1 | 1) => void; findReplace?: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
   const [view, setView] = useState<ViewPrefs>(DEFAULT_VIEW);
   const [viewOpen, setViewOpen] = useState(false);
   useEffect(() => { setView(loadView()); }, []);
@@ -339,6 +340,7 @@ export function ShowControl({ showId }: { showId: string }) {
         const key = e.key.toLowerCase();
         if (key === "s") { e.preventDefault(); if (e.shiftKey) scRef.current.backup(); else scRef.current.save(); return; }
         if (key === "o") { e.preventDefault(); scRef.current.open(); return; }
+        if (key === "h") { e.preventDefault(); scRef.current.findReplace?.(); return; }
       }
       const combo = comboOf(e);
       const a = findAction(scRef.current.map, combo);
@@ -400,6 +402,7 @@ export function ShowControl({ showId }: { showId: string }) {
   };
   const [clickOpen, setClickOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
+  const [frOpen, setFrOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const importSetlist = (text: string) => {
     const lines = text.split(/\r?\n/).map((l) => l.replace(/^\s*\d+[.)\-:]?\s*/, "").trim()).filter(Boolean);
@@ -581,6 +584,7 @@ export function ShowControl({ showId }: { showId: string }) {
     URL.revokeObjectURL(a.href);
   };  scRef.current.save = exportShow;
   scRef.current.backup = () => { void exportBackup(); };
+  scRef.current.findReplace = () => { if (!locked) setFrOpen(true); };
   scRef.current.open = () => { if (!locked) fileRef.current?.click(); };
 
   const importShow = async (f: File) => {
@@ -672,10 +676,13 @@ export function ShowControl({ showId }: { showId: string }) {
         { label: "Rediger", items: [
           ...(["audio", "midi", "osc", "fade", "stop", "memo", "group"] as CueType[]).map((t) => ({ label: `Nyt ${t}-cue`, onClick: () => addCue(t), disabled: locked })),
           "sep",
+          { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
+          "sep",
           { label: locked ? "Lås show op" : "Lås show til live", keys: "Ctrl+L", onClick: () => setLocked((l) => !l) },
         ] },
         { label: "Værktøjer", items: [
           { label: "⏱️ Click / Optælling…", onClick: () => setClickOpen(true), disabled: locked },
+          { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
           { label: "📋 Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
           { label: "⌨️ Genveje…", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
         ] },
@@ -728,6 +735,7 @@ export function ShowControl({ showId }: { showId: string }) {
         <button onClick={() => setLocked((l) => !l)} title="Lås mod utilsigtede ændringer under live-afvikling (Ctrl+L)" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
+        {frOpen && <FindReplace show={show} outputs={outputs} midiPorts={midiPorts} onApply={(n) => setShow(n)} onGo={(id) => { setFrOpen(false); goToCue(id); }} onClose={() => setFrOpen(false)} />}
         {keysOpen && <ShortcutManager map={shortcuts} onChange={(m) => { setShortcuts(m); saveShortcuts(m); }} onClose={() => setKeysOpen(false)} />}
         {proAsk && <ProDialog feature={proAsk} onClose={() => setProAsk(null)} />}
         {!plan.loading && plan.tier !== "pro" && <a href="/priser" target="_blank" rel="noreferrer" title="Opgrader til Pro" className={`rounded px-2 py-1 text-xs font-bold ${plan.tier === "trial" ? "bg-standby/20 text-standby" : "bg-secondary text-muted-foreground"}`}>{plan.tier === "trial" ? tr(`PRO-prøve: ${plan.trialDaysLeft} dage`) : tr("FREE · Opgrader")}</a>}
