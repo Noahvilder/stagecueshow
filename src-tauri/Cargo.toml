@@ -1,6 +1,6 @@
 [package]
 name = "stagecue"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 
 [build-dependencies]
@@ -12,6 +12,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tungstenite = "0.24"
 local-ip-address = "0.6"
+
+[target.'cfg(windows)'.dependencies]
+cpal = { version = "0.15", features = ["asio"] }
 
 [profile.release]
 strip = true

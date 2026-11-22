@@ -30,6 +30,14 @@ jobs:
           cp -r "$SRC"/. src-tauri/dist/
           ls -la src-tauri/dist
       - run: bunx @tauri-apps/cli@2 icon src-tauri/app-icon.png
+      - name: Get Steinberg ASIO SDK
+        shell: bash
+        run: |
+          curl -L -o asiosdk.zip https://www.steinberg.net/asiosdk
+          unzip -q asiosdk.zip -d asiosdk
+          DIR=$(dirname "$(find "$PWD/asiosdk" -type d -name common | head -n1)")
+          echo "CPAL_ASIO_DIR=$DIR" >> "$GITHUB_ENV"
+          echo "Using $DIR"
       - run: bunx @tauri-apps/cli@2 build
       - uses: actions/upload-artifact@v4
         with:

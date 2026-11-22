@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod local;
+mod asio;
 
 /// Sends one OSC packet over UDP (e.g. to QLC+/Resolume on 127.0.0.1).
 #[tauri::command]
@@ -28,7 +29,8 @@ fn main() {
     local::start(shared.clone());
     tauri::Builder::default()
         .manage(shared)
-        .invoke_handler(tauri::generate_handler![send_osc, local_state, local_info])
+        .manage(asio::Asio::default())
+        .invoke_handler(tauri::generate_handler![send_osc, local_state, local_info, asio::asio_list, asio::asio_open, asio::asio_push])
         .run(tauri::generate_context!())
         .expect("error while running StageCue");
 }

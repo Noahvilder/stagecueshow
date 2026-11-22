@@ -1,6 +1,7 @@
 import { sendOsc } from "./osc";
 import { getAudio } from "./audioStore";
 import { dbToGain, deepCues, groupDuration, midiBytes, trimSpan } from "./logic";
+import { asioBridge, isAsio, listAsio, openAsio } from "./asio";
 import type { AudioCue, Cue, MidiMsg } from "./types";
 
 interface Player {
@@ -45,6 +46,7 @@ export class Engine {
   resolveAudio: (id: string) => string = (id) => id;
   resolveMidi: (port: string) => string = (p) => p;
   private masters = new Map<AudioContext, GainNode>();
+  private asioOut = new Map<AudioContext, { node: AudioNode; ch: number }>();
   private muted = false;
   private attachInputs() {
     if (!this.midi) return;
@@ -69,17 +71,19 @@ export class Engine {
   private master(c: AudioContext) {
     let g = this.masters.get(c);
     if (!g) {
-      const n = Math.min(32, c.destination.maxChannelCount || 2);
-      if (n > 2) { c.destination.channelCount = n; c.destination.channelCountMode = "explicit"; c.destination.channelInterpretation = "discrete"; }
+      const asio = this.asioOut.get(c);
+      const n = asio ? Math.min(32, asio.ch) : Math.min(32, c.destination.maxChannelCount || 2);
+      if (!asio && n > 2) { c.destination.channelCount = n; c.destination.channelCountMode = "explicit"; c.destination.channelInterpretation = "discrete"; }
       g = c.createGain(); g.channelCount = Math.max(2, n); g.channelCountMode = "explicit"; g.channelInterpretation = "discrete";
-      g.gain.value = this.muted ? 0 : 1; g.connect(c.destination); this.masters.set(c, g);
+      g.gain.value = this.muted ? 0 : 1; g.connect(asio ? asio.node : c.destination); this.masters.set(c, g);
     }
     return g;
   }
   /** Number of hardware channels on an output (ASIO/multichannel interfaces report up to 32). */
   async channelCount(outputId: string): Promise<number> {
     const c = await this.ctx(outputId);
-    return Math.max(2, Math.min(32, c.destination.maxChannelCount || 2));
+    const asio = this.asioOut.get(c);
+    return Math.max(2, Math.min(32, asio ? asio.ch : c.destination.maxChannelCount || 2));
   }
   /** Play a 1 s 1 kHz test tone on the chosen channel(s), to check which outputs reach the mixer. */
   async testTone(outputId: string, ch: number, mono: boolean) {
@@ -131,6 +135,12 @@ export class Engine {
   private async ctx(rawId: string): Promise<AudioContext> {
     const outputId = this.resolveAudio(rawId);
     let c = this.ctxs.get(outputId);
+    if (!c && isAsio(outputId)) {
+      const info = await openAsio(outputId);
+      c = new AudioContext({ latencyHint: "interactive", sampleRate: info.rate });
+      this.asioOut.set(c, { node: await asioBridge(c, info.channels), ch: info.channels });
+      this.ctxs.set(outputId, c);
+    }
     if (!c) {
       c = new AudioContext({ latencyHint: "interactive" });
       if (outputId) {
@@ -387,5 +397,6 @@ export async function listAudioOutputs(requestLabels: boolean) {
     } catch {}
   }
   const devs = await navigator.mediaDevices.enumerateDevices();
-  return devs.filter((d) => d.kind === "audiooutput").map((d) => ({ id: d.deviceId === "default" ? "" : d.deviceId, label: d.label || "Ukendt udgang" }));
+  const win = devs.filter((d) => d.kind === "audiooutput").map((d) => ({ id: d.deviceId === "default" ? "" : d.deviceId, label: d.label || "Ukendt udgang" }));
+  return [...win, ...(await listAsio().catch(() => []))];
 }
