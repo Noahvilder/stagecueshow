@@ -51,6 +51,7 @@ export type AudioCue = Base & {
   endTime?: number;
 };
 export type MidiCue = Base & { type: "midi"; messages: MidiMsg[] };
+export type OscCue = Base & { type: "osc"; host: string; port: number; address: string; args: string };
 export type FadeCue = Base & {
   type: "fade";
   target: string;
@@ -66,7 +67,7 @@ export type MemoCue = Base & { type: "memo"; text: string };
 /** Fires all children at the same time (each honours its own pre-wait). */
 export type GroupCue = Base & { type: "group"; children: Cue[] };
 
-export type Cue = AudioCue | MidiCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue | GroupCue;
+export type Cue = AudioCue | MidiCue | OscCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue | GroupCue;
 export type CueType = Cue["type"];
 
 export interface Song {

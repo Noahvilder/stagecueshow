@@ -4,7 +4,7 @@ export type ShortcutMap = Partial<Record<ShortcutAction, string>>;
 export const SHORTCUT_LABEL: Record<ShortcutAction, string> = {
   go: "GO", panic: "Panic (fade ud)", hardStop: "Hårdt stop", next: "Standby ned", prev: "Standby op",
   lock: "Lås / lås op show", help: "Åbn genveje", mute: "Mute PA",
-  "add:audio": "Nyt lyd-cue", "add:midi": "Nyt MIDI-cue", "add:fade": "Nyt fade-cue", "add:stop": "Nyt stop-cue",
+  "add:audio": "Nyt lyd-cue", "add:midi": "Nyt MIDI-cue", "add:osc": "Nyt OSC-cue", "add:fade": "Nyt fade-cue", "add:stop": "Nyt stop-cue",
   "add:pause": "Nyt pause-cue", "add:wait": "Nyt vente-cue", "add:memo": "Nyt memo-cue", "add:group": "Nyt gruppe-cue",
 };
 export const DEFAULT_SHORTCUTS: ShortcutMap = {

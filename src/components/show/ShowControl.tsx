@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { loadShow, saveShow } from "@/lib/show/localShows";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { OSC_TEMPLATES, sendOsc, isVirtualMidi } from "@/lib/show/osc";
 import { Engine, listAudioOutputs, type ActiveRow } from "@/lib/show/engine";
 import { putAudio, getAudio } from "@/lib/show/audioStore";
 import { downloadBlob, renderClickVideo, safeName } from "@/lib/show/clickExport";
@@ -58,8 +59,8 @@ const simpleWins = (): Record<WinKey, WinState> => {
 };
 const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "MIDI-controller", remote: "Telefon", midimon: "MIDI Monitor" };
 
-const TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo", "group"];
-const CHILD_TYPES: CueType[] = ["audio", "midi", "fade", "stop", "pause", "wait", "memo"];
+const TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo", "group"];
+const CHILD_TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo"];
 
 type Output = { id: string; label: string };
 
@@ -549,7 +550,7 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "Tilbage til shows", onClick: () => { engine().panic(0); navigate({ to: "/hub" }); } },
         ] },
         { label: "Rediger", items: [
-          ...(["audio", "midi", "fade", "stop", "memo", "group"] as CueType[]).map((t) => ({ label: `Nyt ${t}-cue`, onClick: () => addCue(t), disabled: locked })),
+          ...(["audio", "midi", "osc", "fade", "stop", "memo", "group"] as CueType[]).map((t) => ({ label: `Nyt ${t}-cue`, onClick: () => addCue(t), disabled: locked })),
           "sep",
           { label: locked ? "Lås show op" : "Lås show til live", keys: "Ctrl+L", onClick: () => setLocked((l) => !l) },
         ] },
@@ -857,6 +858,8 @@ function summary(c: Cue, ports: string[]): string {
       return `${c.fileName || "ingen fil"} · ${c.volume}dB${c.loop ? " · loop" : ""}`;
     case "midi":
       return c.messages.map((m) => `${m.port || "?"}${ports.includes(m.port) ? "" : "⚠"} ${midiKindInfo(m.kind).label} ch${m.channel} ${m.data1}${midiKindInfo(m.kind).d2 ? "/" + m.data2 : ""}`).join(" · ");
+    case "osc":
+      return `${c.host}:${c.port} ${c.address} ${c.args}`;
     case "fade":
       return `${c.target === "all" ? "alle" : "mål"} → ${c.volume}dB over ${c.duration}s`;
     case "stop":
@@ -1061,6 +1064,23 @@ function Inspector(props: {
         </>
       )}
 
+      {cue.type === "osc" && (
+        <div className="flex flex-col gap-2">
+          <select className={inputCls} value="" onChange={(e) => { const t = OSC_TEMPLATES[+e.target.value]; if (t) set({ port: t.port, address: t.address, args: t.args }); }}>
+            <option value="">{tr("Skabelon…")}</option>
+            {OSC_TEMPLATES.map((t, i) => <option key={i} value={i}>{t.label}</option>)}
+          </select>
+          <div className="grid grid-cols-3 gap-1">
+            <input className={inputCls + " col-span-2"} title="IP" value={cue.host} onChange={(e) => set({ host: e.target.value })} />
+            <input className={inputCls} type="number" min={1} max={65535} title="Port" value={cue.port} onChange={(e) => set({ port: +e.target.value })} />
+          </div>
+          <input className={inputCls + " font-mono"} placeholder="/adresse" value={cue.address} onChange={(e) => set({ address: e.target.value })} />
+          <input className={inputCls + " font-mono"} placeholder={tr("Værdier, fx 1 0.5 \"tekst\"")} value={cue.args} onChange={(e) => set({ args: e.target.value })} />
+          <p className="text-[10px] text-muted-foreground">{tr("127.0.0.1 = programmer på samme PC (QLC+, Resolume, Reaper…). Kræver Windows-appen.")}</p>
+          <Btn onClick={() => { void sendOsc(cue).then((err) => err && alert(err)); }}>{tr("Send test")}</Btn>
+        </div>
+      )}
+
       {cue.type === "midi" && (
         <div className="flex flex-col gap-2">
           {cue.messages.map((m, i) => {
@@ -1077,7 +1097,7 @@ function Inspector(props: {
                 <select className={inputCls} value={m.port} onChange={(e) => upd({ port: e.target.value })}>
                   <option value="">{tr("Vælg port…")}</option>
                   {slots(show, "midi").length > 0 && <optgroup label={tr("Nummererede udgange")}>{slots(show, "midi").map((sl, i) => <option key={i} value={slotRef(i + 1)}>{slotLabel(i + 1, sl, "midi")}</option>)}</optgroup>}
-                  {midiPorts.map((p) => <option key={p} value={p}>{ioName(p, show.ioAliases?.midi?.[p])}</option>)}
+                  {midiPorts.map((p) => <option key={p} value={p}>{ioName(p, show.ioAliases?.midi?.[p])}{isVirtualMidi(p) ? " · virtuel" : ""}</option>)}
                   {m.port && !midiPorts.includes(m.port) && !m.port.startsWith("#") && <option value={m.port}>{m.port} ({tr("ikke tilsluttet")})</option>}
                 </select>
                 {(() => { const k = midiKindInfo(m.kind); return (<>
@@ -1195,7 +1215,7 @@ function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setSh
   const sel = "min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm";
   const block = (kind: PatchKind) => {
     const list = slots(show, kind);
-    const hwOpts = kind === "audio" ? outputs.map((o) => ({ id: o.id, label: o.label })) : midiPorts.map((p) => ({ id: p, label: p }));
+    const hwOpts = kind === "audio" ? outputs.map((o) => ({ id: o.id, label: o.label })) : midiPorts.map((p) => ({ id: p, label: isVirtualMidi(p) ? `${p} · virtuel (samme PC)` : p }));
     const upd = (i: number, p: Partial<PatchSlot>) => setList(kind, list.map((x, j) => (j === i ? { ...x, ...p } : x)));
     return (
       <div className="mb-3">
@@ -1227,6 +1247,14 @@ function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setSh
       <p className="mb-2 text-xs text-muted-foreground">Cues sender til et nummer, fx "Lyd 2" eller "MIDI 1". Skifter du computer, vælger du bare hardwaren her én gang – alle cues følger med. Teksten "Bruges til" gemmes i showet.</p>
       {block("audio")}
       {block("midi")}
+      <details className="mt-2 rounded border border-border p-2 text-xs">
+        <summary className="cursor-pointer font-semibold">Intern MIDI: styr programmer på samme PC ({midiPorts.filter(isVirtualMidi).length ? `✅ ${midiPorts.filter(isVirtualMidi).join(", ")}` : "⚠ ingen virtuel port fundet"})</summary>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+          <li>Nemmest: brug et <b>OSC-cue</b> til 127.0.0.1 – virker med QLC+, Resolume, GrandMA og Reaper uden ekstra program.</li>
+          <li>Skal det være MIDI: installér det gratis program <a className="underline" href="https://www.tobias-erichsen.de/software/loopmidi.html" target="_blank" rel="noreferrer">loopMIDI</a> og opret en port.</li>
+          <li>Porten dukker op her markeret "virtuel". Vælg den som MIDI-udgang og som MIDI-indgang i det andet program.</li>
+        </ol>
+      </details>
     </Section>
   );
 }

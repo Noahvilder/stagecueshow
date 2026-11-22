@@ -1,3 +1,4 @@
+import { sendOsc } from "./osc";
 import { getAudio } from "./audioStore";
 import { dbToGain, deepCues, groupDuration, midiBytes, trimSpan } from "./logic";
 import type { AudioCue, Cue, MidiMsg } from "./types";
@@ -266,6 +267,11 @@ export class Engine {
         case "midi":
           cue.messages.forEach((m) => this.sendMidi(m));
           break;
+        case "osc": {
+          const err = await sendOsc(cue);
+          if (err) this.onError(err);
+          break;
+        }
         case "fade":
           this.targets(cue.target).forEach((p) => this.fade(p, dbToGain(cue.volume), cue.duration, cue.stopAfter));
           break;

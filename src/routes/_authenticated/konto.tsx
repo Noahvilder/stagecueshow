@@ -8,6 +8,7 @@ import { Billing } from "@/components/account/Billing";
 import { DeviceList } from "@/components/account/DeviceList";
 import { AdminPanel } from "@/components/account/AdminPanel";
 import { MAX_PULT_DEVICES } from "@/lib/show/device";
+import { isOffline } from "@/lib/desktop";
 import { deleteMyAccount } from "@/lib/account/delete.functions";
 
 export const Route = createFileRoute("/_authenticated/konto")({
@@ -39,6 +40,7 @@ function Konto() {
           <span className="font-mono text-lg font-black tracking-widest text-go">STAGECUE</span>
           <Link to="/hub" className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">← Shows</Link>
         </header>
+        {isOffline() ? <OfflineAccount /> : <>
         <PaymentTestModeBanner />
         <AdminPanel />
         <Billing />
@@ -62,6 +64,7 @@ function Konto() {
           <DeviceList />
         </section>
         <DeleteAccount />
+        </>}
       </div>
     </div>
   );
@@ -82,6 +85,18 @@ function DeleteAccount() {
         <span>Læs <a href="/privatliv" className="underline">privatlivspolitikken</a>. Lydfiler ligger kun på din computer.</span>
         <button onClick={run} disabled={busy} className="rounded bg-destructive px-3 py-2 font-bold text-destructive-foreground disabled:opacity-50">Slet min konto</button>
       </div>
+    </section>
+  );
+}
+
+function OfflineAccount() {
+  return (
+    <section className="flex flex-col gap-3 rounded-xl border-2 border-border bg-card p-5 text-sm">
+      <h1 className="text-2xl font-black">Konto og licens</h1>
+      <p>Windows-appen kører 100% offline, så den virker også uden internet i salen. Alle funktioner er tilgængelige her.</p>
+      <p>Din licens, betalinger, enheder og licensnøgler ses på din konto online:</p>
+      <a href="https://stagecueshow.com/konto" target="_blank" rel="noreferrer" className="self-start rounded bg-go px-4 py-2 font-bold text-go-foreground">Åbn min konto på stagecueshow.com</a>
+      <p className="text-xs text-muted-foreground">Åbn adressen i din browser, hvis knappen ikke reagerer: stagecueshow.com/konto</p>
     </section>
   );
 }

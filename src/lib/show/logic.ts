@@ -6,6 +6,7 @@ export const uid = () => Math.random().toString(36).slice(2, 10);
 export const TYPE_LABEL: Record<CueType, string> = {
   audio: "Lyd",
   midi: "MIDI",
+  osc: "OSC",
   fade: "Fade",
   stop: "Stop",
   pause: "Pause",
@@ -17,6 +18,7 @@ export const TYPE_LABEL: Record<CueType, string> = {
 export const DEFAULT_TYPE_COLORS: Record<CueType, string> = {
   audio: "#22c55e",
   midi: "#3b82f6",
+  osc: "#06b6d4",
   fade: "#f59e0b",
   stop: "#ef4444",
   pause: "#a855f7",
@@ -146,6 +148,8 @@ function rawCue(type: CueType): Cue {
       return { ...base, type, fileId: null, fileName: "", volume: 0, pan: 0, fadeIn: 0, fadeOut: 0, loop: false, outputId: "" };
     case "midi":
       return { ...base, type, messages: [newMidiMsg()] };
+    case "osc":
+      return { ...base, type, host: "127.0.0.1", port: 7700, address: "/", args: "" };
     case "fade":
       return { ...base, type, target: "all", volume: -60, duration: 3, stopAfter: true };
     case "stop":
