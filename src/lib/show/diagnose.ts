@@ -2,7 +2,7 @@ import type { Lang } from "@/lib/site/i18n";
 
 /** Structured hardware warning: the red bar shows `short`, "Se mere" explains it. */
 export type DiagCode = "midiInGone" | "midiOutUnassigned" | "midiOutGone" | "audioOutGone";
-export type Diag = { code: DiagCode; slot: string; hw?: string };
+export type Diag = { code: DiagCode; slot: string; hw?: string; cues?: string[] | undefined };
 export type DiagAction = "settings" | "rescanMidi" | "rescanAudio";
 
 type Txt = Record<Lang, string>;

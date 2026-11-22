@@ -206,24 +206,37 @@ export function ShowControl({ showId }: { showId: string }) {
     const w: Diag[] = [];
     for (const i of seenIns.current) if (!midiIns.includes(i)) w.push({ code: "midiInGone", slot: i, hw: i });
     const outsUsed = new Set<string>(), audioUsed = new Set<string>();
+    const users = new Map<string, string[]>();
+    const addUser = (k: string, id: string) => { const l = users.get(k) ?? []; if (!l.includes(id)) l.push(id); users.set(k, l); };
     flat.forEach((c) => {
-      if (c.type === "midi") c.messages.forEach((m) => m.port && outsUsed.add(m.port));
-      if (c.type === "audio" && c.outputId) audioUsed.add(c.outputId);
+      if (c.type === "midi") c.messages.forEach((m) => { if (m.port) { outsUsed.add(m.port); addUser("m" + m.port, c.id); } });
+      if (c.type === "audio" && c.outputId) { audioUsed.add(c.outputId); addUser("a" + c.outputId, c.id); }
     });
     const midiName = (p: string) => (isSlot(p) ? `MIDI ${slotNum(p)}` : p);
     if (midiPorts.length || midiIns.length || seenIns.current.size) for (const p of outsUsed) {
       const hw = resolveOut(show, "midi", p);
-      if (!hw || isSlot(hw)) w.push({ code: "midiOutUnassigned", slot: midiName(p) });
-      else if (!midiPorts.includes(hw)) w.push({ code: "midiOutGone", slot: midiName(p), hw });
+      if (!hw || isSlot(hw)) w.push({ code: "midiOutUnassigned", slot: midiName(p), cues: users.get("m" + p) });
+      else if (!midiPorts.includes(hw)) w.push({ code: "midiOutGone", slot: midiName(p), hw, cues: users.get("m" + p) });
     }
     if (outputs.length > 1) for (const a of audioUsed) {
       const hw = resolveOut(show, "audio", a, outputs);
-      if (hw && !outputs.some((o) => o.id === hw)) w.push({ code: "audioOutGone", slot: isSlot(a) ? `Lyd ${slotNum(a)}` : "Lyd-cue" });
+      if (hw && !outputs.some((o) => o.id === hw)) w.push({ code: "audioOutGone", slot: isSlot(a) ? `Lyd ${slotNum(a)}` : "Lyd-cue", cues: users.get("a" + a) });
     }
     return w.filter((d, i) => w.findIndex((x) => x.code === d.code && x.slot === d.slot) === i);
   }, [midiIns, midiPorts, outputs, flat, show.patch]);
   const warnings = useMemo(() => diags.map((d) => diagShort(d, "da")), [diags]);
   const [diagOpen, setDiagOpen] = useState(false);
+  // Dismissed warnings stay hidden while the problem persists; once it is gone the key is forgotten, so it shows again if it returns.
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  const dKey = (d: Diag) => d.code + "|" + d.slot;
+  useEffect(() => { setDismissed((x) => { const live = x.filter((k) => diags.some((d) => dKey(d) === k)); return live.length === x.length ? x : live; }); }, [diags]);
+  const shownDiags = diags.filter((d) => !dismissed.includes(dKey(d)));
+  const goToCue = (id: string) => {
+    setDiagOpen(false); setSelectedId(id);
+    const song = show.songs.find((sg) => sg.cues.some((c) => c.id === id || (c.type === "group" && c.children.some((k) => k.id === id))));
+    if (song) setSelectedSongId(song.id);
+    setTimeout(() => document.querySelector(`[data-cue-id="${id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 50);
+  };
   const prevWarn = useRef<string[]>([]);
   useEffect(() => {
     const fixed = prevWarn.current.filter((x) => !warnings.includes(x));
@@ -721,18 +734,19 @@ export function ShowControl({ showId }: { showId: string }) {
         <input ref={fileRef} type="file" accept=".json,.stagecue,application/json" hidden onChange={(e) => e.target.files?.[0] && importShow(e.target.files[0])} />
       </header>
 
-      {warnings.length > 0 && (
+      {shownDiags.length > 0 && (
         <div role="alert" className="flex items-center gap-3 bg-destructive px-4 py-2 text-destructive-foreground">
-          <span className="min-w-0 flex-1 animate-pulse text-lg font-black">⚠️ {diags.map((d) => diagShort(d, lang)).join(" · ")}</span>
+          <span className="min-w-0 flex-1 animate-pulse text-lg font-black">⚠️ {shownDiags.map((d) => diagShort(d, lang)).join(" · ")}</span>
           <button onClick={() => setDiagOpen(true)} className="shrink-0 rounded bg-background px-3 py-1 text-sm font-bold text-foreground">ℹ️ {diagUi("more", lang)}</button>
+          <button onClick={() => setDismissed((x) => [...x, ...shownDiags.map(dKey)])} title={tr("Skjul fejlbeskeden – den kommer igen, hvis fejlen opstår igen")} aria-label={diagUi("close", lang)} className="shrink-0 rounded px-2 py-1 text-lg font-black hover:bg-background/20">✕</button>
         </div>
       )}
-      {diagOpen && diags.length > 0 && (
+      {diagOpen && shownDiags.length > 0 && (
         <div className="fixed inset-0 z-[100005] flex items-start justify-center overflow-y-auto bg-background/70 p-6" onClick={() => setDiagOpen(false)}>
           <div role="dialog" aria-label={diagUi("title", lang)} className="w-full max-w-xl rounded-lg border-2 border-destructive bg-card p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center"><h2 className="flex-1 text-lg font-black">⚠️ {diagUi("title", lang)}</h2><button onClick={() => setDiagOpen(false)} className="px-2 text-muted-foreground hover:text-foreground" aria-label={diagUi("close", lang)}>✕</button></div>
             <div className="flex flex-col gap-3">
-              {diags.map((d) => { const x = explain(d, lang); return (
+              {shownDiags.map((d) => { const x = explain(d, lang); return (
                 <div key={d.code + d.slot} className="rounded border border-border p-3 text-sm">
                   <div className="mb-2 font-black text-destructive">{diagShort(d, lang)}</div>
                   <p><b>{diagUi("what", lang)}:</b> {x.what}</p>
@@ -744,6 +758,7 @@ export function ShowControl({ showId }: { showId: string }) {
                     else listAudioOutputs(true).then((o) => setOutputs(dedupe(o))).catch((e) => setError(e.message));
                   }}>{diagUi(x.action, lang)}</button>
                   {x.action !== "settings" && <button className="ml-2 mt-2 rounded bg-secondary px-3 py-1.5 text-sm font-semibold hover:bg-accent" onClick={() => { setDiagOpen(false); setSettings(true); }}>{diagUi("settings", lang)}</button>}
+                  {!!d.cues?.length && <div className="mt-2 flex flex-wrap gap-2">{d.cues.map((id) => { const c = flat.find((f) => f.id === id); return c ? <button key={id} onClick={() => goToCue(id)} className="rounded bg-standby px-3 py-1.5 text-sm font-bold text-background">🎯 {tr("Gå til")}: {c.name}</button> : null; })}</div>}
                 </div>
               ); })}
             </div>
@@ -891,6 +906,7 @@ export function ShowControl({ showId }: { showId: string }) {
                       }}
                       onClick={() => { setSelectedId(c.id); setSelectedSongId(song.id); setStandbyId(c.id); }}
                       onDoubleClick={() => setStandbyId(c.id)}
+                      data-cue-id={c.id}
                       style={{ borderLeftColor: cueColor(show, c), gridTemplateColumns: gridCols(view).replaceAll("_", " ") }}
                       className={`grid cursor-pointer select-none items-center gap-2 border-b border-l-4 border-border px-2 py-0.5 text-sm leading-tight ${
                         selectedId === c.id ? "bg-accent" : "bg-card hover:bg-secondary"
@@ -951,7 +967,7 @@ export function ShowControl({ showId }: { showId: string }) {
               needPro={needPro}
               channelCount={(o) => engine().channelCount(o)}
               testTone={(o, ch, m) => { void engine().testTone(o, ch, m); }}
-              pfl={(fid, end) => { void engine().pfl(fid, show.pflOut || "", show.pflCh ?? 1, end).catch(() => { setError("Forlyt kunne ikke afspilles"); end(); }); }}
+              pfl={(fid, end) => { void engine().pfl(fid, resolveOut(show, "audio", show.pflOut || "", outputs) || "", show.pflCh ?? 1, end).catch(() => { setError("Forlyt kunne ikke afspilles"); end(); }); }}
               stopPfl={() => engine().stopPfl()}
               onSaveDefault={(c) => setShow((s) => ({ ...s, cueDefaults: { ...s.cueDefaults, [c.type]: cueAsDefault(c) } }))}
               onResetDefault={(t) => setShow((s) => { const d = { ...s.cueDefaults }; delete d[t]; return { ...s, cueDefaults: d }; })}
@@ -1451,12 +1467,35 @@ function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setSh
   );
 }
 
+type SetTab = "audio" | "midi" | "patch" | "prefs" | "monitors" | "look" | "general";
+const SET_TABS: [SetTab, string][] = [["audio", "🔊 Lyd"], ["midi", "🎹 MIDI"], ["patch", "🔀 Patch-matrix"], ["prefs", "⚙️ Preferences"], ["monitors", "📱 Scenemonitors"], ["look", "🎨 Udseende"], ["general", "💾 Generelt & Panic"]];
+const PREF_SKIP = new Set(["id", "type", "messages", "children", "fileId", "fileName", "monitorNotes", "number", "ref", "startTime", "endTime", "outputId", "target", "targetId"]);
+const PREF_LABEL: Record<string, string> = { name: "Navn", follow: "Efter cue", preWait: "Pre-wait (s)", postWait: "Post-wait (s)", volume: "Volumen (dB)", pan: "Pan", fadeIn: "Fade ind (s)", fadeOut: "Fade ud (s)", loop: "Loop", duration: "Varighed (s)", channel: "Kanal", host: "IP", port: "Port", address: "Adresse" };
+/** Preferences: starting values for every new cue, per cue type. Saved in the show. */
+function PrefsSection({ show, setShow }: { show: Show; setShow: (s: Show) => void }) {
+  const tr = useTrApp();
+  const setVal = (t: CueType, k: string, v: unknown) => setShow({ ...show, cueDefaults: { ...show.cueDefaults, [t]: { ...cueAsDefault(newCue(t, show.cueDefaults)), [k]: v } } });
+  return <>
+    <p className="mb-4 text-sm text-muted-foreground">{tr("Værdierne her bruges, når du opretter et nyt cue. De gemmes i showet.")}</p>
+    {TYPES.map((t) => { const c = newCue(t, show.cueDefaults) as unknown as Record<string, unknown>; const keys = Object.keys(c).filter((k) => !PREF_SKIP.has(k) && ["number", "boolean", "string"].includes(typeof c[k]));
+      return <Section key={t} title={tr(TYPE_LABEL[t])} action={show.cueDefaults?.[t] ? <Btn onClick={() => { const d = { ...show.cueDefaults }; delete d[t]; setShow({ ...show, cueDefaults: d }); }}>{tr("Nulstil")}</Btn> : undefined}>
+        <div className="grid grid-cols-2 gap-2">{keys.map((k) => { const v = c[k]; const label = tr(PREF_LABEL[k] ?? k);
+          if (typeof v === "boolean") return <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v} onChange={(e) => setVal(t, k, e.target.checked)} />{label}</label>;
+          if (k === "follow") return <Field key={k} label={label}><select className={inputCls} value={String(v)} onChange={(e) => setVal(t, k, e.target.value)}><option value="manual">{tr("Manuel")}</option><option value="withStart">{tr("Start sammen med")}</option><option value="afterEnd">{tr("Efter slut")}</option></select></Field>;
+          if (typeof v === "number") return <Field key={k} label={label}><Num value={v} onChange={(n) => setVal(t, k, n)} /></Field>;
+          return <Field key={k} label={label}><input className={inputCls} value={String(v)} onChange={(e) => setVal(t, k, e.target.value)} /></Field>; })}</div>
+      </Section>; })}
+  </>;
+}
+
 function Settings(props: {
   show: Show; setShow: (s: Show) => void; midiPorts: string[]; midiIns: string[]; outputs: Output[]; onClose: () => void;
   onScanMidi: () => void; onScanAudio: () => void; onTestMidi: (port: string) => void;
   autoSaveMin: number; setAutoSaveMin: (n: number) => void;
 }) {
   const { show, setShow } = props;
+  const [tab, setTab] = useState<SetTab>("audio");
+  const tr = useTrApp();
   const setAlias = (kind: "audio" | "midi", key: string, v: string) => {
     const cur = { ...(show.ioAliases?.[kind] ?? {}) };
     if (v) cur[key] = v; else delete cur[key];
@@ -1467,22 +1506,39 @@ function Settings(props: {
   );
   return (
     <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-background/80 p-6" onClick={props.onClose}>
-      <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="flex h-[85vh] w-full max-w-4xl overflow-hidden rounded-xl border border-border bg-card" onClick={(e) => e.stopPropagation()}>
+        <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-border bg-muted/30 p-3">
+          {SET_TABS.map(([k, label]) => <button key={k} onClick={() => setTab(k)} className={`rounded px-3 py-2 text-left text-sm font-semibold ${tab === k ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary"}`}>{tr(label)}</button>)}
+        </nav>
+        <div className="min-w-0 flex-1 overflow-y-auto p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Indstillinger</h2>
+          <h2 className="text-2xl font-bold">{tr(SET_TABS.find((t) => t[0] === tab)![1])}</h2>
           <Btn onClick={props.onClose}>Luk</Btn>
         </div>
 
+        {tab === "general" && <>
         <Section title="Gem automatisk til fil">
           <label className="flex items-center gap-2 text-sm">Gem hvert
             <input type="number" min={0} max={999} className="w-20 rounded border border-border bg-background px-2 py-1 text-sm" value={props.autoSaveMin} onChange={(e) => props.setAutoSaveMin(Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0))))} />
             minut (0 = fra)</label>
           <p className="mt-1 text-xs text-muted-foreground">Gemmer til den fil, du har valgt med "Gem som…".</p>
         </Section>
-        <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
+        <Section title="Panic">
+          <Field label="Nød-fade tid (s, 0 = øjeblikkelig)"><Num value={show.panicFade} onChange={(n) => setShow({ ...show, panicFade: Math.max(0, n) })} /></Field>
+        </Section>
+        <p className="text-xs text-muted-foreground">Lydfiler gemmes i browseren på denne computer. Show-filen (JSON) indeholder kun filnavne – på en ny computer skal lydfilerne vælges igen. Brug "Backup m. lyd" for at få alt med i én fil.</p>
+        </>}
+        {tab === "monitors" && <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>}
+        {tab === "audio" && <>
         <div className="mb-5 flex items-center gap-3 rounded border border-border bg-muted/30 p-3 text-xs text-muted-foreground"><img src="/asio-compatible.svg" alt="ASIO compatible" className="h-8 w-auto" /><span>ASIO Technology by Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
         <BusSection show={show} setShow={setShow} outputs={props.outputs} />
-        <PatchSection show={show} setShow={setShow} midiPorts={props.midiPorts} outputs={props.outputs} />
+        <Section title="Lydudgange" action={<Btn onClick={props.onScanAudio}>Scan enheder</Btn>}>
+          {props.outputs.map((o) => <div key={o.id} className="flex items-center justify-between gap-2 border-b border-border py-1.5 text-sm"><span className="min-w-0 flex-1 truncate">{o.label}</span>{aliasInput("audio", o.id)}</div>)}
+        </Section>
+        </>}
+        {tab === "patch" && <PatchSection show={show} setShow={setShow} midiPorts={props.midiPorts} outputs={props.outputs} />}
+        {tab === "prefs" && <PrefsSection show={show} setShow={setShow} />}
+        {tab === "midi" && <>
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
           {props.midiPorts.length ? props.midiPorts.map((p) => (
             <div key={p} className="flex items-center justify-between gap-2 border-b border-border py-1.5">
@@ -1499,11 +1555,8 @@ function Settings(props: {
           )) : <p className="text-sm text-muted-foreground">Ingen MIDI-indgange fundet.</p>}
         </Section>
 
-        <Section title="Lydudgange" action={<Btn onClick={props.onScanAudio}>Scan enheder</Btn>}>
-          {props.outputs.map((o) => <div key={o.id} className="flex items-center justify-between gap-2 border-b border-border py-1.5 text-sm"><span className="min-w-0 flex-1 truncate">{o.label}</span>{aliasInput("audio", o.id)}</div>)}
-          <p className="mt-2 text-xs text-muted-foreground">Scan beder om mikrofon-adgang én gang – det er nødvendigt for at browseren viser navne som "VoiceMeeter Input" og "VoiceMeeter AUX Input".</p>
-        </Section>
-
+        </>}
+        {tab === "look" && <>
         <Section title="Farver pr. cue-type">
           <div className="grid grid-cols-4 gap-2">
             {TYPES.map((t) => (
@@ -1516,10 +1569,8 @@ function Settings(props: {
           <button className="mt-2 text-sm text-muted-foreground underline" onClick={() => setShow({ ...show, typeColors: {} })}>Nulstil farver</button>
         </Section>
 
-        <Section title="Panic">
-          <Field label="Nød-fade tid (s, 0 = øjeblikkelig)"><Num value={show.panicFade} onChange={(n) => setShow({ ...show, panicFade: Math.max(0, n) })} /></Field>
-        </Section>
-        <p className="text-xs text-muted-foreground">Lydfiler gemmes i browseren på denne computer. Show-filen (JSON) indeholder kun filnavne – på en ny computer skal lydfilerne vælges igen. Brug "Backup m. lyd" for at få alt med i én fil.</p>
+        </>}
+        </div>
       </div>
     </div>
   );
@@ -1639,7 +1690,9 @@ function SetlistImport({ onClose, onImport }: { onClose: () => void; onImport: (
 
 function PflButton({ fileId, allow, play, stop }: { fileId: string; allow: () => boolean; play: (f: string, end: () => void) => void; stop: () => void }) {
   const [on, setOn] = useState(false);
-  useEffect(() => () => stop(), [stop]);
+  const stopRef = useRef(stop); stopRef.current = stop;
+  // Stop only when this cue's button unmounts or the file changes – not on every re-render.
+  useEffect(() => () => stopRef.current(), [fileId]);
   const toggle = () => {
     if (on) { stop(); setOn(false); return; }
     if (!allow()) return;
