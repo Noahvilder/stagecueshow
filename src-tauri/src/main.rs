@@ -12,7 +12,7 @@ fn send_osc(host: String, port: u16, data: Vec<u8>) -> Result<(), String> {
 
 /// Pult pushes its latest monitor state; returns how many local phones are connected.
 #[tauri::command]
-fn local_state(json: String, st: tauri::State<local::State>) -> usize {
+fn local_state(json: String, st: tauri::State<'_, local::State>) -> usize {
     let mut g = st.lock().unwrap();
     if g.state != json { g.state = json; g.version += 1; }
     g.viewers
