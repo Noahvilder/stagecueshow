@@ -86,6 +86,8 @@ export interface Show {
   ioAliases?: { audio?: Record<string, string>; midi?: Record<string, string> };
   /** Per cue type: starting values for newly created cues. */
   cueDefaults?: Partial<Record<CueType, Record<string, unknown>>>;
+  /** Numbered outputs ("Lyd 1", "MIDI 2"): cues point at the number, each PC picks the hardware. */
+  patch?: { audio?: { alias: string; hw: string; hwLabel?: string }[]; midi?: { alias: string; hw: string; hwLabel?: string }[] };
 }
 
 export interface MonitorProfile {

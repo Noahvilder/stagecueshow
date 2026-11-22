@@ -40,6 +40,9 @@ export class Engine {
   onMidiIn: (bytes: number[]) => void = () => {};
   onMidiLog: (dir: "in" | "out", port: string, bytes: number[]) => void = () => {};
   onMidiPorts: (outs: string[], ins: string[]) => void = () => {};
+  /** Maps numbered outputs ("#1") to real hardware for this PC. */
+  resolveAudio: (id: string) => string = (id) => id;
+  resolveMidi: (port: string) => string = (p) => p;
   private masters = new Map<AudioContext, GainNode>();
   private muted = false;
   private attachInputs() {
@@ -106,14 +109,16 @@ export class Engine {
     return this.midi ? Array.from(this.midi.outputs.values()).filter((o) => o.state !== "disconnected").map((o) => o.name ?? o.id) : [];
   }
   sendMidi(m: MidiMsg) {
-    const out = this.midi && Array.from(this.midi.outputs.values()).find((o) => (o.name ?? o.id) === m.port);
-    if (!out) return this.onError(`MIDI-port ikke fundet: ${m.port || "(ingen valgt)"}`);
+    const port = this.resolveMidi(m.port);
+    const out = this.midi && Array.from(this.midi.outputs.values()).find((o) => (o.name ?? o.id) === port);
+    if (!out) return this.onError(`MIDI-port ikke fundet: ${m.port !== port ? `${m.port} → ` : ""}${port || "(ingen valgt)"}`);
     const b = midiBytes(m);
     out.send(b);
-    this.onMidiLog("out", m.port, b);
+    this.onMidiLog("out", port, b);
   }
 
-  private async ctx(outputId: string): Promise<AudioContext> {
+  private async ctx(rawId: string): Promise<AudioContext> {
+    const outputId = this.resolveAudio(rawId);
     let c = this.ctxs.get(outputId);
     if (!c) {
       c = new AudioContext({ latencyHint: "interactive" });

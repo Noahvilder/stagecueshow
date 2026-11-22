@@ -12,6 +12,7 @@ import {
 } from "@/lib/show/logic";
 import type { Cue, CueType, MidiMsg, Show } from "@/lib/show/types";
 import { ioName } from "@/lib/show/types";
+import { numberExisting, resolveOut, slotLabel, slotRef, slots, type PatchKind, type PatchSlot } from "@/lib/show/patch";
 import { RemoteHost } from "./RemoteHost";
 import { MonitorNotes } from "./MonitorNotes";
 import { MonitorProfiles } from "./MonitorProfiles";
@@ -138,6 +139,8 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => { if (loaded) localStorage.setItem(PEDAL_KEY, JSON.stringify(pedals)); }, [pedals, loaded]);
   useEffect(() => { if (loaded) localStorage.setItem("stagecue.notesize", String(noteSize)); }, [noteSize, loaded]);
 
+  const patchRef = useRef<{ show: Show; outputs: Output[] }>({ show: emptyShow(), outputs: [] });
+  patchRef.current = { show, outputs };
   const engine = () => {
     if (!engineRef.current) {
       engineRef.current = new Engine();
@@ -148,6 +151,8 @@ export function ShowControl({ showId }: { showId: string }) {
         setMidiLog((l) => [row, ...l].slice(0, 300));
       };
       engineRef.current.onMidiPorts = (outs, ins) => { setMidiPorts(outs); setMidiIns(ins); };
+      engineRef.current.resolveAudio = (id) => resolveOut(patchRef.current.show, "audio", id, patchRef.current.outputs);
+      engineRef.current.resolveMidi = (p) => resolveOut(patchRef.current.show, "midi", p);
     }
     return engineRef.current;
   };
@@ -1019,8 +1024,9 @@ function Inspector(props: {
           {cue.fileId && <Field label="Forlyt (PFL) · Pro"><PflButton fileId={cue.fileId} allow={() => props.needPro("pfl")} /></Field>}
           <Field label="Lydudgang">
             <select className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
+              {slots(show, "audio").length > 0 && <optgroup label={tr("Nummererede udgange")}>{slots(show, "audio").map((sl, i) => <option key={i} value={slotRef(i + 1)}>{slotLabel(i + 1, sl, "audio")}</option>)}</optgroup>}
               {outputs.map((o) => <option key={o.id} value={o.id}>{ioName(o.label, show.ioAliases?.audio?.[o.id])}</option>)}
-              {!outputs.some((o) => o.id === cue.outputId) && <option value={cue.outputId}>{tr("(ukendt udgang – scan igen)")}</option>}
+              {!outputs.some((o) => o.id === cue.outputId) && !cue.outputId.startsWith("#") && <option value={cue.outputId}>{tr("(ukendt udgang – scan igen)")}</option>}
             </select>
           </Field>
           <ChannelPicker outputId={cue.outputId} channel={cue.channel ?? 1} mono={!!cue.mono} count={props.channelCount} aliases={show.ioAliases?.audio} onChange={(ch, mono) => { if ((ch > 1 || mono) && !props.needPro("channels")) return; set({ channel: ch, mono }); }} />
@@ -1051,8 +1057,9 @@ function Inspector(props: {
                 </div>
                 <select className={inputCls} value={m.port} onChange={(e) => upd({ port: e.target.value })}>
                   <option value="">{tr("Vælg port…")}</option>
+                  {slots(show, "midi").length > 0 && <optgroup label={tr("Nummererede udgange")}>{slots(show, "midi").map((sl, i) => <option key={i} value={slotRef(i + 1)}>{slotLabel(i + 1, sl, "midi")}</option>)}</optgroup>}
                   {midiPorts.map((p) => <option key={p} value={p}>{ioName(p, show.ioAliases?.midi?.[p])}</option>)}
-                  {m.port && !midiPorts.includes(m.port) && <option value={m.port}>{m.port} ({tr("ikke tilsluttet")})</option>}
+                  {m.port && !midiPorts.includes(m.port) && !m.port.startsWith("#") && <option value={m.port}>{m.port} ({tr("ikke tilsluttet")})</option>}
                 </select>
                 {(() => { const k = midiKindInfo(m.kind); return (<>
                 <div className="mt-2 grid grid-cols-4 gap-1">
@@ -1164,6 +1171,47 @@ function GroupEditor(props: Parameters<typeof Inspector>[0] & { cue: Extract<Cue
   );
 }
 
+function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setShow: (s: Show) => void; midiPorts: string[]; outputs: Output[] }) {
+  const setList = (kind: PatchKind, list: PatchSlot[]) => setShow({ ...show, patch: { ...show.patch, [kind]: list } });
+  const sel = "min-w-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm";
+  const block = (kind: PatchKind) => {
+    const list = slots(show, kind);
+    const hwOpts = kind === "audio" ? outputs.map((o) => ({ id: o.id, label: o.label })) : midiPorts.map((p) => ({ id: p, label: p }));
+    const upd = (i: number, p: Partial<PatchSlot>) => setList(kind, list.map((x, j) => (j === i ? { ...x, ...p } : x)));
+    return (
+      <div className="mb-3">
+        <div className="mb-1 flex items-center justify-between text-sm font-semibold">
+          <span>{kind === "audio" ? "Lydudgange" : "MIDI-udgange"}</span>
+          <button className="text-go" onClick={() => setList(kind, [...list, { alias: "", hw: "" }])}>+ {kind === "audio" ? "Lyd" : "MIDI"} {list.length + 1}</button>
+        </div>
+        {list.length === 0 && <p className="text-xs text-muted-foreground">Ingen numre endnu.</p>}
+        {list.map((sl, i) => {
+          const resolved = resolveOut(show, kind, slotRef(i + 1), kind === "audio" ? outputs : undefined);
+          const found = hwOpts.some((o) => o.id === resolved);
+          return (
+            <div key={i} className="flex flex-wrap items-center gap-2 border-b border-border py-1.5">
+              <span className="w-16 shrink-0 font-mono text-sm font-bold">{kind === "audio" ? "Lyd" : "MIDI"} {i + 1}</span>
+              <input className="w-40 rounded border border-border bg-background px-2 py-1 text-sm" placeholder="Bruges til, fx In-ear" value={sl.alias} onChange={(e) => upd(i, { alias: e.target.value })} />
+              <select className={sel} value={found ? resolved : "__missing"} onChange={(e) => { const o = hwOpts.find((x) => x.id === e.target.value); upd(i, { hw: e.target.value, hwLabel: o?.label ?? (e.target.value ? e.target.value : "Standard") }); }}>
+                {!found && <option value="__missing">⚠ {sl.hwLabel || sl.hw || "Vælg hardware…"} (ikke fundet på denne PC)</option>}
+                {hwOpts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              {i === list.length - 1 && <button className="text-xs text-destructive" title="Fjern sidste nummer" onClick={() => setList(kind, list.slice(0, -1))}>✕</button>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+  return (
+    <Section title="Udgange med numre (følger showet)" action={<Btn onClick={() => setShow(numberExisting(show, Object.fromEntries(outputs.map((o) => [o.id, o.label]))))}>Giv eksisterende cues numre</Btn>}>
+      <p className="mb-2 text-xs text-muted-foreground">Cues sender til et nummer, fx "Lyd 2" eller "MIDI 1". Skifter du computer, vælger du bare hardwaren her én gang – alle cues følger med. Teksten "Bruges til" gemmes i showet.</p>
+      {block("audio")}
+      {block("midi")}
+    </Section>
+  );
+}
+
 function Settings(props: {
   show: Show; setShow: (s: Show) => void; midiPorts: string[]; midiIns: string[]; outputs: Output[]; onClose: () => void;
   onScanMidi: () => void; onScanAudio: () => void; onTestMidi: (port: string) => void;
@@ -1186,6 +1234,7 @@ function Settings(props: {
         </div>
 
         <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>
+        <PatchSection show={show} setShow={setShow} midiPorts={props.midiPorts} outputs={props.outputs} />
         <Section title="MIDI-udgange" action={<Btn onClick={props.onScanMidi}>Scan</Btn>}>
           {props.midiPorts.length ? props.midiPorts.map((p) => (
             <div key={p} className="flex items-center justify-between gap-2 border-b border-border py-1.5">
