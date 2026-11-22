@@ -100,8 +100,8 @@ export function FloatingWindow(props: {
         <span className={`flex-1 truncate text-xs font-bold uppercase tracking-widest ${props.accent ? "text-standby" : "text-muted-foreground"}`}>{tr(props.title)}</span>
         {props.locked ? <span className="text-xs" aria-label="Låst">🔒</span> : <>
         <button onClick={() => onChange({ popped: !s.popped, min: false })} className="px-1.5 text-muted-foreground hover:text-foreground" title={tr(s.popped ? "Gendan i pulten" : "Åbn på anden skærm")} aria-label={tr(s.popped ? "Gendan i pulten" : "Åbn på anden skærm")}>{s.popped ? "⤶" : "⧉"}</button>
-        <button onClick={() => onChange({ min: !s.min })} className="px-1.5 text-muted-foreground hover:text-foreground" aria-label="Minimer">{s.min ? "▢" : "–"}</button>
-        <button onClick={() => onChange({ open: false })} className="px-1.5 text-muted-foreground hover:text-destructive" aria-label="Luk">✕</button></>}
+        <button onClick={() => onChange({ min: !s.min })} className="px-1.5 text-muted-foreground hover:text-foreground" aria-label="Minimer" title="Minimer / gendan vindue">{s.min ? "▢" : "–"}</button>
+        <button onClick={() => onChange({ open: false })} className="px-1.5 text-muted-foreground hover:text-destructive" aria-label="Luk" title="Luk vindue">✕</button></>}
       </div>
       {!s.min && (
         <>

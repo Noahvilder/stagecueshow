@@ -16,7 +16,8 @@
         "minHeight": 640,
         "resizable": true,
         "devtools": false,
-        "label": "main"
+        "label": "main",
+        "dragDropEnabled": false
       }
     ],
     "security": {
