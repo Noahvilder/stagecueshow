@@ -31,6 +31,8 @@ import { TAB_TUNINGS, tabTemplate } from "@/lib/show/tabs";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
 import { TimecodePanel } from "./TimecodePanel";
+import { CartPanel } from "./CartPanel";
+import type { CartPad } from "@/lib/show/types";
 import { ProDialog } from "./ProGate";
 import { HotStandby } from "./HotStandby";
 import { DEFAULT_GO_GUARD_MS, acceptGo, isDoubleTap, readPlayhead, savePlayhead, shouldOfferResume, type Playhead } from "@/lib/show/safety";
@@ -45,7 +47,7 @@ import { HelpTips } from "@/components/show/HelpTips";
 import { LANGS, LANG_NAMES } from "@/lib/site/i18n";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
-type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon";
+type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon" | "cart";
 const WIN_KEY = "stagecue.windows.v1";
 const PEDAL_KEY = "stagecue.pedals.v1";
 const defaultWins = (): Record<WinKey, WinState> => ({
@@ -56,6 +58,7 @@ const defaultWins = (): Record<WinKey, WinState> => ({
   pedal: { x: 384, y: 454, w: 360, h: 330, z: 1, open: false, min: false },
   remote: { x: 756, y: 454, w: 320, h: 470, z: 1, open: false, min: false },
   midimon: { x: 1088, y: 454, w: 560, h: 360, z: 1, open: false, min: false },
+  cart: { x: 384, y: 454, w: 620, h: 420, z: 1, open: false, min: false },
 });
 const simpleWins = (): Record<WinKey, WinState> => {
   const d = defaultWins();
@@ -63,7 +66,7 @@ const simpleWins = (): Record<WinKey, WinState> => {
   d.list = { ...d.list, w: 760, h: 912 };
   return d;
 };
-const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "MIDI-controller", remote: "Telefon", midimon: "MIDI Monitor" };
+const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "MIDI-controller", remote: "Telefon", midimon: "MIDI Monitor", cart: "Lydbræt (jingles)" };
 
 const TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo", "group"];
 const CHILD_TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo"];
@@ -749,6 +752,7 @@ export function ShowControl({ showId }: { showId: string }) {
         { label: "Værktøjer", items: [
           { label: "⏱️ Click / Optælling…", onClick: () => setClickOpen(true), disabled: locked },
           { label: "🕒 Timecode (MTC / LTC)…", onClick: () => setTcOpen(true) },
+          { label: "🎛️ Lydbræt (jingles)", onClick: () => { setWin("cart", { open: true, min: false }); focusWin("cart"); } },
           { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
           { label: "📋 Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
           { label: "⌨️ Genveje…", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
@@ -1061,6 +1065,18 @@ export function ShowControl({ showId }: { showId: string }) {
 </FloatingWindow>
 <FloatingWindow locked={locked} title={"MIDI-controller"} state={wins.pedal} onChange={(p) => setWin("pedal", p)} onFocus={() => focusWin("pedal")}>
 <PedalPanel map={pedals} learning={learning} last={lastMidi} onLearn={setLearning} onClear={(k) => setPedals((m) => { const n = { ...m }; delete n[k]; return n; })} />
+</FloatingWindow>
+<FloatingWindow locked={locked} title={"Lydbræt (jingles)"} state={wins.cart} onChange={(p) => setWin("cart", p)} onFocus={() => focusWin("cart")}>
+<CartPanel show={show} pads={show.cart ?? []} locked={locked} outputs={outputs} playing={new Set(active.map((r) => r.cueId))}
+  setPads={(fn) => setShow((s) => ({ ...s, cart: fn(s.cart ?? []) }))}
+  onFire={(p) => { trackFeature("cart.fire"); void engine().execute(p); }}
+  onStop={(id) => engine().stopCue(id)}
+  onAddFiles={async (files) => {
+    const audio = files.filter((f) => f.type.startsWith("audio/") || AUDIO_EXT.test(f.name));
+    const made: CartPad[] = [];
+    for (const f of audio) { const id = uid(); await putAudio(id, f); made.push({ ...(newCue("audio", show.cueDefaults) as CartPad), id: uid(), name: f.name.replace(/\.[^.]+$/, ""), fileId: id, fileName: f.name }); }
+    if (made.length) setShow((s) => ({ ...s, cart: [...(s.cart ?? []), ...made] }));
+  }} />
 </FloatingWindow>
 <FloatingWindow locked={locked} title={"MIDI Monitor"} state={wins.midimon} onChange={(p) => setWin("midimon", p)} onFocus={() => focusWin("midimon")}>
 <MidiMonitor rows={show.ioAliases?.midi ? midiLog.map((r) => ({ ...r, port: show.ioAliases?.midi?.[r.port]?.trim() || r.port })) : midiLog} paused={monPaused} setPaused={setMonPaused} onClear={() => setMidiLog([])} ins={midiIns.map((p) => show.ioAliases?.midi?.[p]?.trim() || p)} outs={midiPorts.map((p) => show.ioAliases?.midi?.[p]?.trim() || p)} />

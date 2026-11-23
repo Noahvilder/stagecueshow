@@ -11,6 +11,7 @@ export function collectFileIds(show: Show): string[] {
     }
   };
   for (const s of show.songs) walk(s.cues as any[]);
+  walk((show.cart ?? []) as any[]);
   return [...ids];
 }
 

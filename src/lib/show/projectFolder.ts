@@ -19,6 +19,7 @@ export function audioRefs(show: Show): AudioRef[] {
     }
   };
   for (const s of show.songs) walk(s.cues as any[]);
+  walk((show.cart ?? []) as any[]);
   return [...out].map(([fileId, fileName]) => ({ fileId, fileName }));
 }
 

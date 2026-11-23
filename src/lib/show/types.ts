@@ -72,6 +72,9 @@ export type GroupCue = Base & { type: "group"; children: Cue[] };
 export type Cue = AudioCue | MidiCue | OscCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue | GroupCue;
 export type CueType = Cue["type"];
 
+/** Soundboard pad: an audio cue fired outside the cue list, with its own output. */
+export type CartPad = AudioCue & { color?: string; key?: string };
+
 export interface Song {
   id: string;
   name: string;
@@ -84,6 +87,8 @@ export interface Show {
   panicFade: number;
   typeColors: Partial<Record<CueType, string>>;
   songs: Song[];
+  /** Soundboard (cart) pads for jingles and effects. */
+  cart?: CartPad[];
   monitors?: MonitorProfile[];
   /** Friendly names for hardware ports, travels with the show. */
   ioAliases?: { audio?: Record<string, string>; midi?: Record<string, string> };
