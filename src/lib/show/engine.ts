@@ -4,12 +4,36 @@ import { dbToGain, deepCues, groupDuration, midiBytes, trimSpan } from "./logic"
 import { asioBridge, isAsio, listAsio, openAsio } from "./asio";
 import type { AudioCue, Cue, MidiMsg } from "./types";
 
+interface MixNodes { trim: GainNode; hpf: BiquadFilterNode; low: BiquadFilterNode; mid: BiquadFilterNode; high: BiquadFilterNode }
+
+function applyMix(m: MixNodes, c: AudioCue) {
+  m.trim.gain.value = dbToGain(c.trim ?? 0);
+  m.hpf.frequency.value = c.hpf ? 80 : 10;
+  m.low.gain.value = c.eqLow ?? 0;
+  m.mid.gain.value = c.eqMid ?? 0;
+  m.mid.frequency.value = c.eqMidFreq ?? 1000;
+  m.high.gain.value = c.eqHigh ?? 0;
+}
+
+function buildMix(ctx: AudioContext, from: AudioNode, to: AudioNode, c: AudioCue): MixNodes {
+  const trim = ctx.createGain();
+  const hpf = ctx.createBiquadFilter(); hpf.type = "highpass"; hpf.Q.value = 0.7;
+  const low = ctx.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 100;
+  const mid = ctx.createBiquadFilter(); mid.type = "peaking"; mid.Q.value = 1;
+  const high = ctx.createBiquadFilter(); high.type = "highshelf"; high.frequency.value = 10000;
+  from.connect(trim); trim.connect(hpf); hpf.connect(low); low.connect(mid); mid.connect(high); high.connect(to);
+  const m = { trim, hpf, low, mid, high };
+  applyMix(m, c);
+  return m;
+}
+
 interface Player {
   cue: AudioCue;
   ctx: AudioContext;
   buffer: AudioBuffer;
   gain: GainNode;
   pan: StereoPannerNode;
+  mix?: MixNodes;
   source: AudioBufferSourceNode | null;
   offset: number;
   startedCtx: number;
@@ -221,7 +245,7 @@ export class Engine {
     const gain = ctx.createGain();
     const pan = ctx.createStereoPanner();
     pan.pan.value = Math.max(-1, Math.min(1, cue.pan));
-    gain.connect(pan);
+    const mix = buildMix(ctx, gain, pan, cue);
     this.route(ctx, pan, cue.channel ?? 1, !!cue.mono);
     const span = trimSpan(buffer.duration, cue.startTime, cue.endTime);
     const target = dbToGain(cue.volume);
@@ -235,9 +259,18 @@ export class Engine {
       gain.gain.setValueAtTime(target, t);
       gain.gain.linearRampToValueAtTime(0, now + span.len);
     }
-    const p: Player = { cue, ctx, buffer, gain, pan, source: null, offset: 0, startedCtx: now, paused: false, start: span.start, end: span.end };
+    const p: Player = { cue, ctx, buffer, gain, pan, mix, source: null, offset: 0, startedCtx: now, paused: false, start: span.start, end: span.end };
     this.players.set(cue.id, p);
     this.startSource(p);
+  }
+
+  /** Live-update EQ/trim/pan of a playing audio cue from the mini-mixer. */
+  liveMix(cue: AudioCue) {
+    const p = this.players.get(cue.id);
+    if (!p) return;
+    p.cue = { ...p.cue, ...cue };
+    if (p.mix) applyMix(p.mix, p.cue);
+    p.pan.pan.value = Math.max(-1, Math.min(1, cue.pan));
   }
 
   private removePlayer(id: string) {

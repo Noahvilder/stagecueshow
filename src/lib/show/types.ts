@@ -51,6 +51,15 @@ export type AudioCue = Base & {
   startTime?: number;
   /** Trim end in seconds (0 = file end). */
   endTime?: number;
+  /** Mini-mixer: input trim in dB before the fader. */
+  trim?: number;
+  /** Low-cut (high-pass) on at 80 Hz. */
+  hpf?: boolean;
+  /** 3-band EQ gains in dB, mid frequency in Hz. */
+  eqLow?: number;
+  eqMid?: number;
+  eqMidFreq?: number;
+  eqHigh?: number;
 };
 export type MidiCue = Base & { type: "midi"; messages: MidiMsg[] };
 export type OscCue = Base & { type: "osc"; host: string; port: number; address: string; args: string };

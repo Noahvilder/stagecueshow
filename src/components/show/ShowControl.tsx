@@ -32,7 +32,7 @@ import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKe
 import { ClickGenerator } from "./ClickGenerator";
 import { TimecodePanel } from "./TimecodePanel";
 import { CartPanel } from "./CartPanel";
-import type { CartPad } from "@/lib/show/types";
+import type { AudioCue, CartPad } from "@/lib/show/types";
 import { ProDialog } from "./ProGate";
 import { HotStandby } from "./HotStandby";
 import { DEFAULT_GO_GUARD_MS, acceptGo, isDoubleTap, readPlayhead, savePlayhead, shouldOfferResume, type Playhead } from "@/lib/show/safety";
@@ -1040,7 +1040,7 @@ export function ShowControl({ showId }: { showId: string }) {
               flat={flat}
               midiPorts={midiPorts}
               outputs={outputs}
-              onChange={(p) => updateCue(selected.id, p)}
+              onChange={(p) => { updateCue(selected.id, p); if (selected.type === "audio") engineRef.current?.liveMix({ ...selected, ...p } as AudioCue); }}
               onDelete={() => deleteCue(selected.id)}
               onStandby={() => setStandbyId(selected.id)}
               onFire={() => engine().execute(selected)}
@@ -1203,6 +1203,39 @@ function Btn({ children, onClick }: { children: ReactNode; onClick: () => void }
   );
 }
 
+function Knob({ label, value, min, max, step, unit, onChange }: { label: string; value: number; min: number; max: number; step: number; unit: string; onChange: (n: number) => void }) {
+  return (
+    <label className="flex flex-col items-center gap-1 text-[11px]">
+      <span className="text-muted-foreground">{label}</span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} onDoubleClick={() => onChange(unit === "Hz" ? 1000 : 0)} className="w-full accent-[var(--standby)]" />
+      <span className="tabular-nums">{value > 0 && unit === "dB" ? "+" : ""}{value}{unit}</span>
+    </label>
+  );
+}
+
+function MixStrip({ cue, set, tr }: { cue: AudioCue; set: (p: Record<string, unknown>) => void; tr: (s: string) => string }) {
+  const flat = !(cue.eqLow || cue.eqMid || cue.eqHigh) && (cue.eqMidFreq ?? 1000) === 1000;
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border p-2">
+      <div className="flex items-center justify-between text-xs font-semibold">
+        <span>{tr("Indgang & EQ")}</span>
+        {!flat && <button className="font-normal text-muted-foreground underline" onClick={() => set({ eqLow: 0, eqMid: 0, eqHigh: 0, eqMidFreq: 1000 })}>{tr("Nulstil EQ")}</button>}
+      </div>
+      <div className="grid grid-cols-2 items-end gap-2">
+        <Knob label={tr("Trim")} value={cue.trim ?? 0} min={-24} max={24} step={0.5} unit="dB" onChange={(n) => set({ trim: n })} />
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!cue.hpf} onChange={(e) => set({ hpf: e.target.checked })} /> {tr("Low-cut 80 Hz")}</label>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        <Knob label={tr("Diskant")} value={cue.eqHigh ?? 0} min={-15} max={15} step={0.5} unit="dB" onChange={(n) => set({ eqHigh: n })} />
+        <Knob label={tr("Mellem")} value={cue.eqMid ?? 0} min={-15} max={15} step={0.5} unit="dB" onChange={(n) => set({ eqMid: n })} />
+        <Knob label={tr("Mellem-frekvens")} value={cue.eqMidFreq ?? 1000} min={200} max={5000} step={50} unit="Hz" onChange={(n) => set({ eqMidFreq: n })} />
+        <Knob label={tr("Bas")} value={cue.eqLow ?? 0} min={-15} max={15} step={0.5} unit="dB" onChange={(n) => set({ eqLow: n })} />
+      </div>
+      <p className="text-[10px] text-muted-foreground">{tr("Dobbeltklik på en skyder for at nulstille. Ændringer høres med det samme, også mens cuet spiller.")}</p>
+    </div>
+  );
+}
+
 function Field({ label, children, tip }: { label: string; children: ReactNode; tip?: string }) {
   const tr = useTrApp();
   return (
@@ -1318,6 +1351,10 @@ function Inspector(props: {
             <input type="file" accept="audio/*" className="text-sm" onChange={(e) => e.target.files?.[0] && props.onFile(e.target.files[0])} />
             <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || tr("Ingen fil valgt")}</div>
           </Field>
+          <details className="rounded-lg border border-border bg-muted/30 p-2" open={false}>
+            <summary className="cursor-pointer select-none text-sm font-semibold">🎛️ {tr("Mixer")} <span className="text-xs font-normal text-muted-foreground">· {tr("trim, EQ, patch, fader")}</span></summary>
+            <div className="mt-2 flex flex-col gap-3">
+          <MixStrip cue={cue} set={set} tr={tr} />
           {cue.fileId && (
             <Field label="Waveform & trim (træk i markørerne)">
               <Waveform fileKey={cue.fileId} load={() => props.loadAudio(cue.fileId!, cue.outputId)} startTime={cue.startTime ?? 0} endTime={cue.endTime ?? 0} onChange={(p) => set(p)} />
@@ -1350,6 +1387,8 @@ function Inspector(props: {
             <Field label="Fade-out (s)"><Num value={cue.fadeOut} onChange={(n) => set({ fadeOut: Math.max(0, n) })} /></Field>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cue.loop} onChange={(e) => set({ loop: e.target.checked })} /> {tr("Loop")}</label>
+            </div>
+          </details>
         </>
       )}
 
