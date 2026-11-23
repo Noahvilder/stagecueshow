@@ -54,7 +54,7 @@ export class Engine {
       inp.onmidimessage = (e) => {
         if (!e.data) return;
         const b = Array.from(e.data);
-        if (b[0] === 0xf8 || b[0] === 0xfe) return; // skip clock/active sensing noise
+        if (b[0] === 0xf8 || b[0] === 0xfe || b[0] === 0xf1) return; // skip clock/active sensing noise
         this.onMidiLog("in", inp.name ?? inp.id, b);
         this.onMidiIn(b);
       };

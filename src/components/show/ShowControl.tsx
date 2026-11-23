@@ -30,6 +30,7 @@ import { GRID, snapRect, type SnapMode } from "@/lib/show/snap";
 import { TAB_TUNINGS, tabTemplate } from "@/lib/show/tabs";
 import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKey, type ViewPrefs } from "@/lib/show/view";
 import { ClickGenerator } from "./ClickGenerator";
+import { TimecodePanel } from "./TimecodePanel";
 import { ProDialog } from "./ProGate";
 import { HotStandby } from "./HotStandby";
 import { DEFAULT_GO_GUARD_MS, acceptGo, isDoubleTap, readPlayhead, savePlayhead, shouldOfferResume, type Playhead } from "@/lib/show/safety";
@@ -304,6 +305,17 @@ export function ShowControl({ showId }: { showId: string }) {
     setStandbyId(n >= 0 ? flat[n]!.id : null);
   }, [flat, standbyIdx, backup, goGuard]);
 
+  /** Timecode trigger: fire a specific cue as if it were on standby. */
+  const fireById = (id: string) => {
+    const i = flat.findIndex((c) => c.id === id);
+    if (i < 0 || backup) return;
+    engine().go(flat, i);
+    setLiveId(id);
+    setLastGo(performance.now());
+    const n = nextStandbyIndex(flat, i);
+    setStandbyId(n >= 0 ? flat[n]!.id : null);
+  };
+
   // Esc = smooth emergency fade; Esc twice quickly = instant hard cut.
   const panic = useCallback(() => {
     const t = performance.now();
@@ -408,6 +420,35 @@ export function ShowControl({ showId }: { showId: string }) {
     setSelectedId(c.id);
   };
   const [clickOpen, setClickOpen] = useState(false);
+  const [tcOpen, setTcOpen] = useState(false);
+  const AUDIO_EXT = /\.(mp3|wav|aiff?|flac|m4a|ogg|aac|opus)$/i;
+  const [fileDrop, setFileDrop] = useState<string | null>(null);
+  const isFileDrag = (e: import("react").DragEvent) => !drag.current && Array.from(e.dataTransfer.types).includes("Files");
+  /** Audio files dragged in from Explorer become audio cues in the song they land on. */
+  const dropFiles = async (files: File[], songId: string | null, beforeId: string | null) => {
+    setFileDrop(null);
+    if (locked) return;
+    const audio = files.filter((f) => f.type.startsWith("audio/") || AUDIO_EXT.test(f.name));
+    if (!audio.length) { setError(tr("Kun lydfiler (mp3, wav, aiff, flac, m4a) kan trækkes ind")); return; }
+    const made: Cue[] = [];
+    for (const f of audio) {
+      const id = uid();
+      await putAudio(id, f);
+      made.push({ ...newCue("audio", show.cueDefaults), name: f.name.replace(/\.[^.]+$/, ""), fileId: id, fileName: f.name } as Cue);
+    }
+    trackFeature("cue.dropFiles");
+    setShow((s) => {
+      const songs = [...s.songs];
+      let si = songs.findIndex((sg) => sg.id === songId);
+      if (si < 0) { if (!songs.length) return { ...s, songs: [{ id: uid(), name: "Sang 1", cues: made }] }; si = songs.length - 1; }
+      const cues = [...songs[si]!.cues];
+      const at = beforeId ? cues.findIndex((x) => x.id === beforeId) : -1;
+      cues.splice(at < 0 ? cues.length : at, 0, ...made);
+      songs[si] = { ...songs[si]!, cues };
+      return { ...s, songs };
+    });
+    setSelectedId(made[0]!.id);
+  };
   const [keysOpen, setKeysOpen] = useState(false);
   const [frOpen, setFrOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -707,6 +748,7 @@ export function ShowControl({ showId }: { showId: string }) {
         ] },
         { label: "Værktøjer", items: [
           { label: "⏱️ Click / Optælling…", onClick: () => setClickOpen(true), disabled: locked },
+          { label: "🕒 Timecode (MTC / LTC)…", onClick: () => setTcOpen(true) },
           { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
           { label: "📋 Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
           { label: "⌨️ Genveje…", keys: "Ctrl+K", onClick: () => setKeysOpen(true) },
@@ -758,6 +800,7 @@ export function ShowControl({ showId }: { showId: string }) {
         <span className="min-w-[8.5rem] shrink-0 text-right font-mono text-2xl tabular-nums">{clock}</span>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
         <button onClick={() => setLocked((l) => !l)} title="Lås mod utilsigtede ændringer under live-afvikling (Ctrl+L)" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
+        {tcOpen && <TimecodePanel engine={engine} outputs={outputs.filter((o) => o.id).map((o) => ({ deviceId: o.id, label: o.label }))} goId={lastGo} targets={flat.filter((c) => c.tc?.trim()).map((c) => ({ id: c.id, name: c.name, tc: c.tc! }))} onTrigger={fireById} onClose={() => setTcOpen(false)} />}
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
         {frOpen && <FindReplace show={show} outputs={outputs} midiPorts={midiPorts} onApply={(n) => setShow(n)} onGo={(id) => { setFrOpen(false); goToCue(id); }} onClose={() => setFrOpen(false)} />}
@@ -887,9 +930,15 @@ export function ShowControl({ showId }: { showId: string }) {
             </button>
           </div>}
           <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder={tr("🔍 Søg i sange, cues, numre, stikord og noter…")} aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          <div
+            className={`relative min-h-0 flex-1 overflow-y-auto p-2 ${fileDrop !== null ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
+            onDragOverCapture={(e) => { if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; const sid = (e.target as HTMLElement).closest("[data-song-id]")?.getAttribute("data-song-id") ?? ""; if (sid !== fileDrop) setFileDrop(sid); }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDrop(null); }}
+            onDropCapture={(e) => { if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); const t = e.target as HTMLElement; void dropFiles(Array.from(e.dataTransfer.files), t.closest("[data-song-id]")?.getAttribute("data-song-id") ?? null, t.closest("[data-cue-id]")?.getAttribute("data-cue-id") ?? null); }}
+          >
+            {fileDrop !== null && <div className="pointer-events-none sticky top-0 z-10 mb-2 rounded bg-standby px-3 py-2 text-center text-sm font-black text-background">{tr("⬇ Slip her for at oprette lyd-cues")}</div>}
             {show.songs.map((song, si) => { const q = songQuery.trim().toLowerCase(); const songHit = !q || song.name.toLowerCase().includes(q); const cues = songHit ? song.cues : song.cues.filter((c) => cueMatches(c, q, flat.indexOf(c) + 1)); if (q && !cues.length) return null; return (
-              <section key={song.id} className="mb-3">
+              <section key={song.id} data-song-id={song.id} className={`mb-3 ${fileDrop === song.id ? "rounded ring-2 ring-standby" : ""}`}>
                 <div
                   draggable={!locked}
                   onDragStart={(e) => { drag.current = { kind: "song", id: song.id }; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", song.id); }}
@@ -1219,6 +1268,7 @@ function Inspector(props: {
         <Field label="Manuskript-ref (side/replik)"><input className={inputCls} placeholder={tr("fx s. 34")} value={cue.ref ?? ""} onChange={(e) => set({ ref: e.target.value })} /></Field>
       </div>
       <Field label="Stikord (hvornår skal der trykkes GO?)"><input className={inputCls} placeholder={tr("fx Efter guitarsolo")} value={cue.stikord ?? ""} onChange={(e) => set({ stikord: e.target.value })} /></Field>
+      <Field label="Timecode-trigger (HH:MM:SS:FF, tom = fra)"><input className={inputCls + " font-mono"} placeholder="01:00:12:00" value={cue.tc ?? ""} onChange={(e) => set({ tc: e.target.value.replace(/[^0-9:;.]/g, "") })} /></Field>
 
       <div className="rounded border border-border p-2">
         <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">{tr("Afvikling")}</div>

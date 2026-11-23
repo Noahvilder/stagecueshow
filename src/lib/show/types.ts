@@ -26,6 +26,8 @@ interface Base {
   /** Script/manuscript reference. */
   ref?: string;
   monitorNotes?: Record<string, string>;
+  /** Fire this cue when incoming timecode reaches HH:MM:SS:FF. */
+  tc?: string;
   /** Tempo map of a generated click track (shown live on the drummer monitor). */
   click?: ClickInfo;
 }
