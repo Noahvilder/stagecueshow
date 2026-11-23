@@ -41,7 +41,7 @@ describe("stresstest: kæmpe show", () => {
   it("Tjek show på hele showet er hurtigt og finder ingen falske fejl", () => {
     let r: ReturnType<typeof preflight> = [];
     const ms = time(() => { r = preflight(show, []); });
-    expect(r.filter((x) => x.code !== "midiPort" && x.code !== "audioPort")).toEqual([]);
+    expect(r).toEqual([]);
     expect(ms).toBeLessThan(200);
   });
 
