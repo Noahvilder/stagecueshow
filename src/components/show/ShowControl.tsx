@@ -44,6 +44,7 @@ import { trackFeature } from "@/lib/track";
 import { setAppLang, useAppLang, trApp, useTrApp } from "@/lib/show/appI18n";
 import { diagShort, diagUi, explain, type Diag } from "@/lib/show/diagnose";
 import { HelpTips } from "@/components/show/HelpTips";
+import { preflight, type PreflightIssue } from "@/lib/show/preflight";
 import { LANGS, LANG_NAMES } from "@/lib/site/i18n";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
@@ -109,7 +110,7 @@ export function ShowControl({ showId }: { showId: string }) {
   const needPro = useCallback((f: ProFeature) => { if (pro) return true; setProAsk(f); return false; }, [pro]);
   const [shortcuts, setShortcuts] = useState<ShortcutMap>(DEFAULT_SHORTCUTS);
   useEffect(() => setShortcuts(loadShortcuts()), []);
-  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void; shift?: (d: -1 | 1) => void; findReplace?: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
+  const scRef = useRef<{ map: ShortcutMap; add: (t: CueType) => void; mute: () => void; stop: () => void; save: () => void; backup: () => void; open: () => void; shift?: (d: -1 | 1) => void; findReplace?: () => void; toggleLock?: () => void }>({ map: DEFAULT_SHORTCUTS, add: () => {}, mute: () => {}, stop: () => {}, save: () => {}, backup: () => {}, open: () => {} });
   const [view, setView] = useState<ViewPrefs>(DEFAULT_VIEW);
   const [viewOpen, setViewOpen] = useState(false);
   useEffect(() => { setView(loadView()); }, []);
@@ -249,6 +250,9 @@ export function ShowControl({ showId }: { showId: string }) {
     if (song) setSelectedSongId(song.id);
     setTimeout(() => document.querySelector(`[data-cue-id="${id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 50);
   };
+  const [pf, setPf] = useState<PreflightIssue[] | null>(null);
+  const runPreflight = async () => { await checkMissing(); const miss: string[] = []; for (const r of audioRefs(show)) if (!(await getAudio(r.fileId))) miss.push(r.fileId); setPf(preflight(show, miss)); };
+  const toggleLock = () => { if (!locked) void runPreflight(); setLocked((l) => !l); };
   const prevWarn = useRef<string[]>([]);
   useEffect(() => {
     const fixed = prevWarn.current.filter((x) => !warnings.includes(x));
@@ -375,7 +379,7 @@ export function ShowControl({ showId }: { showId: string }) {
       else if (a === "hardStop") scRef.current.stop();
       else if (a === "next") step(1);
       else if (a === "prev") step(-1);
-      else if (a === "lock") setLocked((l) => !l);
+      else if (a === "lock") scRef.current.toggleLock?.();
       else if (a === "help") setKeysOpen((o) => !o);
       else if (a === "mute") scRef.current.mute();
       else if (a.startsWith("add:") && !e.repeat) scRef.current.add(a.slice(4) as CueType);
@@ -643,6 +647,7 @@ export function ShowControl({ showId }: { showId: string }) {
     URL.revokeObjectURL(a.href);
   };  scRef.current.save = exportShow;
   scRef.current.backup = () => { void exportBackup(); };
+  scRef.current.toggleLock = toggleLock;
   scRef.current.findReplace = () => { if (!locked) setFrOpen(true); };
   const openShow = async () => {
     const picker = (window as any).showOpenFilePicker;
@@ -747,7 +752,8 @@ export function ShowControl({ showId }: { showId: string }) {
           "sep",
           { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
           "sep",
-          { label: locked ? "Lås show op" : "Lås show til live", keys: "Ctrl+L", onClick: () => setLocked((l) => !l) },
+          { label: locked ? "Lås show op" : "Lås show til live", keys: "Ctrl+L", onClick: toggleLock },
+          { label: "🛡️ Tjek show før start", onClick: () => void runPreflight() },
         ] },
         { label: "Værktøjer", items: [
           { label: "⏱️ Click / Optælling…", onClick: () => setClickOpen(true), disabled: locked },
@@ -803,7 +809,8 @@ export function ShowControl({ showId }: { showId: string }) {
         <span className={`max-w-[40%] truncate text-right text-xs ${saved === "error" ? "text-destructive" : "text-muted-foreground"}`}>{saved === "saving" ? tr("Gemmer…") : saved === "error" ? tr("Ikke gemt!") : (cloudSyncOn() ? tr("✓ Gemt lokalt + sky") : tr("✓ Gemt lokalt"))}{fileName ? ` · 💾 ${fileName}${fileSavedAt ? ` (${fileSavedAt})` : ""}${autoSaveMin ? "" : ""}` : autoSaveMin ? " · Autogem: vælg fil med Gem som" : ""}</span>
         <span className="min-w-[8.5rem] shrink-0 text-right font-mono text-2xl tabular-nums">{clock}</span>
         <button onClick={() => toggleMute()} className={`rounded px-3 py-1.5 text-sm font-bold ${muted ? "bg-destructive text-destructive-foreground" : "bg-secondary"}`} title="Mute alle lydudgange">{muted ? "🔇 PA MUTED" : "🔊 PA"}</button>
-        <button onClick={() => setLocked((l) => !l)} title="Lås mod utilsigtede ændringer under live-afvikling (Ctrl+L)" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
+        <button onClick={() => void runPreflight()} title="Tjek lydfiler, udgange, MIDI og cues før showet starter" className="rounded bg-secondary px-3 py-1.5 text-sm font-bold">🛡️ {tr("Tjek show")}</button>
+        <button onClick={toggleLock} title="Lås mod utilsigtede ændringer under live-afvikling (Ctrl+L)" className={`rounded px-3 py-1.5 text-sm font-black ${locked ? "bg-standby text-background" : "bg-secondary"}`}>{locked ? tr("🔒 LÅST TIL LIVE") : tr("🔓 Lås show")}</button>
         {tcOpen && <TimecodePanel engine={engine} outputs={outputs.filter((o) => o.id).map((o) => ({ deviceId: o.id, label: o.label }))} goId={lastGo} targets={flat.filter((c) => c.tc?.trim()).map((c) => ({ id: c.id, name: c.name, tc: c.tc! }))} onTrigger={fireById} onClose={() => setTcOpen(false)} />}
         {clickOpen && <ClickGenerator onClose={() => setClickOpen(false)} onCreate={createClickCue} />}
         {importOpen && <SetlistImport onClose={() => setImportOpen(false)} onImport={importSetlist} />}
@@ -842,6 +849,35 @@ export function ShowControl({ showId }: { showId: string }) {
                 </div>
               ); })}
             </div>
+          </div>
+        </div>
+      )}
+      {pf && (
+        <div className="fixed inset-0 z-[100005] flex items-start justify-center overflow-y-auto bg-background/70 p-6" onClick={() => setPf(null)}>
+          <div role="dialog" aria-label="Show-tjek" className={`w-full max-w-xl rounded-lg border-2 bg-card p-4 shadow-2xl ${pf.length + diags.length ? "border-destructive" : "border-go"}`} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center"><h2 className="flex-1 text-lg font-black">🛡️ {tr("Tjek show før start")}</h2><button onClick={() => setPf(null)} className="px-2 text-muted-foreground hover:text-foreground" aria-label="Luk">✕</button></div>
+            {pf.length + diags.length === 0 ? (
+              <div className="rounded bg-go p-4 text-center text-lg font-black text-background">✓ {tr("Showet er klar")} – 0 {tr("fejl")}<div className="mt-1 text-sm font-semibold">{show.songs.length} {tr("sange")} · {flat.length} cues · {tr("alle udgange forbundet")}</div></div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="font-black text-destructive">⚠️ {pf.length + diags.length} {tr("ting skal tjekkes")}</div>
+                {diags.map((d) => (
+                  <div key={"d" + d.code + d.slot} className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm">
+                    <span className="flex-1">{diagShort(d, lang)}</span>
+                    <button onClick={() => { setPf(null); setSettings(true); }} className="rounded bg-secondary px-3 py-1 font-semibold">{diagUi("settings", lang)}</button>
+                    {d.cues?.[0] && <button onClick={() => { setPf(null); goToCue(d.cues![0]!); }} className="rounded bg-standby px-3 py-1 font-bold text-background">🎯 {tr("Gå til cue")}</button>}
+                  </div>
+                ))}
+                {pf.map((x, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm">
+                    <span className="flex-1"><b>{x.cueName ?? ""}</b>{x.cueName ? ": " : ""}{tr(x.text)}</span>
+                    {x.code === "fileMissing" && <button onClick={() => { setPf(null); void relink(); }} className="rounded bg-secondary px-3 py-1 font-semibold">🔎 {tr("Find lydfiler")}</button>}
+                    {x.cueId && <button onClick={() => { setPf(null); goToCue(x.cueId!); }} className="rounded bg-standby px-3 py-1 font-bold text-background">🎯 {tr("Gå til cue")}</button>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-3 flex justify-end gap-2"><button onClick={() => void runPreflight()} className="rounded bg-secondary px-3 py-1.5 text-sm font-semibold">↻ {tr("Tjek igen")}</button></div>
           </div>
         </div>
       )}
