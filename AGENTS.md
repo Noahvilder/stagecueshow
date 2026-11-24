@@ -14,3 +14,4 @@
 - Desktop .exe uses Tauri v2 in `src-tauri/`, built on GitHub Actions (`.github/workflows/release.yml`) since the sandbox is Linux; v1 window loads the published site, so it needs internet until a static offline bundle exists.
 - Windows app bundles an offline SPA build (STAGECUE_DESKTOP=1 → dist/client/index.html); inside it isOffline() skips login and stores shows in localStorage, so the .exe never needs internet.
 - Windows auto-update uses tauri-plugin-updater via custom Rust commands (update_check/update_install) so no capabilities file is needed; release.yml signs with the TAURI_SIGNING_PRIVATE_KEY secret and publishes latest.json to GitHub Releases.
+- DMX output lives in src/lib/show/dmx.ts as one shared DmxOut (512 levels, LTP fades, Art-Net/sACN via Tauri send_udp with broadcast) — one source of truth for cues and the monitor.
