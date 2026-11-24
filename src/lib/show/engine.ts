@@ -1,4 +1,5 @@
 import { sendOsc } from "./osc";
+import { dmx } from "./dmx";
 import { getAudio } from "./audioStore";
 import { dbToGain, deepCues, groupDuration, midiBytes, trimSpan } from "./logic";
 import { asioBridge, isAsio, listAsio, openAsio } from "./asio";
@@ -340,6 +341,9 @@ export class Engine {
           break;
         case "midi":
           cue.messages.forEach((m) => this.sendMidi(m));
+          break;
+        case "dmx":
+          dmx.run(cue);
           break;
         case "osc": {
           const err = await sendOsc(cue);

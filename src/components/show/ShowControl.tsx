@@ -32,6 +32,8 @@ import { COLS, DEFAULT_VIEW, applyTips, gridCols, loadView, saveView, type ColKe
 import { ClickGenerator } from "./ClickGenerator";
 import { TimecodePanel } from "./TimecodePanel";
 import { CartPanel } from "./CartPanel";
+import { DmxCueEditor, DmxMonitor, DmxSettingsSection } from "./DmxPanel";
+import { dmx } from "@/lib/show/dmx";
 import type { AudioCue, CartPad } from "@/lib/show/types";
 import { ProDialog } from "./ProGate";
 import { HotStandby } from "./HotStandby";
@@ -48,7 +50,7 @@ import { preflight, type PreflightIssue } from "@/lib/show/preflight";
 import { LANGS, LANG_NAMES } from "@/lib/site/i18n";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
 
-type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon" | "cart";
+type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon" | "cart" | "dmx";
 const WIN_KEY = "stagecue.windows.v1";
 const PEDAL_KEY = "stagecue.pedals.v1";
 const defaultWins = (): Record<WinKey, WinState> => ({
@@ -60,6 +62,7 @@ const defaultWins = (): Record<WinKey, WinState> => ({
   remote: { x: 756, y: 454, w: 320, h: 470, z: 1, open: false, min: false },
   midimon: { x: 1088, y: 454, w: 560, h: 360, z: 1, open: false, min: false },
   cart: { x: 384, y: 454, w: 620, h: 420, z: 1, open: false, min: false },
+  dmx: { x: 420, y: 120, w: 720, h: 560, z: 1, open: false, min: false },
 });
 const simpleWins = (): Record<WinKey, WinState> => {
   const d = defaultWins();
@@ -67,10 +70,10 @@ const simpleWins = (): Record<WinKey, WinState> => {
   d.list = { ...d.list, w: 760, h: 912 };
   return d;
 };
-const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "MIDI-controller", remote: "Telefon", midimon: "MIDI Monitor", cart: "Lydbræt (jingles)" };
+const WIN_TITLES: Record<WinKey, string> = { stage: "Scene", transport: "Transport", list: "Setliste", inspector: "Inspector", pedal: "MIDI-controller", remote: "Telefon", midimon: "MIDI Monitor", cart: "Lydbræt (jingles)", dmx: "DMX Monitor" };
 
-const TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo", "group"];
-const CHILD_TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo"];
+const TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo", "dmx", "group"];
+const CHILD_TYPES: CueType[] = ["audio", "midi", "osc", "fade", "stop", "pause", "wait", "memo", "dmx"];
 
 type Output = { id: string; label: string };
 
@@ -177,6 +180,7 @@ export function ShowControl({ showId }: { showId: string }) {
     if (!engineRef.current) {
       engineRef.current = new Engine();
       engineRef.current.onError = (m) => setError(m);
+      dmx.onError = (m) => setError(m);
       engineRef.current.onMidiLog = (dir, port, bytes) => {
         if (monPausedRef.current) return;
         const row = { id: ++logId.current, t: Date.now(), dir, port, bytes };
@@ -191,6 +195,7 @@ export function ShowControl({ showId }: { showId: string }) {
 
   const withLayout = (): Show => ({ ...show, layout: { wins: Object.fromEntries(Object.entries(wins).map(([k, v]) => [k, { ...v, popped: false }])), snap, goGuard, timeMode, timeFmt, noteSize, pedals } });
   const flat = useMemo(() => flatten(show), [show]);
+  useEffect(() => { dmx.configure(show.dmx); }, [show.dmx]);
   const standbyIdx = flat.findIndex((c) => c.id === standbyId);
   const standby = standbyIdx >= 0 ? flat[standbyIdx] : null;
   const selected = flat.find((c) => c.id === selectedId) ?? null;
@@ -748,7 +753,7 @@ export function ShowControl({ showId }: { showId: string }) {
           { label: "Tilbage til shows", onClick: () => { engine().panic(0); navigate({ to: "/hub" }); } },
         ] },
         { label: "Rediger", items: [
-          ...(["audio", "midi", "osc", "fade", "stop", "memo", "group"] as CueType[]).map((t) => ({ label: `Nyt ${t}-cue`, onClick: () => addCue(t), disabled: locked })),
+          ...(["audio", "midi", "osc", "fade", "stop", "memo", "dmx", "group"] as CueType[]).map((t) => ({ label: `Nyt ${t}-cue`, onClick: () => addCue(t), disabled: locked })),
           "sep",
           { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
           "sep",
@@ -758,6 +763,7 @@ export function ShowControl({ showId }: { showId: string }) {
         { label: "Værktøjer", items: [
           { label: "⏱️ Click / Optælling…", onClick: () => setClickOpen(true), disabled: locked },
           { label: "🕒 Timecode (MTC / LTC)…", onClick: () => setTcOpen(true) },
+          { label: "💡 DMX Monitor", onClick: () => { setWin("dmx", { open: true, min: false }); focusWin("dmx"); } },
           { label: "🎛️ Lydbræt (jingles)", onClick: () => { setWin("cart", { open: true, min: false }); focusWin("cart"); } },
           { label: "🔍 Find & erstat…", keys: "Ctrl+H", onClick: () => setFrOpen(true), disabled: locked },
           { label: "📋 Importér setliste…", onClick: () => setImportOpen(true), disabled: locked },
@@ -1114,6 +1120,9 @@ export function ShowControl({ showId }: { showId: string }) {
     if (made.length) setShow((s) => ({ ...s, cart: [...(s.cart ?? []), ...made] }));
   }} />
 </FloatingWindow>
+<FloatingWindow locked={locked} title={"DMX Monitor"} state={wins.dmx} onChange={(p) => setWin("dmx", p)} onFocus={() => focusWin("dmx")}>
+<DmxMonitor show={show} />
+</FloatingWindow>
 <FloatingWindow locked={locked} title={"MIDI Monitor"} state={wins.midimon} onChange={(p) => setWin("midimon", p)} onFocus={() => focusWin("midimon")}>
 <MidiMonitor rows={show.ioAliases?.midi ? midiLog.map((r) => ({ ...r, port: show.ioAliases?.midi?.[r.port]?.trim() || r.port })) : midiLog} paused={monPaused} setPaused={setMonPaused} onClear={() => setMidiLog([])} ins={midiIns.map((p) => show.ioAliases?.midi?.[p]?.trim() || p)} outs={midiPorts.map((p) => show.ioAliases?.midi?.[p]?.trim() || p)} />
 </FloatingWindow>
@@ -1191,6 +1200,8 @@ function summary(c: Cue, ports: string[], show?: Show): string {
       return `${c.duration}s`;
     case "memo":
       return c.text.split("\n")[0] ?? "";
+    case "dmx":
+      return `${c.values.length} kanaler · fade ${c.fade}s${c.full ? " · hel scene" : ""}`;
   }
 }
 
@@ -1337,7 +1348,7 @@ function Inspector(props: {
   const { cue, show, flat, midiPorts, outputs, onChange } = props;
   const set = (p: Record<string, unknown>) => onChange(p as Partial<Cue>);
   const tr = useTrApp();
-  const typeTab: Record<string, string> = { audio: "🔊 Lyd", midi: "🎹 MIDI", osc: "🌐 OSC", fade: "📉 Fade", stop: "⏹ Stop", pause: "⏸ Pause", wait: "⏱ Vent", memo: "📝 Tekst", group: "🗂 Gruppe" };
+  const typeTab: Record<string, string> = { audio: "🔊 Lyd", midi: "🎹 MIDI", osc: "🌐 OSC", fade: "📉 Fade", stop: "⏹ Stop", pause: "⏸ Pause", wait: "⏱ Vent", memo: "📝 Tekst", dmx: "💡 Lys", group: "🗂 Gruppe" };
   const [tab, setTab] = useState<"type" | "general" | "notes">("type");
   const tabs: [typeof tab, string][] = [["type", typeTab[cue.type] ?? "Cue"], ["general", "⚙️ Generelt"], ["notes", "📋 Noter & monitor"]];
   return (
@@ -1513,6 +1524,7 @@ function Inspector(props: {
         <Field label="Mål (pause/genoptag)"><TargetSelect value={cue.target} flat={flat} onChange={(v) => set({ target: v })} /></Field>
       )}
       {cue.type === "wait" && <Field label="Varighed (s)"><Num value={cue.duration} onChange={(n) => set({ duration: Math.max(0, n) })} /></Field>}
+      {cue.type === "dmx" && <DmxCueEditor cue={cue} show={show} set={(p) => set(p)} onFire={props.onFire} />}
       {cue.type === "memo" && (
         <Field label="Tekst (vises stort i standby)">
           <textarea rows={6} className={`${inputCls} font-mono`} value={cue.text} onChange={(e) => set({ text: e.target.value })} />
@@ -1658,8 +1670,8 @@ function PatchSection({ show, setShow, midiPorts, outputs }: { show: Show; setSh
   );
 }
 
-type SetTab = "audio" | "midi" | "patch" | "prefs" | "monitors" | "look" | "general";
-const SET_TABS: [SetTab, string][] = [["audio", "🔊 Lyd"], ["midi", "🎹 MIDI"], ["patch", "🔀 Patch-matrix"], ["prefs", "⚙️ Preferences"], ["monitors", "📱 Scenemonitors"], ["look", "🎨 Udseende"], ["general", "💾 Generelt & Panic"]];
+type SetTab = "audio" | "midi" | "patch" | "prefs" | "monitors" | "look" | "dmx" | "general";
+const SET_TABS: [SetTab, string][] = [["audio", "🔊 Lyd"], ["midi", "🎹 MIDI"], ["patch", "🔀 Patch-matrix"], ["prefs", "⚙️ Preferences"], ["monitors", "📱 Scenemonitors"], ["look", "🎨 Udseende"], ["dmx", "💡 DMX / Lys"], ["general", "💾 Generelt & Panic"]];
 const PREF_SKIP = new Set(["id", "type", "messages", "children", "fileId", "fileName", "monitorNotes", "number", "ref", "startTime", "endTime", "outputId", "target", "targetId"]);
 const PREF_LABEL: Record<string, string> = { name: "Navn", follow: "Efter cue", preWait: "Pre-wait (s)", postWait: "Post-wait (s)", volume: "Volumen (dB)", pan: "Pan", fadeIn: "Fade ind (s)", fadeOut: "Fade ud (s)", loop: "Loop", duration: "Varighed (s)", channel: "Kanal", host: "IP", port: "Port", address: "Adresse" };
 /** Default MIDI messages for new MIDI cues: type, channel and data values. */
@@ -1742,6 +1754,7 @@ function Settings(props: {
         </Section>
         <p className="text-xs text-muted-foreground">Lydfiler gemmes i browseren på denne computer. Show-filen (JSON) indeholder kun filnavne – på en ny computer skal lydfilerne vælges igen. Brug "Backup m. lyd" for at få alt med i én fil.</p>
         </>}
+        {tab === "dmx" && <DmxSettingsSection show={show} setShow={setShow} />}
         {tab === "monitors" && <div className="mb-5"><MonitorProfiles show={show} onChange={setShow} /></div>}
         {tab === "audio" && <>
         <div className="mb-5 flex items-center gap-3 rounded border border-border bg-muted/30 p-3 text-xs text-muted-foreground"><img src="/asio-compatible.svg" alt="ASIO compatible" className="h-8 w-auto" /><span>ASIO Technology by Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>

@@ -74,11 +74,14 @@ export type StopCue = Base & { type: "stop"; target: string; duration: number };
 export type PauseCue = Base & { type: "pause"; target: string };
 export type WaitCue = Base & { type: "wait"; duration: number };
 export type MemoCue = Base & { type: "memo"; text: string };
+/** Light cue: target levels (0-255) per DMX channel, faded over `fade` seconds. */
+export type DmxCue = Base & { type: "dmx"; fade: number; values: { ch: number; v: number; label?: string }[]; full?: boolean };
+export interface DmxSettings { protocol: "artnet" | "sacn"; host: string; universe: number; hz: number }
 
 /** Fires all children at the same time (each honours its own pre-wait). */
 export type GroupCue = Base & { type: "group"; children: Cue[] };
 
-export type Cue = AudioCue | MidiCue | OscCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue | GroupCue;
+export type Cue = AudioCue | MidiCue | OscCue | FadeCue | StopCue | PauseCue | WaitCue | MemoCue | DmxCue | GroupCue;
 export type CueType = Cue["type"];
 
 /** Soundboard pad: an audio cue fired outside the cue list, with its own output. */
@@ -99,6 +102,8 @@ export interface Show {
   /** Soundboard (cart) pads for jingles and effects. */
   cart?: CartPad[];
   monitors?: MonitorProfile[];
+  /** DMX (Art-Net/sACN) output and channel names. */
+  dmx?: DmxSettings & { names?: Record<number, string> };
   /** Friendly names for hardware ports, travels with the show. */
   ioAliases?: { audio?: Record<string, string>; midi?: Record<string, string> };
   /** Per cue type: starting values for newly created cues. */

@@ -12,6 +12,7 @@ export const TYPE_LABEL: Record<CueType, string> = {
   pause: "Pause",
   wait: "Vent",
   memo: "Memo",
+  dmx: "Lys",
   group: "Gruppe",
 };
 
@@ -24,6 +25,7 @@ export const DEFAULT_TYPE_COLORS: Record<CueType, string> = {
   pause: "#a855f7",
   wait: "#94a3b8",
   memo: "#facc15",
+  dmx: "#fb923c",
   group: "#ec4899",
 };
 
@@ -160,6 +162,8 @@ function rawCue(type: CueType): Cue {
       return { ...base, type, duration: 5 };
     case "memo":
       return { ...base, type, text: "" };
+    case "dmx":
+      return { ...base, type, fade: 3, values: [] };
     case "group":
       return { ...base, type, children: [] };
   }

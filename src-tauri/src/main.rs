@@ -10,6 +10,15 @@ fn send_osc(host: String, port: u16, data: Vec<u8>) -> Result<(), String> {
     Ok(())
 }
 
+/// Sends a UDP packet with broadcast allowed (Art-Net / sACN DMX).
+#[tauri::command]
+fn send_udp(host: String, port: u16, data: Vec<u8>) -> Result<(), String> {
+    let sock = std::net::UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+    sock.set_broadcast(true).map_err(|e| e.to_string())?;
+    sock.send_to(&data, (host.as_str(), port)).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Pult pushes its latest monitor state; returns how many local phones are connected.
 #[tauri::command]
 fn local_state(json: String, st: tauri::State<'_, local::State>) -> usize {
@@ -52,7 +61,7 @@ fn main() {
         .on_permission_request(|_, _| tauri::webview::PermissionResponse::Allow)
         .manage(shared)
         .manage(asio::Asio::default())
-        .invoke_handler(tauri::generate_handler![send_osc, local_state, local_info, asio::asio_list, asio::asio_open, asio::asio_push, update_check, update_install])
+        .invoke_handler(tauri::generate_handler![send_osc, send_udp, local_state, local_info, asio::asio_list, asio::asio_open, asio::asio_push, update_check, update_install])
         .run(tauri::generate_context!())
         .expect("error while running StageCue");
 }
