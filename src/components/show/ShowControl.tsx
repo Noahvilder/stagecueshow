@@ -1337,6 +1337,9 @@ function Inspector(props: {
   const { cue, show, flat, midiPorts, outputs, onChange } = props;
   const set = (p: Record<string, unknown>) => onChange(p as Partial<Cue>);
   const tr = useTrApp();
+  const typeTab: Record<string, string> = { audio: "🔊 Lyd", midi: "🎹 MIDI", osc: "🌐 OSC", fade: "📉 Fade", stop: "⏹ Stop", pause: "⏸ Pause", wait: "⏱ Vent", memo: "📝 Tekst", group: "🗂 Gruppe" };
+  const [tab, setTab] = useState<"type" | "general" | "notes">("type");
+  const tabs: [typeof tab, string][] = [["type", typeTab[cue.type] ?? "Cue"], ["general", "⚙️ Generelt"], ["notes", "📋 Noter & monitor"]];
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -1347,6 +1350,10 @@ function Inspector(props: {
           <button onClick={props.onDelete} title="Slet cuet" className="rounded bg-destructive px-3 py-1.5 text-sm font-semibold text-destructive-foreground">{tr("Slet")}</button>
         </div>
       </div>
+      <div role="tablist" className="flex gap-1 border-b border-border">
+        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px rounded-t border border-b-0 px-3 py-1.5 text-sm font-semibold ${tab === k ? "border-border bg-card text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{tr(l)}</button>)}
+      </div>
+      {tab === "general" && <>
       <Field label="Navn"><input className={inputCls} value={cue.name} onChange={(e) => set({ name: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Cue-nummer (fx 1, 1.5, 12.25)"><input className={inputCls} inputMode="decimal" placeholder="auto" value={cue.number ?? ""} onChange={(e) => set({ number: e.target.value.replace(",", ".").replace(/[^0-9.]/g, "") })} /></Field>
@@ -1381,13 +1388,15 @@ function Inspector(props: {
         </div>
       </Field>
 
+      </>}
+      {tab === "type" && <>
       {cue.type === "audio" && (
         <>
           <Field label="Lydfil">
             <input type="file" accept="audio/*" className="text-sm" onChange={(e) => e.target.files?.[0] && props.onFile(e.target.files[0])} />
             <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || tr("Ingen fil valgt")}</div>
           </Field>
-          <details className="rounded-lg border border-border bg-muted/30 p-2" open={false}>
+          <details className="rounded-lg border border-border bg-muted/30 p-2" open>
             <summary className="cursor-pointer select-none text-sm font-semibold">🎛️ {tr("Mixer")} <span className="text-xs font-normal text-muted-foreground">· {tr("trim, EQ, patch, fader")}</span></summary>
             <div className="mt-2 flex flex-col gap-3">
           <MixStrip cue={cue} set={set} tr={tr} />
@@ -1514,12 +1523,15 @@ function Inspector(props: {
         </Field>
       )}
       {cue.type === "group" && <GroupEditor {...props} cue={cue} />}
+      </>}
+      {tab === "notes" && <>
       <MonitorNotes key={cue.id} cue={cue} monitors={show.monitors ?? []} onChange={onChange} />
       {props.onSaveDefault && <div className="flex flex-wrap items-center gap-2 rounded border border-dashed border-border p-2 text-xs">
         <span className="text-muted-foreground">{tr("Standard for nye cues af typen")} {tr(TYPE_LABEL[cue.type])}{show.cueDefaults?.[cue.type] ? ` (${tr("sat")})` : ""}:</span>
         <button type="button" onClick={() => props.onSaveDefault?.(cue)} className="rounded bg-secondary px-2 py-1 font-semibold hover:bg-accent">{tr("Gem dette cue som standard")}</button>
         {show.cueDefaults?.[cue.type] && <button type="button" onClick={() => props.onResetDefault?.(cue.type)} className="text-muted-foreground underline">{tr("Nulstil til fabriksindstillinger")}</button>}
       </div>}
+      </>}
     </div>
   );
 }
