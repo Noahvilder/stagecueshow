@@ -14,3 +14,4 @@
 - [x] Lokal Wi-Fi-scenemonitor uden internet (v0.1.4).
 - [ ] ASIO-lyd (venter: stor ombygning af lydmotoren, egen version).
 - [ ] Eksterne links i systembrowser (kræver opener-plugin i ny .exe-build).
+- [x] Opdater vilkår og installationslicens: lysstyring, sikkerhed, offline-brug, netværk og Art-Net-kreditering; Gratis/Pro uændret.

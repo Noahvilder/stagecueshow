@@ -9,7 +9,7 @@ export const Route = createFileRoute("/vilkaar")({
     <SiteShell>
       <article className="mx-auto max-w-3xl space-y-4 px-4 py-12 leading-relaxed">
         <h1 className="text-3xl font-black">Vilkår og licensaftale</h1>
-        <p className="text-sm text-muted-foreground">Senest opdateret: 19. november 2026</p>
+        <p className="text-sm text-muted-foreground">Senest opdateret: 25. november 2026</p>
 
         <H>1. Konto</H>
         <p>Man skal have en personlig konto for at bruge pulten og scenemonitoren. Du er ansvarlig for at holde dit login hemmeligt og må ikke dele din konto med andre.</p>
@@ -37,9 +37,11 @@ export const Route = createFileRoute("/vilkaar")({
 
         <H>7. Redundans og ansvar ved liveshows</H>
         <p>StageCue har indbyggede sikkerhedsfunktioner (dobbelt-GO-spærre, nødstop, genoptagelse efter nedbrud, lokal lagring på monitorer og backup-pc). De mindsker risikoen, men kan ikke garantere en fejlfri forestilling. StageCue leveres "som den er". Du er selv ansvarlig for at teste dit show, din hardware og dit netværk og for at have en plan B. StageCue hæfter ikke for tab som følge af afbrudte eller forstyrrede forestillinger.</p>
+        <p>Dette gælder også afvikling med ekstern lyd-, lys- og scenehardware, herunder DMX via Art-Net/sACN, MIDI, OSC og MTC/LTC-tidskode. Du skal kontrollere patch, kanalværdier, lydniveauer, tidskode og udstyrets reaktion ved signaltab før brug. StageCue er ikke et sikkerhedssystem og må ikke erstatte hardware-nødstop eller andre påkrævede sikkerhedsforanstaltninger. Ansvarsbegrænsningerne gælder kun i det omfang, gældende lov tillader det, og begrænser ikke dine ufravigelige rettigheder.</p>
 
         <H>8. Installation på Windows</H>
-        <p>Ved installation accepterer du disse vilkår. Programmet kan bede om adgang til lokalt netværk (firewall) til scenemonitorer samt lydkort (inkl. ASIO), MIDI-enheder og MIDI-controllere. Intet installeres eller tilsluttes uden din bekræftelse. Den nuværende version kræver internet.</p>
+        <p>Ved installation accepterer du disse vilkår. Programmet kan bede om adgang til lokalt netværk (firewall) til scenemonitorer, OSC og DMX via Art-Net/sACN, herunder afsendelse af UDP-pakker og broadcast. Det kan også bede om adgang til lydkort (inkl. ASIO), MIDI-enheder og MIDI-controllere til lyd og MTC/LTC-tidskode. Du vælger selv udgange og forbindelser i programmet.</p>
+        <p>Windows-versioner med indbygget offline-pult kan oprette, gemme og afvikle lokale shows uden internet og uden login i offline-tilstand. Webversionen og ældre Windows-versioner, der indlæser hjemmesiden, kræver internet. Konto, cloud-gemning, online-invitationer og download af opdateringer kræver internet. Kommunikation med lokal hardware og lokale scenemonitorer kan fortsat kræve et fungerende lokalt netværk.</p>
 
         <H>9. Opdateringer</H>
         <p>Vi kan løbende opdatere, ændre eller fjerne funktioner. Væsentlige ændringer i disse vilkår varsles på siden eller via email.</p>
@@ -52,6 +54,7 @@ export const Route = createFileRoute("/vilkaar")({
 
         <H>12. Tredjeparts-teknologi</H>
         <p>StageCue til Windows bruger ASIO Technology by Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries. Desuden bruges open source-komponenter (Tauri, cpal, PeerJS) under deres egne licenser.</p>
+        <p>Art-Net™ Designed by and Copyright Artistic Licence Engineering Ltd. <a className="underline" href="https://art-net.org.uk/" target="_blank" rel="noreferrer">Art-Net-protokollen</a> bruges til netværksbaseret DMX-lysudgang.</p>
 
         <H>13. Lovvalg</H>
         <p>Vilkårene er underlagt dansk ret. Kontakt os via supportsiden ved spørgsmål eller klager.</p>

@@ -1,4 +1,4 @@
-StageCue End User License Agreement (updated 19 November 2026)
+StageCue End User License Agreement (updated 25 November 2026)
 
 By installing StageCue you agree to the Terms of Use at https://stagecueshow.lovable.app/vilkaar
 and the Privacy Policy at https://stagecueshow.lovable.app/privatliv.
@@ -6,14 +6,25 @@ and the Privacy Policy at https://stagecueshow.lovable.app/privatliv.
 - StageCue is provided "as is". Built-in safety features (double-GO lock, panic stop, crash
   recovery, Hot-Standby backup PC) reduce risk but do not guarantee an uninterrupted show.
   You are responsible for testing your show and having a backup plan.
+  This also applies to external audio, lighting and stage hardware controlled through
+  DMX (Art-Net/sACN), MIDI, OSC and MTC/LTC timecode. Check patch, levels, timecode and
+  behaviour on signal loss before use. StageCue is not a safety system and does not
+  replace hardware emergency stops or other required safety measures. Liability
+  limitations apply only as permitted by law and do not limit mandatory legal rights.
 - A Pro licence is personal and may be active on at most 3 console devices at a time.
 - You may not resell, redistribute, reverse engineer or bypass licence or device limits.
-- StageCue may request access to the local network (firewall), audio devices including ASIO,
-  and MIDI devices/controllers. Nothing is connected without your confirmation.
-- Audio files stay on your computer. This version requires an internet connection.
+- StageCue may request access to the local network (firewall) for stage monitors, OSC
+  and DMX (Art-Net/sACN), including UDP packets and broadcast, audio devices including
+  ASIO, and MIDI devices/controllers for audio and MTC/LTC. You choose outputs and connections.
+- Audio files stay on your computer. Windows versions with the bundled offline console
+  can create, save and run local shows without internet or login in offline mode.
+  The web version and older Windows versions loading the website require internet.
+  Account features, cloud saving, online invitations and update downloads require internet.
+  Local hardware and local stage monitors may still require a working local network.
 
 
 THIRD-PARTY TECHNOLOGY
 - ASIO Technology by Steinberg Media Technologies GmbH.
 - ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
+- Art-Net™ Designed by and Copyright Artistic Licence Engineering Ltd. https://art-net.org.uk/
 - Also uses Tauri, cpal, PeerJS and other open-source components under their own licences.
