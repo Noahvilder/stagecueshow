@@ -28,14 +28,14 @@ export function MenuBar({ menus }: { menus: Menu[] }) {
             className={`h-full px-3 ${open === i ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
           >{tr(m.label)}</button>
           {open === i && (
-            <div role="menu" className="absolute left-0 top-full z-[100002] min-w-60 rounded-b-md border border-border bg-card py-1 shadow-2xl">
+            <div role="menu" className="absolute left-0 top-full z-[100002] min-w-60 rounded-b-md border border-border bg-popover py-1 text-popover-foreground shadow-2xl">
               {m.items.map((it, j) => it === "sep" ? <div key={j} className="my-1 h-px bg-border" /> : (
                 <button
                   key={j}
                   role="menuitem"
                   disabled={it.disabled}
                   onClick={() => { setOpen(null); it.onClick?.(); }}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent"
+                  className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left last:border-b-0 hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40 disabled:hover:bg-transparent"
                 >
                   <span className="w-4 text-center text-go">{it.checked ? "✓" : ""}</span>
                   <span className="flex-1">{tr(it.label)}</span>

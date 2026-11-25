@@ -1286,7 +1286,7 @@ function MixStrip({ cue, set, tr }: { cue: AudioCue; set: (p: Record<string, unk
 function Field({ label, children, tip }: { label: string; children: ReactNode; tip?: string }) {
   const tr = useTrApp();
   return (
-    <label title={tip} className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+    <label title={tip} className="setting-field flex min-w-0 flex-col gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
       {tr(label)}
       <div className="font-normal normal-case tracking-normal text-foreground">{children}</div>
     </label>
@@ -1352,7 +1352,7 @@ function Inspector(props: {
   const [tab, setTab] = useState<"type" | "general" | "notes">("type");
   const tabs: [typeof tab, string][] = [["type", typeTab[cue.type] ?? "Cue"], ["general", "⚙️ Generelt"], ["notes", "📋 Noter & monitor"]];
   return (
-    <div className="flex flex-col gap-3">
+    <div className="cue-inspector flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <TypeTag show={show} cue={cue} />
         <div className="ml-auto flex gap-1">
@@ -1361,8 +1361,8 @@ function Inspector(props: {
           <button onClick={props.onDelete} title="Slet cuet" className="rounded bg-destructive px-3 py-1.5 text-sm font-semibold text-destructive-foreground">{tr("Slet")}</button>
         </div>
       </div>
-      <div role="tablist" className="flex gap-1 border-b border-border">
-        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px rounded-t border border-b-0 px-3 py-1.5 text-sm font-semibold ${tab === k ? "border-border bg-card text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{tr(l)}</button>)}
+      <div role="tablist" className="flex flex-wrap gap-1 border-b border-border pb-1">
+        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`rounded-t border-b-2 px-3 py-2 text-sm font-semibold ${tab === k ? "border-standby bg-secondary text-foreground" : "border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>{tr(l)}</button>)}
       </div>
       {tab === "general" && <>
       <Field label="Navn"><input className={inputCls} value={cue.name} onChange={(e) => set({ name: e.target.value })} /></Field>
@@ -1373,7 +1373,7 @@ function Inspector(props: {
       <Field label="Stikord (hvornår skal der trykkes GO?)"><input className={inputCls} placeholder={tr("fx Efter guitarsolo")} value={cue.stikord ?? ""} onChange={(e) => set({ stikord: e.target.value })} /></Field>
       <Field label="Timecode-trigger (HH:MM:SS:FF, tom = fra)"><input className={inputCls + " font-mono"} placeholder="01:00:12:00" value={cue.tc ?? ""} onChange={(e) => set({ tc: e.target.value.replace(/[^0-9:;.]/g, "") })} /></Field>
 
-      <div className="rounded border border-border p-2">
+      <div className="border-y border-border py-3">
         <div className="mb-2 text-xs font-bold uppercase tracking-widest text-standby">{tr("Afvikling")}</div>
         {props.inGroup ? <Field label="Start efter gruppe-GO (sekunder, 0 = straks)"><Num value={cue.preWait} onChange={(n) => set({ preWait: Math.max(0, n) })} /></Field> : <>
         <div className="grid grid-cols-2 gap-2">
@@ -1728,12 +1728,12 @@ function Settings(props: {
   );
   return (
     <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-background/80 p-6" onClick={props.onClose}>
-      <div className="flex h-[85vh] w-full max-w-4xl overflow-hidden rounded-xl border border-border bg-card" onClick={(e) => e.stopPropagation()}>
-        <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-border bg-muted/30 p-3">
-          {SET_TABS.map(([k, label]) => <button key={k} onClick={() => setTab(k)} className={`rounded px-3 py-2 text-left text-sm font-semibold ${tab === k ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-secondary"}`}>{tr(label)}</button>)}
+      <div className="show-settings flex h-[85vh] w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-card" onClick={(e) => e.stopPropagation()}>
+        <nav className="flex w-52 shrink-0 flex-col border-r border-border bg-background p-3">
+          {SET_TABS.map(([k, label]) => <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={`border-b border-l-2 border-b-border px-3 py-3 text-left text-sm font-semibold ${tab === k ? "border-l-standby bg-secondary text-foreground" : "border-l-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>{tr(label)}</button>)}
         </nav>
         <div className="min-w-0 flex-1 overflow-y-auto p-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between gap-3 border-b border-border pb-4">
           <h2 className="text-2xl font-bold">{tr(SET_TABS.find((t) => t[0] === tab)![1])}</h2>
           <Btn onClick={props.onClose}>Luk</Btn>
         </div>
@@ -1805,9 +1805,9 @@ function Settings(props: {
 
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <div className="mb-5">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-standby">{title}</h3>
+    <div className="mb-5 border-b border-border pb-5 last:mb-0 last:border-b-0">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-xs font-bold uppercase text-standby">{title}</h3>
         {action}
       </div>
       {children}

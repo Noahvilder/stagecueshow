@@ -15,3 +15,5 @@
 - [ ] ASIO-lyd (venter: stor ombygning af lydmotoren, egen version).
 - [ ] Eksterne links i systembrowser (kræver opener-plugin i ny .exe-build).
 - [x] Opdater vilkår og installationslicens: lysstyring, sikkerhed, offline-brug, netværk og Art-Net-kreditering; Gratis/Pro uændret.
+- [x] Visuel opgradering: højere kontrast og tynde skillelinjer i menuer, indstillinger og cue-faner; 117 tests består og menu afprøvet separat.
+- [ ] Visuel kontrol af indstillinger og cue-faner i eget show (venter: kontoen har allerede tre registrerede pult-enheder; ingen enheder fjernet).
