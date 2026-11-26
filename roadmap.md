@@ -17,3 +17,8 @@
 - [x] Opdater vilkår og installationslicens: lysstyring, sikkerhed, offline-brug, netværk og Art-Net-kreditering; Gratis/Pro uændret.
 - [x] Visuel opgradering: højere kontrast og tynde skillelinjer i menuer, indstillinger og cue-faner; 117 tests består og menu afprøvet separat.
 - [ ] Visuel kontrol af indstillinger og cue-faner i eget show (venter: kontoen har allerede tre registrerede pult-enheder; ingen enheder fjernet).
+- [ ] Fase 1: Pro / Teater & Skole, Akt/Scene og trinvis oprettelse/redigering af cues med samme showformat.
+- [ ] Fase 2: Live Band & Koncert med BPM-visning og auto-stop.
+- [ ] Fase 3: Radiovært & Podcast med fuldskærms-lydbræt.
+- [ ] Fase 4: Konference & Event med talertimer og faste afviklingsknapper.
+- [ ] Selvstændig DMX-fane og lokal fixture-import (sat på pause efter aftale).

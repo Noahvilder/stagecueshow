@@ -49,6 +49,10 @@ import { HelpTips } from "@/components/show/HelpTips";
 import { preflight, type PreflightIssue } from "@/lib/show/preflight";
 import { LANGS, LANG_NAMES } from "@/lib/site/i18n";
 import { PEDAL_LABEL, matchPedal, midiInLabel, parseMidiIn, type MidiIn, type PedalAction, type PedalMap } from "@/lib/show/pedal";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CueWizard } from "./CueWizard";
+import { readWorkspaceMode, saveGuidedCue, type WorkspaceMode } from "@/lib/show/workspace";
 
 type WinKey = "stage" | "transport" | "list" | "inspector" | "pedal" | "remote" | "midimon" | "cart" | "dmx";
 const WIN_KEY = "stagecue.windows.v1";
@@ -106,6 +110,14 @@ export function ShowControl({ showId }: { showId: string }) {
   const [learning, setLearning] = useState<PedalAction | null>(null);
   const [lastMidi, setLastMidi] = useState<MidiIn | null>(null);
   const [locked, setLocked] = useState(false);
+  const [mode, setMode] = useState<WorkspaceMode>("pro");
+  const guided = mode === "theatre";
+  const [guide, setGuide] = useState<{ cue: Cue | null; editing: boolean; sceneId: string } | null>(null);
+  const [sceneOpen, setSceneOpen] = useState(false);
+  const [sceneName, setSceneName] = useState("");
+  useEffect(() => { setMode(readWorkspaceMode(localStorage.getItem("stagecue.workspace"))); }, []);
+  const changeMode = (m: WorkspaceMode) => { setMode(m); localStorage.setItem("stagecue.workspace", m); };
+  const workspaceState = (k: WinKey): WinState => guided && ["stage", "transport", "list"].includes(k) ? { ...wins[k], open: true, min: false, popped: false } : guided && k === "inspector" ? { ...wins[k], open: false } : wins[k];
   const plan = usePlan();
   const pro = hasPro(plan.tier);
   useEffect(() => { if (!plan.loading && !pro) setCloudSync(false); }, [plan.loading, pro]);
@@ -365,6 +377,7 @@ export function ShowControl({ showId }: { showId: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
+      if (document.querySelector('[data-cue-guide="true"]')) return;
       if (t.closest("[data-shortcut-capture]")) return;
       if (e.altKey && !e.ctrlKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); scRef.current.shift?.(e.key === "ArrowUp" ? -1 : 1); return; }
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
@@ -425,6 +438,11 @@ export function ShowControl({ showId }: { showId: string }) {
   const addCue = (type: CueType) => {
     if (locked) return;
     if (type === "group" && !needPro("group")) return;
+    if (guided) {
+      const sceneId = selectedSongId ?? show.songs.find((s) => s.cues.some((c) => c.id === selectedId))?.id ?? show.songs[0]?.id;
+      if (!sceneId) { setSceneName(`Akt/Scene ${show.songs.length + 1}`); setSceneOpen(true); return; }
+      setGuide({ cue: newCue(type, show.cueDefaults), editing: false, sceneId }); return;
+    }
     const c = newCue(type, show.cueDefaults);
     trackFeature(`cue.${type}`);
     setShow((s) => insertCue(s, c, selectedId, selectedSongId));
@@ -491,7 +509,11 @@ export function ShowControl({ showId }: { showId: string }) {
     setShow((s) => ({ ...s, songs: s.songs.map((sg) => ({ ...sg, cues: sg.cues.filter((c) => c.id !== id) })) }));
     if (selectedId === id) setSelectedId(null);
   };
-  const addSong = () => setShow((s) => ({ ...s, songs: [...s.songs, { id: uid(), name: `Sang ${s.songs.length + 1}`, cues: [] }] }));
+  const addSong = () => {
+    if (locked) return;
+    if (guided) { setSceneName(`Akt/Scene ${show.songs.length + 1}`); setSceneOpen(true); return; }
+    setShow((s) => ({ ...s, songs: [...s.songs, { id: uid(), name: `Sang ${s.songs.length + 1}`, cues: [] }] }));
+  };
   const renameSong = (id: string, name: string) => setShow((s) => ({ ...s, songs: s.songs.map((sg) => (sg.id === id ? { ...sg, name } : sg)) }));
   const deleteSong = (id: string) => {
     if (!confirm(tr("Slet sang og alle dens cues?"))) return;
@@ -803,8 +825,9 @@ export function ShowControl({ showId }: { showId: string }) {
         ] },
       ]; return <div className="flex border-b border-border bg-card"><div className="flex-1 [&>div]:border-b-0"><MenuBar menus={menus} /></div><CommandPalette menus={menus} /></div>; })()}
       {/* top bar */}
-      <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-2">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2">
         <span className="font-mono text-sm font-bold tracking-widest text-go">STAGECUE</span>
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">Arbejdstilstand<select aria-label="Arbejdstilstand" disabled={locked || !!guide} value={mode} onChange={(e) => changeMode(readWorkspaceMode(e.target.value))} className="max-w-full rounded border border-input bg-background px-2 py-1.5 text-sm text-foreground"><option value="pro">Pro</option><option value="theatre">Teater & Skole</option></select></label>
         <input
           className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none focus:bg-input"
           value={show.name}
@@ -913,11 +936,11 @@ export function ShowControl({ showId }: { showId: string }) {
         </div>
       )}
 
-<div className="relative min-h-0 flex-1 overflow-hidden">
-<FloatingWindow locked={locked} title={"Scene · Nu & Næste"} state={wins.stage} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
+<div className={guided ? "relative grid min-h-0 flex-1 gap-px overflow-auto bg-border lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)] lg:grid-rows-[minmax(15rem,1fr)_minmax(20rem,1fr)]" : "relative min-h-0 flex-1 overflow-hidden"}>
+<FloatingWindow docked={guided} dockedClassName="min-h-64 lg:col-start-2 lg:row-start-1" locked={locked} title={"Scene · Nu & Næste"} state={workspaceState("stage")} onChange={(p) => setWin("stage", p)} onFocus={() => focusWin("stage")} accent>
 <StageView show={show} flat={flat} standby={standby ?? null} standbyIdx={standbyIdx} warn={!!mainRun && mainRun.duration! - mainRun.elapsed <= 10} size={noteSize} setSize={setNoteSize} onNotes={(v) => standby && updateCue(standby.id, { notes: v })} />
 </FloatingWindow>
-<FloatingWindow locked={locked} title={"Transport"} state={wins.transport} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
+<FloatingWindow docked={guided} dockedClassName="min-h-96 lg:col-start-2 lg:row-start-2" locked={locked} title={"Transport"} state={workspaceState("transport")} onChange={(p) => setWin("transport", p)} onFocus={() => focusWin("transport")}>
 <div className="flex flex-col gap-3 p-3">
           <button
             onClick={go}
@@ -957,10 +980,13 @@ export function ShowControl({ showId }: { showId: string }) {
         </div>
 </FloatingWindow>
 {loaded && <RemoteHost showId={showId} state={remoteState} onCmd={onRemote} getAudio={async (id) => { const c = flat.find((x) => x.id === id); return c?.type === "audio" && c.fileId ? getAudio(c.fileId) : undefined; }} renderPanel={(panel) => <FloatingWindow locked={locked} title={"Telefon & scenemonitors"} state={wins.remote} onChange={(p) => setWin("remote", p)} onFocus={() => focusWin("remote")}>{panel}</FloatingWindow>} />}
-<FloatingWindow locked={locked} title={"Setliste & Cues"} state={wins.list} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
+<FloatingWindow docked={guided} dockedClassName="order-first min-h-96 lg:col-start-1 lg:row-span-2 lg:row-start-1" locked={locked} title={guided ? "Akter / Scener & Cues" : "Setliste & Cues"} state={workspaceState("list")} onChange={(p) => setWin("list", p)} onFocus={() => focusWin("list")}>
 <div className="flex h-full min-h-0 flex-col">
           {!locked && <div className="flex flex-wrap gap-1 border-b border-border p-2">
-            {TYPES.map((t) => (
+            {guided ? <Button variant="secondary" disabled={!show.songs.length} onClick={() => {
+              const sceneId = selectedSongId ?? show.songs.find((s) => s.cues.some((c) => c.id === selectedId))?.id ?? show.songs[0]?.id;
+              if (sceneId) setGuide({ cue: null, editing: false, sceneId });
+            }}>+ Opret cue</Button> : TYPES.map((t) => (
               <button
                 key={t}
                 onClick={() => addCue(t)}
@@ -971,9 +997,7 @@ export function ShowControl({ showId }: { showId: string }) {
                 + {tr(TYPE_LABEL[t])}
               </button>
             ))}
-            <button onClick={addSong} title="Opret en ny sang/sektion i showet" className="ml-auto rounded bg-secondary px-3 py-1.5 text-sm font-semibold hover:bg-accent">
-              {tr("+ Sang")}
-            </button>
+            <Button variant="secondary" onClick={addSong} className="ml-auto">{guided ? "+ Opret Akt/Scene" : tr("+ Sang")}</Button>
           </div>}
           <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder={tr("🔍 Søg i sange, cues, numre, stikord og noter…")} aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
           <div
@@ -1033,7 +1057,7 @@ export function ShowControl({ showId }: { showId: string }) {
                         if (drag.current?.kind === "cue" && drag.current.id !== c.id) onDropCue(song.id, c.id); else { drag.current = null; setDropKey(null); }
                       }}
                       onClick={() => { setSelectedId(c.id); setSelectedSongId(song.id); setStandbyId(c.id); }}
-                      onDoubleClick={() => setStandbyId(c.id)}
+                      onDoubleClick={() => { if (guided && !locked) setGuide({ cue: c, editing: true, sceneId: song.id }); else setStandbyId(c.id); }}
                       data-cue-id={c.id}
                       style={{ borderLeftColor: cueColor(show, c), gridTemplateColumns: gridCols(view).replaceAll("_", " ") }}
                       className={`grid cursor-pointer select-none items-center gap-2 border-b border-l-4 border-border px-2 py-0.5 text-sm leading-tight ${
@@ -1050,6 +1074,7 @@ export function ShowControl({ showId }: { showId: string }) {
                       </div>
                       {view.type && <TypeTag show={show} cue={c} />}
                       {view.follow && <span className="w-24 text-right font-mono text-xs text-muted-foreground">{followLabel(c)}</span>}
+                      {guided && !locked && selectedId === c.id && <Button variant="secondary" size="sm" className="col-span-full justify-self-start" onClick={(e) => { e.stopPropagation(); setGuide({ cue: c, editing: true, sceneId: song.id }); }}>Rediger cue</Button>}
                       {!locked && selectedId === c.id && <span className="col-span-full flex gap-1 pb-0.5"><button onClick={(e) => { e.stopPropagation(); setShow((s) => shiftCue(s, c.id, -1)); }} className="rounded bg-secondary px-2 text-xs hover:bg-accent" aria-label="Flyt cue op" title="Flyt cue op (Alt+↑)">▲ Op</button><button onClick={(e) => { e.stopPropagation(); setShow((s) => shiftCue(s, c.id, 1)); }} className="rounded bg-secondary px-2 text-xs hover:bg-accent" aria-label="Flyt cue ned" title="Flyt cue ned (Alt+↓)">▼ Ned</button><span className="text-xs text-muted-foreground">Alt+↑/↓</span></span>}
                     </div>
                   );
@@ -1069,7 +1094,7 @@ export function ShowControl({ showId }: { showId: string }) {
           </div>
         </div>
 </FloatingWindow>
-<FloatingWindow locked={locked} title={"Cue Inspector"} state={wins.inspector} onChange={(p) => setWin("inspector", p)} onFocus={() => focusWin("inspector")}>
+<FloatingWindow locked={locked} title={"Cue Inspector"} state={workspaceState("inspector")} onChange={(p) => setWin("inspector", p)} onFocus={() => focusWin("inspector")}>
 <div className="p-4">
           {locked ? (
             <div className="text-muted-foreground">🔒 Showet er låst til live. Tryk Ctrl+L eller "Lås show" for at redigere.</div>
@@ -1128,6 +1153,24 @@ export function ShowControl({ showId }: { showId: string }) {
 </FloatingWindow>
 </div>
 
+      {sceneOpen && <Dialog open onOpenChange={setSceneOpen}><DialogContent className="z-[100010]" aria-describedby={undefined}><DialogHeader><DialogTitle>Opret Akt/Scene</DialogTitle></DialogHeader><form onSubmit={(e) => {
+        e.preventDefault(); if (!sceneName.trim() || locked) return;
+        const id = uid(); setShow((s) => ({ ...s, songs: [...s.songs, { id, name: sceneName.trim(), cues: [] }] })); setSelectedSongId(id); setSelectedId(null); setSceneOpen(false);
+      }}><label className="block space-y-2 text-sm font-semibold">Navn<input autoFocus aria-label="Akt/Scene-navn" className={inputCls} value={sceneName} onChange={(e) => setSceneName(e.target.value)} /></label><div className="mt-4 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setSceneOpen(false)}>Annuller</Button><Button type="submit" disabled={!sceneName.trim()}>Opret Akt/Scene</Button></div></form></DialogContent></Dialog>}
+      {guide && !locked && <CueWizard show={show} initial={guide.cue} editing={guide.editing} sceneId={guide.sceneId} onClose={() => setGuide(null)} allowType={(t) => t !== "group" || needPro("group")}
+        onSave={async (draft, file, sceneId) => {
+          let cue = draft;
+          if (file && draft.type === "audio") { const id = uid(); await putAudio(id, file); cue = { ...draft, fileId: id, fileName: file.name }; }
+          setShow((s) => saveGuidedCue(s, cue, guide.editing, selectedId, sceneId));
+          setSelectedId(cue.id); setSelectedSongId(sceneId); if (!guide.editing) { setStandbyId(cue.id); trackFeature(`cue.${cue.type}`); }
+        }}
+        renderNotes={(cue, change) => <MonitorNotes cue={cue} monitors={show.monitors ?? []} onChange={change} />}
+        renderSettings={(cue, change, onFile) => <Inspector cue={cue} show={show} flat={flat} midiPorts={midiPorts} outputs={outputs} guidedSection="type" onChange={change} onFile={onFile}
+          onDelete={() => {}} onStandby={() => {}} onFire={() => engine().execute(cue)} onTestMidi={(m) => engine().sendMidi(m)} needPro={needPro}
+          loadAudio={(fid, out) => engine().decoded(fid, out)} channelCount={(out) => engine().channelCount(out)}
+          testTone={(out, ch, mono) => { void engine().testTone(out, ch, mono); }}
+          pfl={(fid, end) => { void engine().pfl(fid, resolveOut(show, "audio", show.pflOut || "", outputs) || "", show.pflCh ?? 1, end).catch(() => { setError("Forlyt kunne ikke afspilles"); end(); }); }} stopPfl={() => engine().stopPfl()} />}
+      />}
       {settings && (
         <Settings
           pro={pro}
@@ -1342,6 +1385,7 @@ function Inspector(props: {
   pfl: (fileId: string, onEnd: () => void) => void;
   stopPfl: () => void;
   inGroup?: boolean;
+  guidedSection?: "type";
   onSaveDefault?: (c: Cue) => void;
   onResetDefault?: (t: CueType) => void;
 }) {
@@ -1353,6 +1397,7 @@ function Inspector(props: {
   const tabs: [typeof tab, string][] = [["type", typeTab[cue.type] ?? "Cue"], ["general", "⚙️ Generelt"], ["notes", "📋 Noter & monitor"]];
   return (
     <div className="cue-inspector flex flex-col gap-3">
+      {!props.guidedSection && <>
       <div className="flex items-center gap-2">
         <TypeTag show={show} cue={cue} />
         <div className="ml-auto flex gap-1">
@@ -1364,6 +1409,7 @@ function Inspector(props: {
       <div role="tablist" className="flex flex-wrap gap-1 border-b border-border pb-1">
         {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`rounded-t border-b-2 px-3 py-2 text-sm font-semibold ${tab === k ? "border-standby bg-secondary text-foreground" : "border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>{tr(l)}</button>)}
       </div>
+      </>}
       {tab === "general" && <>
       <Field label="Navn"><input className={inputCls} value={cue.name} onChange={(e) => set({ name: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-2">
@@ -1400,14 +1446,14 @@ function Inspector(props: {
       </Field>
 
       </>}
-      {tab === "type" && <>
+      {(props.guidedSection === "type" || tab === "type") && <>
       {cue.type === "audio" && (
         <>
           <Field label="Lydfil">
             <input type="file" accept="audio/*" className="text-sm" onChange={(e) => e.target.files?.[0] && props.onFile(e.target.files[0])} />
             <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || tr("Ingen fil valgt")}</div>
           </Field>
-          <details className="rounded-lg border border-border bg-muted/30 p-2" open>
+          <details className="rounded-lg border border-border bg-muted/30 p-2" open={props.guidedSection ? undefined : true}>
             <summary className="cursor-pointer select-none text-sm font-semibold">🎛️ {tr("Mixer")} <span className="text-xs font-normal text-muted-foreground">· {tr("trim, EQ, patch, fader")}</span></summary>
             <div className="mt-2 flex flex-col gap-3">
           <MixStrip cue={cue} set={set} tr={tr} />

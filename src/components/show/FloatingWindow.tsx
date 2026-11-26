@@ -11,6 +11,8 @@ export function FloatingWindow(props: {
   onFocus: () => void;
   accent?: boolean;
   locked?: boolean;
+  docked?: boolean;
+  dockedClassName?: string;
   children: ReactNode;
 }) {
   const tr = useTrApp();
@@ -19,7 +21,7 @@ export function FloatingWindow(props: {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const changeRef = useRef(onChange);
   changeRef.current = onChange;
-  const popped = !!(s.open && s.popped);
+  const popped = !!(s.open && s.popped && !props.docked);
   useEffect(() => {
     if (!popped) return;
     const pw = window.open("", `stagecue-${props.title}`, `popup=yes,width=${Math.round(s.w)},height=${Math.round(s.h)}`);
@@ -62,6 +64,11 @@ export function FloatingWindow(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [popped]);
   if (!s.open) return null;
+
+  if (props.docked) return <section aria-label={tr(props.title)} className={`@container flex min-h-0 min-w-0 flex-col border-b border-border bg-card ${props.dockedClassName ?? ""}`}>
+    <h2 className="border-b border-border bg-muted px-3 py-2 text-xs font-bold uppercase text-muted-foreground">{tr(props.title)}</h2>
+    <div className="min-h-0 flex-1 overflow-auto break-words">{props.children}</div>
+  </section>;
 
   const begin = (e: React.PointerEvent, mode: "move" | "resize") => {
     if (props.locked || (e.target as HTMLElement).closest("button")) return;
