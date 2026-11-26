@@ -16,3 +16,4 @@
 - Windows auto-update uses tauri-plugin-updater via custom Rust commands (update_check/update_install) so no capabilities file is needed; release.yml signs with the TAURI_SIGNING_PRIVATE_KEY secret and publishes latest.json to GitHub Releases.
 - DMX output lives in src/lib/show/dmx.ts as one shared DmxOut (512 levels, LTP fades, Art-Net/sACN via Tauri send_udp with broadcast) — one source of truth for cues and the monitor.
 - Console parameter dividers use scoped `.cue-inspector` / `.show-settings` styles and shared semantic theme tokens; exclude nested fields to avoid duplicate lines and keep website forms unaffected.
+- Workspace modes are local presentation preferences over the same Show format; guided cue drafts are saved only on completion, and docked panels never replace the Pro window layout, preserving compatibility and cancellation.

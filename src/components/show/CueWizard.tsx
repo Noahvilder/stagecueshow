@@ -39,7 +39,7 @@ export function CueWizard(props: {
     catch { setError("Cuet kunne ikke gemmes. Prøv igen."); setBusy(false); }
   };
   return <Dialog open onOpenChange={(open) => { if (!open && !busy) props.onClose(); }}>
-    <DialogContent aria-describedby="cue-guide-progress" className="z-[100010] flex max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl flex-col overflow-hidden bg-card">
+    <DialogContent data-cue-guide="true" aria-describedby="cue-guide-progress" className="z-[100010] flex max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl flex-col overflow-hidden bg-card">
       <DialogHeader className="border-b border-border pb-4 pr-6">
         <DialogTitle>{props.editing ? "Rediger cue" : "Opret cue"} · {STEPS[step]}</DialogTitle>
         <DialogDescription id="cue-guide-progress">Teater & Skole · Trin {step + 1} af {STEPS.length}</DialogDescription>

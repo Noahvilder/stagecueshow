@@ -999,7 +999,7 @@ export function ShowControl({ showId }: { showId: string }) {
             ))}
             <Button variant="secondary" onClick={addSong} className="ml-auto">{guided ? "+ Opret Akt/Scene" : tr("+ Sang")}</Button>
           </div>}
-          <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder={tr("🔍 Søg i sange, cues, numre, stikord og noter…")} aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
+          <div className="border-b border-border p-2"><input value={songQuery} onChange={(e) => setSongQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setSongQuery(""); }} placeholder={guided ? "Søg i akter/scener og cues…" : tr("🔍 Søg i sange, cues, numre, stikord og noter…")} aria-label="Søg i cues" className="w-full rounded border border-input bg-input px-2 py-1 text-sm" /></div>
           <div
             className={`relative min-h-0 flex-1 overflow-y-auto p-2 ${fileDrop !== null ? "outline outline-2 -outline-offset-2 outline-standby" : ""}`}
             onDragOverCapture={(e) => { if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; const sid = (e.target as HTMLElement).closest("[data-song-id]")?.getAttribute("data-song-id") ?? ""; if (sid !== fileDrop) setFileDrop(sid); }}
@@ -1024,7 +1024,7 @@ export function ShowControl({ showId }: { showId: string }) {
                 >
                   <span className="font-mono text-sm text-muted-foreground">{si + 1}</span>
                   <input
-                    value={song.name}
+                    value={guided ? song.name.replace(/^Sang (\d+)$/, "Akt/Scene $1") : song.name}
                     readOnly={locked}
                     onChange={(e) => renameSong(song.id, e.target.value)}
                     className="min-w-0 flex-1 bg-transparent text-lg font-bold outline-none focus:bg-input"
@@ -1090,7 +1090,7 @@ export function ShowControl({ showId }: { showId: string }) {
                 />
               </section>
             ); })}
-            {!show.songs.length && <div className="p-8 text-center text-muted-foreground">{tr("Tilføj en sang for at komme i gang")}</div>}
+            {!show.songs.length && <div className="p-8 text-center text-muted-foreground">{guided ? "Opret en Akt/Scene" : tr("Tilføj en sang for at komme i gang")}</div>}
           </div>
         </div>
 </FloatingWindow>
@@ -1453,6 +1453,11 @@ function Inspector(props: {
             <input type="file" accept="audio/*" className="text-sm" onChange={(e) => e.target.files?.[0] && props.onFile(e.target.files[0])} />
             <div className="mt-1 truncate text-xs text-muted-foreground">{cue.fileName || tr("Ingen fil valgt")}</div>
           </Field>
+          {props.guidedSection && <Field label="Lydudgang"><select aria-label="Lydudgang" className={inputCls} value={cue.outputId} onChange={(e) => set({ outputId: e.target.value })}>
+            {slots(show, "audio").map((sl, i) => <option key={`slot-${i}`} value={slotRef(i + 1)}>{slotLabel(i + 1, sl, "audio")}</option>)}
+            {outputs.map((o) => <option key={o.id} value={o.id}>{ioName(o.label, show.ioAliases?.audio?.[o.id])}</option>)}
+            {cue.outputId && !outputs.some((o) => o.id === cue.outputId) && !isSlot(cue.outputId) && <option value={cue.outputId}>{cue.outputId}</option>}
+          </select></Field>}
           <details className="rounded-lg border border-border bg-muted/30 p-2" open={props.guidedSection ? undefined : true}>
             <summary className="cursor-pointer select-none text-sm font-semibold">🎛️ {tr("Mixer")} <span className="text-xs font-normal text-muted-foreground">· {tr("trim, EQ, patch, fader")}</span></summary>
             <div className="mt-2 flex flex-col gap-3">
