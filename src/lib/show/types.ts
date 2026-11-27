@@ -91,6 +91,9 @@ export interface Song {
   id: string;
   name: string;
   cues: Cue[];
+  /** Quarter-note tempo and meter for the concert workspace's visual pulse. */
+  bpm?: number;
+  meter?: string;
 }
 
 export interface Show {
